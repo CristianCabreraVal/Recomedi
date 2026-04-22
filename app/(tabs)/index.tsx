@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { generarRecomendaciones } from "../../ml/recomendaciones";
 
 export default function Home() {
   const router = useRouter();
