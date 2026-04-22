@@ -1,14 +1,54 @@
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, Button, StyleSheet, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useState, useEffect } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Notifications from "expo-notifications";
+
 import { generarRecomendaciones } from "../../ml/recomendaciones";
+import { generarMensaje, enviarNotificacion } from "../../ml/notificaciones";
 
 export default function Home() {
   const router = useRouter();
 
+  const [usuario, setUsuario] = useState<any>(null);
+  const [recomendaciones, setRecomendaciones] = useState<string[]>([]);
+
+  // 🔔 Permisos de notificación
+  useEffect(() => {
+    Notifications.requestPermissionsAsync();
+  }, []);
+
+  // 📊 Cargar usuario + recomendaciones
+  useEffect(() => {
+    const cargar = async () => {
+      const data = await AsyncStorage.getItem("usuario");
+      if (data) {
+        const user = JSON.parse(data);
+        setUsuario(user);
+
+        const rec = generarRecomendaciones(user);
+        setRecomendaciones(rec);
+      }
+    };
+    cargar();
+  }, []);
+
+  // 🔔 Botón de prueba
+  const probarNotificacion = async () => {
+    const data = await AsyncStorage.getItem("usuario");
+    const usuario = data ? JSON.parse(data) : null;
+
+    const mensaje = generarMensaje(usuario);
+
+    alert(mensaje);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.logo}>Recomedi</Text>
+
+      <Button title="Probar notificación" onPress={probarNotificacion} />
 
       {/* 🔹 Recordatorios */}
       <View style={styles.card}>
@@ -17,7 +57,16 @@ export default function Home() {
         <Text>Revisión dental: 6 meses</Text>
       </View>
 
-      {/* 🔹 Vista rápida del mapa */}
+      {/* 🔹 Recomendaciones */}
+      <View style={styles.card}>
+        <Text style={{ fontWeight: "bold" }}>Recomendaciones:</Text>
+
+        {recomendaciones.map((r, index) => (
+          <Text key={index}>• {r}</Text>
+        ))}
+      </View>
+
+      {/* 🔹 Mapa */}
       <TouchableOpacity
         style={styles.card}
         onPress={() => router.push("/mapa")}

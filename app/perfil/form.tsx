@@ -14,13 +14,28 @@ export default function PerfilForm() {
   const [genero, setGenero] = useState("");
 
   const guardar = async () => {
-    const usuario = { nombre, edad, peso, altura, genero };
+  if (!nombre || !edad || !peso || !altura || !genero) {
+    Alert.alert("Error", "Todos los campos son obligatorios");
+    return;
+  }
 
-    await AsyncStorage.setItem("usuario", JSON.stringify(usuario));
+  if (isNaN(Number(edad)) || isNaN(Number(peso)) || isNaN(Number(altura))) {
+    Alert.alert("Error", "Edad, peso y altura deben ser números");
+    return;
+  }
 
-    Alert.alert("Listo", "Perfil guardado");
-    router.replace("/perfil"); // 🔥 vuelve al perfil
+  const usuario = {
+    nombre,
+    edad: Number(edad),
+    peso: Number(peso),
+    altura: Number(altura),
+    genero,
   };
+
+  await AsyncStorage.setItem("usuario", JSON.stringify(usuario));
+
+  router.replace("/perfil");
+};
 
   return (
     <SafeAreaView style={styles.container}>

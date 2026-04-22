@@ -1,5 +1,5 @@
 export const generarRecomendaciones = (usuario: any) => {
-  const recomendaciones = [];
+  const recomendaciones: string[] = [];
 
   const imc = usuario.peso / ((usuario.altura / 100) ** 2);
 
@@ -11,8 +11,12 @@ export const generarRecomendaciones = (usuario: any) => {
     recomendaciones.push("Chequeo cardiovascular anual");
   }
 
-  if (usuario.genero === "femenino") {
+  if (usuario.genero.toLowerCase() === "femenino") {
     recomendaciones.push("Chequeo ginecológico periódico");
+  }
+
+  if (recomendaciones.length === 0) {
+    recomendaciones.push("Mantén hábitos saludables");
   }
 
   return recomendaciones;
