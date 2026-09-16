@@ -1,19 +1,23 @@
-import {View,Text,StyleSheet,TouchableOpacity,ScrollView,
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useState, useEffect } from "react";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { Ionicons } from "@expo/vector-icons";
 
-import { generarRecomendaciones } from "../../ml/recomendaciones";
-import { generarMensaje } from "../../ml/notificaciones";
 import { useTheme } from "../../hooks/useTheme";
-
-import { auth } from "../../services/firebase";
+import { generarMensaje } from "../../ml/notificaciones";
+import { generarRecomendaciones } from "../../ml/recomendaciones";
 
 export default function Home() {
   const dark = useTheme();
@@ -23,42 +27,47 @@ export default function Home() {
   const [recomendaciones, setRecomendaciones] = useState<string[]>([]);
 
   useEffect(() => {
-  const cargar = async () => {
-    const data = await AsyncStorage.getItem("usuario");
+    const cargarUsuario = async () => {
+      try {
+        const data = await AsyncStorage.getItem("usuario");
 
-    if (data) {
-      const user = JSON.parse(data);
+        if (!data) {
+          setUsuario(null);
+          setRecomendaciones([]);
+          return;
+        }
 
-      setUsuario(user);
+        const user = JSON.parse(data);
 
-      const rec = generarRecomendaciones(user);
-      setRecomendaciones(rec);
-    }
-  };
+        setUsuario(user);
 
-  cargar();
-}, []);
-
-useEffect(() => {
-  const verificarSesion = async () => {
-    setTimeout(() => {
-      if (!auth.currentUser) {
-        router.replace("/auth/login");
+        const rec = generarRecomendaciones(user);
+        setRecomendaciones(rec);
+      } catch (error) {
+        console.error("Error cargando usuario:", error);
       }
-    }, 100);
-  };
+    };
 
-  verificarSesion();
-}, []);
+    cargarUsuario();
+  }, []);
 
-  const probarNotificacion = async () => {
-    const data = await AsyncStorage.getItem("usuario");
+  const probarRecomendacion = async () => {
+    try {
+      const data = await AsyncStorage.getItem("usuario");
 
-    const usuario = data ? JSON.parse(data) : null;
+      const usuarioActual = data ? JSON.parse(data) : null;
 
-    const mensaje = generarMensaje(usuario);
+      const mensaje = generarMensaje(usuarioActual);
 
-    alert(mensaje);
+      Alert.alert("Recomedi", mensaje);
+    } catch (error) {
+      console.error("Error generando recomendación:", error);
+
+      Alert.alert(
+        "Recomedi",
+        "No fue posible generar la recomendación."
+      );
+    }
   };
 
   return (
@@ -76,7 +85,14 @@ useEffect(() => {
           <View>
             <Text style={styles.logo}>Recomedi</Text>
 
-            <Text style={styles.subtitle}>
+            <Text
+              style={[
+                styles.subtitle,
+                {
+                  color: dark ? "#D1D5DB" : "#6B7280",
+                },
+              ]}
+            >
               {usuario
                 ? `Hola, ${usuario.nombre}`
                 : "Bienvenido a tu salud preventiva"}
@@ -99,7 +115,7 @@ useEffect(() => {
 
           <TouchableOpacity
             style={styles.button}
-            onPress={probarNotificacion}
+            onPress={probarRecomendacion}
           >
             <Text style={styles.buttonText}>
               Ver recomendación
@@ -108,34 +124,91 @@ useEffect(() => {
         </View>
 
         {/* RECORDATORIOS */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: dark ? "#1E1E1E" : "#FFFFFF",
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.cardTitle,
+              {
+                color: dark ? "#FFFFFF" : "#111827",
+              },
+            ]}
+          >
             Recordatorios importantes
           </Text>
 
-          <Text style={styles.item}>
+          <Text
+            style={[
+              styles.item,
+              {
+                color: dark ? "#D1D5DB" : "#374151",
+              },
+            ]}
+          >
             • Chequeo médico: 6-12 meses
           </Text>
 
-          <Text style={styles.item}>
+          <Text
+            style={[
+              styles.item,
+              {
+                color: dark ? "#D1D5DB" : "#374151",
+              },
+            ]}
+          >
             • Revisión dental: cada 6 meses
           </Text>
         </View>
 
         {/* RECOMENDACIONES */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: dark ? "#1E1E1E" : "#FFFFFF",
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.cardTitle,
+              {
+                color: dark ? "#FFFFFF" : "#111827",
+              },
+            ]}
+          >
             Recomendaciones
           </Text>
 
           {recomendaciones.length > 0 ? (
             recomendaciones.map((r, index) => (
-              <Text key={index} style={styles.item}>
+              <Text
+                key={`${r}-${index}`}
+                style={[
+                  styles.item,
+                  {
+                    color: dark ? "#D1D5DB" : "#374151",
+                  },
+                ]}
+              >
                 • {r}
               </Text>
             ))
           ) : (
-            <Text style={styles.item}>
+            <Text
+              style={[
+                styles.item,
+                {
+                  color: dark ? "#D1D5DB" : "#374151",
+                },
+              ]}
+            >
               Completa tu perfil para obtener recomendaciones.
             </Text>
           )}
@@ -143,7 +216,12 @@ useEffect(() => {
 
         {/* MAPA */}
         <TouchableOpacity
-          style={styles.card}
+          style={[
+            styles.card,
+            {
+              backgroundColor: dark ? "#1E1E1E" : "#FFFFFF",
+            },
+          ]}
           onPress={() => router.push("/mapa")}
         >
           <View style={styles.row}>
@@ -153,19 +231,38 @@ useEffect(() => {
               color="#2563EB"
             />
 
-            <Text style={styles.cardTitle}>
+            <Text
+              style={[
+                styles.cardTitle,
+                {
+                  color: dark ? "#FFFFFF" : "#111827",
+                },
+              ]}
+            >
               Centros de salud
             </Text>
           </View>
 
-          <Text style={styles.item}>
+          <Text
+            style={[
+              styles.item,
+              {
+                color: dark ? "#D1D5DB" : "#374151",
+              },
+            ]}
+          >
             Hospitales y droguerías cercanas
           </Text>
         </TouchableOpacity>
 
         {/* NOTICIAS */}
         <TouchableOpacity
-          style={styles.card}
+          style={[
+            styles.card,
+            {
+              backgroundColor: dark ? "#1E1E1E" : "#FFFFFF",
+            },
+          ]}
           onPress={() => router.push("/noticias")}
         >
           <View style={styles.row}>
@@ -175,19 +272,38 @@ useEffect(() => {
               color="#2563EB"
             />
 
-            <Text style={styles.cardTitle}>
+            <Text
+              style={[
+                styles.cardTitle,
+                {
+                  color: dark ? "#FFFFFF" : "#111827",
+                },
+              ]}
+            >
               Noticias de salud
             </Text>
           </View>
 
-          <Text style={styles.item}>
+          <Text
+            style={[
+              styles.item,
+              {
+                color: dark ? "#D1D5DB" : "#374151",
+              },
+            ]}
+          >
             Información y novedades médicas
           </Text>
         </TouchableOpacity>
 
         {/* ALERTAS */}
         <TouchableOpacity
-          style={styles.card}
+          style={[
+            styles.card,
+            {
+              backgroundColor: dark ? "#1E1E1E" : "#FFFFFF",
+            },
+          ]}
           onPress={() => router.push("/epidemia")}
         >
           <View style={styles.row}>
@@ -197,12 +313,26 @@ useEffect(() => {
               color="#DC2626"
             />
 
-            <Text style={styles.cardTitle}>
+            <Text
+              style={[
+                styles.cardTitle,
+                {
+                  color: dark ? "#FFFFFF" : "#111827",
+                },
+              ]}
+            >
               Alertas sanitarias
             </Text>
           </View>
 
-          <Text style={styles.item}>
+          <Text
+            style={[
+              styles.item,
+              {
+                color: dark ? "#D1D5DB" : "#374151",
+              },
+            ]}
+          >
             Brotes y epidemias cercanas
           </Text>
         </TouchableOpacity>
@@ -233,7 +363,6 @@ const styles = StyleSheet.create({
 
   subtitle: {
     fontSize: 16,
-    color: "#6B7280",
     marginTop: 4,
   },
 
@@ -245,7 +374,7 @@ const styles = StyleSheet.create({
   },
 
   mainTitle: {
-    color: "#fff",
+    color: "#FFFFFF",
     fontSize: 22,
     fontWeight: "bold",
     marginBottom: 10,
@@ -258,7 +387,7 @@ const styles = StyleSheet.create({
   },
 
   button: {
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
     padding: 12,
     borderRadius: 12,
     alignItems: "center",
@@ -270,7 +399,6 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    backgroundColor: "#fff",
     padding: 18,
     borderRadius: 18,
     marginBottom: 15,
@@ -291,7 +419,6 @@ const styles = StyleSheet.create({
   item: {
     marginTop: 8,
     fontSize: 15,
-    color: "#374151",
   },
 
   row: {
