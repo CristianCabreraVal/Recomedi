@@ -7,12 +7,17 @@ const alertsData = [
     disease: "Gripe común",
     level: "Moderado",
     location: "Bogotá",
+    recommendation:
+      "Usar mascarilla en lugares cerrados.",
   },
+
   {
     id: "2",
     disease: "Dengue",
     level: "Alto",
     location: "Zona cercana",
+    recommendation:
+      "Evitar acumulación de agua.",
   },
 ];
 
@@ -25,12 +30,24 @@ export default function Alerts() {
         data={alertsData}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Text style={styles.title}>{item.disease}</Text>
-            <Text>Nivel: {item.level}</Text>
-            <Text>Ubicación: {item.location}</Text>
-          </View>
-        )}
+  <View style={styles.card}>
+    <Text style={styles.title}>
+      {item.disease}
+    </Text>
+
+    <Text style={styles.level}>
+      Nivel: {item.level}
+    </Text>
+
+    <Text style={styles.location}>
+      Ubicación: {item.location}
+    </Text>
+
+    <Text style={styles.recommendation}>
+      {item.recommendation}
+    </Text>
+  </View>
+)}
         ListEmptyComponent={
           <Text style={styles.empty}>No hay alertas cercanas</Text>
         }
@@ -40,14 +57,58 @@ export default function Alerts() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 15 },
-  header: { fontSize: 22, fontWeight: "bold", marginBottom: 10 },
-  card: {
-    backgroundColor: "#FADBD8",
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
+  container: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: "#F3F4F6",
   },
-  title: { fontWeight: "bold" },
-  empty: { textAlign: "center", marginTop: 20 },
+
+  header: {
+    fontSize: 30,
+    fontWeight: "bold",
+    color: "#DC2626",
+    marginBottom: 20,
+  },
+
+  card: {
+    backgroundColor: "#fff",
+    padding: 20,
+    borderRadius: 18,
+    marginBottom: 15,
+
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+
+    elevation: 4,
+  },
+
+  title: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#111827",
+  },
+
+  level: {
+    marginTop: 8,
+    color: "#DC2626",
+    fontWeight: "bold",
+  },
+
+  location: {
+    marginTop: 6,
+    color: "#374151",
+  },
+
+  recommendation: {
+    marginTop: 12,
+    color: "#6B7280",
+    lineHeight: 20,
+  },
+
+  empty: {
+    textAlign: "center",
+    marginTop: 40,
+    color: "#6B7280",
+  },
 });
