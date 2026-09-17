@@ -1,5 +1,12 @@
 import { useState } from "react";
-import {View,Text,TextInput,TouchableOpacity,StyleSheet,Alert,} from "react-native";
+import {
+  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity
+} from "react-native";
+
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../../services/firebase";
 
@@ -11,20 +18,103 @@ export default function Login() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const login = async () => {
-    if (!email || !password) {
-      Alert.alert("Error", "Completa todos los campos");
+    const correo = email.trim();
+
+    // Validar campos
+    if (!correo || !password) {
+      Alert.alert(
+        "Campos incompletos",
+        "Ingresa tu correo y contraseña."
+      );
+      return;
+    }
+
+    // Validar formato básico del correo
+    if (!correo.includes("@")) {
+      Alert.alert(
+        "Correo inválido",
+        "Ingresa un correo electrónico válido."
+      );
       return;
     }
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      setLoading(true);
 
-      Alert.alert("Correcto", "Inicio de sesión exitoso");
+      const resultado = await signInWithEmailAndPassword(
+        auth,
+        correo,
+        password
+      );
+
+      console.log("Inicio de sesión correcto");
+      console.log("Usuario:", resultado.user.email);
+
+      Alert.alert(
+        "Correcto",
+        "Inicio de sesión exitoso.",
+        [
+          {
+            text: "Continuar",
+            onPress: () => {
+              // El _layout.tsx puede encargarse
+              // de detectar al usuario autenticado.
+            },
+          },
+        ]
+      );
 
     } catch (error: any) {
-      Alert.alert("Error", error.message);
+      console.log("Firebase error:", error?.code);
+
+      switch (error?.code) {
+        case "auth/invalid-credential":
+          Alert.alert(
+            "No se pudo iniciar sesión",
+            "El correo o la contraseña no son correctos."
+          );
+          break;
+
+        case "auth/invalid-email":
+          Alert.alert(
+            "Correo inválido",
+            "El formato del correo electrónico no es válido."
+          );
+          break;
+
+        case "auth/user-disabled":
+          Alert.alert(
+            "Cuenta deshabilitada",
+            "Esta cuenta ha sido deshabilitada."
+          );
+          break;
+
+        case "auth/too-many-requests":
+          Alert.alert(
+            "Demasiados intentos",
+            "Se han realizado demasiados intentos. Intenta nuevamente más tarde."
+          );
+          break;
+
+        case "auth/network-request-failed":
+          Alert.alert(
+            "Error de conexión",
+            "No se pudo conectar con Firebase. Comprueba tu conexión a Internet."
+          );
+          break;
+
+        default:
+          Alert.alert(
+            "Error",
+            "No fue posible iniciar sesión. Intenta nuevamente."
+          );
+          break;
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -37,6 +127,9 @@ export default function Login() {
         style={styles.input}
         value={email}
         onChangeText={setEmail}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        autoCorrect={false}
       />
 
       <TextInput
@@ -45,13 +138,27 @@ export default function Login() {
         style={styles.input}
         value={password}
         onChangeText={setPassword}
+        autoCapitalize="none"
+        autoCorrect={false}
       />
 
-      <TouchableOpacity style={styles.button} onPress={login}>
-        <Text style={styles.buttonText}>Ingresar</Text>
+      <TouchableOpacity
+        style={[
+          styles.button,
+          loading && styles.buttonDisabled,
+        ]}
+        onPress={login}
+        disabled={loading}
+      >
+        <Text style={styles.buttonText}>
+          {loading ? "Ingresando..." : "Ingresar"}
+        </Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => router.push("/auth/register")}>
+      <TouchableOpacity
+        onPress={() => router.push("/auth/register")}
+        disabled={loading}
+      >
         <Text style={styles.link}>Crear cuenta</Text>
       </TouchableOpacity>
     </SafeAreaView>
@@ -87,6 +194,10 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: "center",
     marginTop: 10,
+  },
+
+  buttonDisabled: {
+    opacity: 0.6,
   },
 
   buttonText: {
