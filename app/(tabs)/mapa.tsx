@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -17,27 +18,20 @@ import { useTheme } from "../../hooks/useTheme";
 export default function Mapa() {
   const { colors } = useTheme();
 
-  const [ubicacion, setUbicacion] =
-    useState<any>(null);
+  const [ubicacion, setUbicacion] = useState<any>(null);
+  const [lugares, setLugares] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [lugares, setLugares] =
-    useState<any[]>([]);
-
-  const [loading, setLoading] =
-    useState(true);
-
-  // Obtener ubicación
   useEffect(() => {
     const cargar = async () => {
       try {
         const permiso =
           await Location.requestForegroundPermissionsAsync();
 
-        if (
-          permiso.status !== "granted"
-        ) {
-          alert(
-            "Permiso de ubicación denegado"
+        if (permiso.status !== "granted") {
+          Alert.alert(
+            "Ubicación",
+            "Se necesita permiso de ubicación para encontrar centros médicos cercanos."
           );
 
           setLoading(false);
@@ -45,24 +39,19 @@ export default function Mapa() {
         }
 
         const location =
-          await Location.getCurrentPositionAsync(
-            {}
-          );
+          await Location.getCurrentPositionAsync({});
 
-        const lat =
-          location.coords.latitude;
-
-        const lng =
-          location.coords.longitude;
+        const lat = location.coords.latitude;
+        const lng = location.coords.longitude;
 
         setUbicacion({
           latitude: lat,
           longitude: lng,
         });
 
-        buscarHospitales(lat, lng);
+        await buscarHospitales(lat, lng);
       } catch (error) {
-        console.log(error);
+        console.log("Error obteniendo ubicación:", error);
         setLoading(false);
       }
     };
@@ -70,22 +59,22 @@ export default function Mapa() {
     cargar();
   }, []);
 
-  // API OpenStreetMap
   const buscarHospitales = async (
     lat: number,
     lng: number
   ) => {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const data =
-      await buscarCentrosMedicos(
-        lat,
-        lng
-      );
+      const data = await buscarCentrosMedicos(lat, lng);
 
-    setLugares(data);
-
-    setLoading(false);
+      setLugares(data);
+    } catch (error) {
+      console.log("Error buscando centros médicos:", error);
+      setLugares([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (loading) {
@@ -94,8 +83,7 @@ export default function Mapa() {
         style={[
           styles.loading,
           {
-            backgroundColor:
-              colors.background,
+            backgroundColor: colors.background,
           },
         ]}
       >
@@ -121,14 +109,11 @@ export default function Mapa() {
       style={[
         styles.container,
         {
-          backgroundColor:
-            colors.background,
+          backgroundColor: colors.background,
         },
       ]}
     >
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView showsVerticalScrollIndicator={false}>
         <Text
           style={[
             styles.header,
@@ -144,78 +129,88 @@ export default function Mapa() {
           style={[
             styles.subtitle,
             {
-              color:
-                colors.textSecondary,
+              color: colors.textSecondary,
             },
           ]}
         >
           Hospitales y farmacias cerca de ti
         </Text>
 
-        {/* MAPA */}
+        {/* MAPA REAL PARA ANDROID / IOS */}
 
         {ubicacion && (
           <View style={styles.mapContainer}>
             <MapView
               style={styles.map}
               initialRegion={{
-                latitude:
-                  ubicacion.latitude,
-
-                longitude:
-                  ubicacion.longitude,
-
+                latitude: ubicacion.latitude,
+                longitude: ubicacion.longitude,
                 latitudeDelta: 0.05,
                 longitudeDelta: 0.05,
               }}
+              showsUserLocation
+              showsMyLocationButton
             >
-              {/* Usuario */}
-
               <Marker
                 coordinate={ubicacion}
                 title="Tu ubicación"
                 pinColor="blue"
               />
 
-              {/* Lugares */}
+              {lugares.map((lugar, index) => {
+                const latitude = Number(lugar.lat);
+                const longitude = Number(lugar.lon);
 
-              {lugares.map(
-                (lugar, index) => (
+                if (
+                  Number.isNaN(latitude) ||
+                  Number.isNaN(longitude)
+                ) {
+                  return null;
+                }
+
+                return (
                   <Marker
                     key={index}
                     coordinate={{
-                      latitude: Number(
-                        lugar.lat
-                      ),
-                      longitude: Number(
-                        lugar.lon
-                      ),
+                      latitude,
+                      longitude,
                     }}
                     title={
                       lugar.tags?.name ||
                       "Centro médico"
                     }
                     description={
-                      lugar.tags?.amenity
+                      lugar.tags?.amenity ||
+                      "Centro de salud"
                     }
                   />
-                )
-              )}
+                );
+              })}
             </MapView>
           </View>
         )}
 
-        {/* LISTA */}
+        {/* LISTA DE CENTROS */}
 
-        {lugares.map(
-          (lugar, index) => (
+        {lugares.length === 0 ? (
+          <Text
+            style={[
+              styles.empty,
+              {
+                color: colors.textSecondary,
+              },
+            ]}
+          >
+            No se encontraron centros médicos cercanos.
+          </Text>
+        ) : (
+          lugares.map((lugar, index) => (
             <View
               key={index}
               style={[
                 styles.card,
                 {
-                  backgroundColor:
-                    colors.card,
+                  backgroundColor: colors.card,
                 },
               ]}
             >
@@ -228,6 +223,7 @@ export default function Mapa() {
                 ]}
               >
                 {lugar.display_name ||
+                  lugar.tags?.name ||
                   "Centro Médico"}
               </Text>
 
@@ -235,15 +231,15 @@ export default function Mapa() {
                 style={[
                   styles.cardText,
                   {
-                    color:
-                      colors.textSecondary,
+                    color: colors.textSecondary,
                   },
                 ]}
               >
-                Hospital o centro de salud
+                {lugar.tags?.amenity ||
+                  "Hospital o centro de salud"}
               </Text>
             </View>
-          )
+          ))
         )}
       </ScrollView>
     </SafeAreaView>
@@ -302,5 +298,10 @@ const styles = StyleSheet.create({
 
   cardText: {
     marginTop: 5,
+  },
+
+  empty: {
+    textAlign: "center",
+    marginTop: 30,
   },
 });

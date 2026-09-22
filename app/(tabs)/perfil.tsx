@@ -4,49 +4,89 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
-import { useState, useEffect } from "react";
+
+import { useState, useCallback } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { useRouter } from "expo-router";
 import { auth, db } from "../../services/firebase";
-
 import { doc, getDoc } from "firebase/firestore";
 import { useTheme } from "../../hooks/useTheme";
 
 export default function Perfil() {
   const { colors } = useTheme();
 
-  const [usuario, setUsuario] =
-    useState<any>(null);
+  const [usuario, setUsuario] = useState<any>(null);
+  const [cargando, setCargando] = useState(true);
 
   const router = useRouter();
 
-  useEffect(() => {
-    const cargar = async () => {
-      try {
-        const uid = auth.currentUser?.uid;
+  useFocusEffect(
+    useCallback(() => {
+      const cargar = async () => {
+        try {
+          setCargando(true);
 
-        if (!uid) return;
+          const uid = auth.currentUser?.uid;
 
-        const ref = doc(
-          db,
-          "usuarios",
-          uid
-        );
+          if (!uid) {
+            setUsuario(null);
+            return;
+          }
 
-        const snap = await getDoc(ref);
+          const ref = doc(db, "usuarios", uid);
+          const snap = await getDoc(ref);
 
-        if (snap.exists()) {
-          setUsuario(snap.data());
+          if (snap.exists()) {
+            setUsuario(snap.data());
+          } else {
+            setUsuario(null);
+          }
+        } catch (error) {
+          console.log("Error cargando perfil:", error);
+          setUsuario(null);
+        } finally {
+          setCargando(false);
         }
-      } catch (error) {
-        console.log(error);
-      }
-    };
+      };
 
-    cargar();
-  }, []);
+      cargar();
+    }, [])
+  );
+
+  // CARGANDO PERFIL
+  if (cargando) {
+    return (
+      <SafeAreaView
+        style={[
+          styles.container,
+          {
+            backgroundColor: colors.background,
+          },
+        ]}
+      >
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator
+            size="large"
+            color={colors.primary}
+          />
+
+          <Text
+            style={[
+              styles.loadingText,
+              {
+                color: colors.textSecondary,
+              },
+            ]}
+          >
+            Cargando perfil...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   // SI NO EXISTE PERFIL
   if (!usuario) {
@@ -424,5 +464,16 @@ const styles = StyleSheet.create({
   header: {
     fontSize: 30,
     fontWeight: "bold",
+  },
+
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
   },
 });
