@@ -1,12 +1,4 @@
-import {
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-
+import {Alert,ScrollView,StyleSheet,Text,TouchableOpacity,View,} from "react-native";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -20,7 +12,7 @@ import { generarMensaje } from "../../ml/notificaciones";
 import { generarRecomendaciones } from "../../ml/recomendaciones";
 
 export default function Home() {
-  const dark = useTheme();
+  const { dark, colors } = useTheme();
   const router = useRouter();
 
   const [usuario, setUsuario] = useState<any>(null);

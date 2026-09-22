@@ -1,7 +1,4 @@
-import MapView, {
-  Marker,
-} from "react-native-maps";
-
+import MapView, { Marker } from "react-native-maps";
 import {
   View,
   Text,
@@ -9,18 +6,17 @@ import {
   ScrollView,
   ActivityIndicator,
 } from "react-native";
-
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import {
-  useState,
-  useEffect,
-} from "react";
+import { useState, useEffect } from "react";
 import { buscarCentrosMedicos } from "../../services/mapService";
 
 import * as Location from "expo-location";
+import { useTheme } from "../../hooks/useTheme";
 
 export default function Mapa() {
+  const { colors } = useTheme();
+
   const [ubicacion, setUbicacion] =
     useState<any>(null);
 
@@ -30,7 +26,7 @@ export default function Mapa() {
   const [loading, setLoading] =
     useState(true);
 
-  // 📍 Obtener ubicación
+  // Obtener ubicación
   useEffect(() => {
     const cargar = async () => {
       try {
@@ -44,6 +40,7 @@ export default function Mapa() {
             "Permiso de ubicación denegado"
           );
 
+          setLoading(false);
           return;
         }
 
@@ -63,40 +60,56 @@ export default function Mapa() {
           longitude: lng,
         });
 
-        // 🔍 Buscar hospitales reales
         buscarHospitales(lat, lng);
       } catch (error) {
         console.log(error);
+        setLoading(false);
       }
     };
 
     cargar();
   }, []);
 
-  // 🏥 API OpenStreetMap
+  // API OpenStreetMap
   const buscarHospitales = async (
-  lat: number,
-  lng: number
-) => {
-  setLoading(true);
+    lat: number,
+    lng: number
+  ) => {
+    setLoading(true);
 
-  const data =
-    await buscarCentrosMedicos(
-      lat,
-      lng
-    );
+    const data =
+      await buscarCentrosMedicos(
+        lat,
+        lng
+      );
 
-  setLugares(data);
+    setLugares(data);
 
-  setLoading(false);
-};
+    setLoading(false);
+  };
 
   if (loading) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" />
+      <View
+        style={[
+          styles.loading,
+          {
+            backgroundColor:
+              colors.background,
+          },
+        ]}
+      >
+        <ActivityIndicator
+          size="large"
+          color={colors.primary}
+        />
 
-        <Text>
+        <Text
+          style={{
+            color: colors.text,
+            marginTop: 10,
+          }}
+        >
           Buscando centros médicos...
         </Text>
       </View>
@@ -104,15 +117,38 @@ export default function Mapa() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={[
+        styles.container,
+        {
+          backgroundColor:
+            colors.background,
+        },
+      ]}
+    >
       <ScrollView
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.header}>
+        <Text
+          style={[
+            styles.header,
+            {
+              color: colors.primary,
+            },
+          ]}
+        >
           Centros Médicos Cercanos
         </Text>
 
-        <Text style={styles.subtitle}>
+        <Text
+          style={[
+            styles.subtitle,
+            {
+              color:
+                colors.textSecondary,
+            },
+          ]}
+        >
           Hospitales y farmacias cerca de ti
         </Text>
 
@@ -148,9 +184,13 @@ export default function Mapa() {
                   <Marker
                     key={index}
                     coordinate={{
-  latitude: Number(lugar.lat),
-  longitude: Number(lugar.lon),
-}}
+                      latitude: Number(
+                        lugar.lat
+                      ),
+                      longitude: Number(
+                        lugar.lon
+                      ),
+                    }}
                     title={
                       lugar.tags?.name ||
                       "Centro médico"
@@ -171,17 +211,36 @@ export default function Mapa() {
           (lugar, index) => (
             <View
               key={index}
-              style={styles.card}
+              style={[
+                styles.card,
+                {
+                  backgroundColor:
+                    colors.card,
+                },
+              ]}
             >
               <Text
-                style={styles.cardTitle}
+                style={[
+                  styles.cardTitle,
+                  {
+                    color: colors.text,
+                  },
+                ]}
               >
                 {lugar.display_name ||
-                "Centro Médico"}
+                  "Centro Médico"}
               </Text>
 
-              <Text style={styles.cardText}>
-              Hospital o centro de salud
+              <Text
+                style={[
+                  styles.cardText,
+                  {
+                    color:
+                      colors.textSecondary,
+                  },
+                ]}
+              >
+                Hospital o centro de salud
               </Text>
             </View>
           )
@@ -194,7 +253,6 @@ export default function Mapa() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F3F4F6",
     padding: 20,
   },
 
@@ -207,13 +265,11 @@ const styles = StyleSheet.create({
   header: {
     fontSize: 30,
     fontWeight: "bold",
-    color: "#2563EB",
   },
 
   subtitle: {
     marginTop: 5,
     marginBottom: 20,
-    color: "#6B7280",
   },
 
   mapContainer: {
@@ -228,7 +284,6 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    backgroundColor: "#fff",
     padding: 18,
     borderRadius: 18,
     marginBottom: 14,
@@ -247,6 +302,5 @@ const styles = StyleSheet.create({
 
   cardText: {
     marginTop: 5,
-    color: "#6B7280",
   },
 });

@@ -1,6 +1,8 @@
 import { View, Text, StyleSheet, FlatList } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { useTheme } from "../../hooks/useTheme";
+
 const alertsData = [
   {
     id: "1",
@@ -22,34 +24,70 @@ const alertsData = [
 ];
 
 export default function Alerts() {
+  const { colors } = useTheme();
+
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.header}>Alertas Epidemiológicas</Text>
+    <SafeAreaView
+      style={[
+        styles.container,
+        { backgroundColor: colors.background },
+      ]}
+    >
+      <Text style={styles.header}>
+        Alertas Epidemiológicas
+      </Text>
 
       <FlatList
         data={alertsData}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-  <View style={styles.card}>
-    <Text style={styles.title}>
-      {item.disease}
-    </Text>
+          <View
+            style={[
+              styles.card,
+              { backgroundColor: colors.card },
+            ]}
+          >
+            <Text
+              style={[
+                styles.title,
+                { color: colors.text },
+              ]}
+            >
+              {item.disease}
+            </Text>
 
-    <Text style={styles.level}>
-      Nivel: {item.level}
-    </Text>
+            <Text style={styles.level}>
+              Nivel: {item.level}
+            </Text>
 
-    <Text style={styles.location}>
-      Ubicación: {item.location}
-    </Text>
+            <Text
+              style={[
+                styles.location,
+                { color: colors.text },
+              ]}
+            >
+              Ubicación: {item.location}
+            </Text>
 
-    <Text style={styles.recommendation}>
-      {item.recommendation}
-    </Text>
-  </View>
-)}
+            <Text
+              style={[
+                styles.recommendation,
+                { color: colors.textSecondary },
+              ]}
+            >
+              {item.recommendation}
+            </Text>
+          </View>
+        )}
         ListEmptyComponent={
-          <Text style={styles.empty}>No hay alertas cercanas</Text>
+          <Text
+            style={[
+              styles.empty,
+              { color: colors.textSecondary },
+            ]}
+          >
+            No hay alertas cercanas
+          </Text>
         }
       />
     </SafeAreaView>
@@ -60,7 +98,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: "#F3F4F6",
   },
 
   header: {
@@ -71,7 +108,6 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    backgroundColor: "#fff",
     padding: 20,
     borderRadius: 18,
     marginBottom: 15,
@@ -86,7 +122,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#111827",
   },
 
   level: {
@@ -97,18 +132,15 @@ const styles = StyleSheet.create({
 
   location: {
     marginTop: 6,
-    color: "#374151",
   },
 
   recommendation: {
     marginTop: 12,
-    color: "#6B7280",
     lineHeight: 20,
   },
 
   empty: {
     textAlign: "center",
     marginTop: 40,
-    color: "#6B7280",
   },
 });

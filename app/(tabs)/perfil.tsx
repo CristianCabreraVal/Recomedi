@@ -5,21 +5,18 @@ import {
   TouchableOpacity,
   ScrollView,
 } from "react-native";
-
 import { useState, useEffect } from "react";
-
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useRouter } from "expo-router";
-
 import { auth, db } from "../../services/firebase";
 
-import {
-  doc,
-  getDoc,
-} from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
+import { useTheme } from "../../hooks/useTheme";
 
 export default function Perfil() {
+  const { colors } = useTheme();
+
   const [usuario, setUsuario] =
     useState<any>(null);
 
@@ -51,16 +48,34 @@ export default function Perfil() {
     cargar();
   }, []);
 
-  // 🔥 SI NO EXISTE PERFIL
+  // SI NO EXISTE PERFIL
   if (!usuario) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView
+        style={[
+          styles.container,
+          {
+            backgroundColor:
+              colors.background,
+          },
+        ]}
+      >
         <View style={styles.emptyCard}>
-          <Text style={styles.header}>
+          <Text
+            style={[
+              styles.header,
+              { color: colors.primary },
+            ]}
+          >
             Perfil
           </Text>
 
-          <Text style={styles.emptyText}>
+          <Text
+            style={[
+              styles.emptyText,
+              { color: colors.textSecondary },
+            ]}
+          >
             Aún no has creado tu perfil
           </Text>
 
@@ -79,7 +94,7 @@ export default function Perfil() {
     );
   }
 
-  // 🔥 CALCULAR IMC
+  // CALCULAR IMC
   const alturaMetros =
     usuario.altura / 100;
 
@@ -88,7 +103,15 @@ export default function Perfil() {
     (alturaMetros * alturaMetros);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={[
+        styles.container,
+        {
+          backgroundColor:
+            colors.background,
+        },
+      ]}
+    >
       <ScrollView
         showsVerticalScrollIndicator={false}
       >
@@ -112,32 +135,78 @@ export default function Perfil() {
 
         {/* DATOS */}
 
-        <View style={styles.card}>
-          <Text style={styles.section}>
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor:
+                colors.card,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.section,
+              { color: colors.text },
+            ]}
+          >
             Información Personal
           </Text>
 
-          <Text style={styles.item}>
+          <Text
+            style={[
+              styles.item,
+              { color: colors.text },
+            ]}
+          >
             Edad: {usuario.edad} años
           </Text>
 
-          <Text style={styles.item}>
+          <Text
+            style={[
+              styles.item,
+              { color: colors.text },
+            ]}
+          >
             Peso: {usuario.peso} kg
           </Text>
 
-          <Text style={styles.item}>
+          <Text
+            style={[
+              styles.item,
+              { color: colors.text },
+            ]}
+          >
             Altura: {usuario.altura} cm
           </Text>
 
-          <Text style={styles.item}>
+          <Text
+            style={[
+              styles.item,
+              { color: colors.text },
+            ]}
+          >
             Género: {usuario.genero}
           </Text>
         </View>
 
         {/* IMC */}
 
-        <View style={styles.card}>
-          <Text style={styles.section}>
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor:
+                colors.card,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.section,
+              { color: colors.text },
+            ]}
+          >
             Índice de Masa Corporal
           </Text>
 
@@ -145,7 +214,15 @@ export default function Perfil() {
             {imc.toFixed(1)}
           </Text>
 
-          <Text style={styles.imcText}>
+          <Text
+            style={[
+              styles.imcText,
+              {
+                color:
+                  colors.textSecondary,
+              },
+            ]}
+          >
             {imc < 18.5
               ? "Bajo peso"
               : imc < 25
@@ -158,8 +235,21 @@ export default function Perfil() {
 
         {/* CONDICIONES */}
 
-        <View style={styles.card}>
-          <Text style={styles.section}>
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor:
+                colors.card,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.section,
+              { color: colors.text },
+            ]}
+          >
             Condiciones Médicas
           </Text>
 
@@ -173,16 +263,31 @@ export default function Perfil() {
                 ) => (
                   <View
                     key={index}
-                    style={styles.condition}
+                    style={[
+                      styles.condition,
+                      {
+                        backgroundColor:
+                          colors.background,
+                      },
+                    ]}
                   >
-                    <Text>
+                    <Text
+                      style={{
+                        color: colors.text,
+                      }}
+                    >
                       {item}
                     </Text>
                   </View>
                 )
               )
             ) : (
-              <Text>
+              <Text
+                style={{
+                  color:
+                    colors.textSecondary,
+                }}
+              >
                 Sin condiciones registradas
               </Text>
             )}
@@ -209,7 +314,6 @@ export default function Perfil() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F3F4F6",
     padding: 20,
   },
 
@@ -225,7 +329,7 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 15,
@@ -240,7 +344,7 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 26,
     fontWeight: "bold",
-    color: "#fff",
+    color: "#FFFFFF",
   },
 
   subtitle: {
@@ -249,7 +353,6 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    backgroundColor: "#fff",
     padding: 20,
     borderRadius: 20,
     marginBottom: 18,
@@ -279,7 +382,6 @@ const styles = StyleSheet.create({
   },
 
   condition: {
-    backgroundColor: "#DBEAFE",
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -293,7 +395,6 @@ const styles = StyleSheet.create({
 
   imcText: {
     marginTop: 10,
-    color: "#6B7280",
   },
 
   button: {
@@ -305,7 +406,7 @@ const styles = StyleSheet.create({
   },
 
   buttonText: {
-    color: "#fff",
+    color: "#FFFFFF",
     fontWeight: "bold",
     fontSize: 16,
   },
@@ -318,12 +419,10 @@ const styles = StyleSheet.create({
 
   emptyText: {
     marginVertical: 15,
-    color: "#6B7280",
   },
 
   header: {
     fontSize: 30,
     fontWeight: "bold",
-    color: "#2563EB",
   },
 });

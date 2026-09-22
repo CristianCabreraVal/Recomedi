@@ -1,0 +1,117 @@
+import {createContext,useContext,useEffect,useState,ReactNode,} from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+type Theme = {
+  dark: boolean;
+  setDark: (value: boolean) => void;
+  toggleTheme: () => void;
+
+  colors: {
+    background: string;
+    card: string;
+    text: string;
+    textSecondary: string;
+    primary: string;
+    border: string;
+
+    // Colores especiales para elementos que necesitan
+    // conservar una apariencia determinada.
+    mapBackground: string;
+    mapText: string;
+  };
+};
+
+const ThemeContext = createContext<Theme | undefined>(undefined);
+
+export const ThemeProvider = ({ children }: { children: ReactNode }) => {
+  const [dark, setDark] = useState(false);
+
+  useEffect(() => {
+    const cargarTema = async () => {
+      try {
+        const data = await AsyncStorage.getItem("config");
+
+        if (data) {
+          const config = JSON.parse(data);
+          setDark(config.modoOscuro ?? false);
+        }
+      } catch (error) {
+        console.error("Error al cargar el tema:", error);
+      }
+    };
+
+    cargarTema();
+  }, []);
+
+  const cambiarTema = async (value: boolean) => {
+    setDark(value);
+
+    try {
+      const data = await AsyncStorage.getItem("config");
+      const config = data ? JSON.parse(data) : {};
+
+      config.modoOscuro = value;
+
+      await AsyncStorage.setItem("config", JSON.stringify(config));
+    } catch (error) {
+      console.error("Error al guardar el tema:", error);
+    }
+  };
+
+  const toggleTheme = () => {
+    cambiarTema(!dark);
+  };
+
+  const colors = dark
+    ? {
+        // Tema oscuro
+        background: "#111827",
+        card: "#1F2937",
+        text: "#F9FAFB",
+        textSecondary: "#D1D5DB",
+        primary: "#60A5FA",
+        border: "#374151",
+
+        // Elementos especiales
+        mapBackground: "#111827",
+        mapText: "#FFFFFF",
+      }
+    : {
+        // Tema claro
+        background: "#F3F4F6",
+        card: "#FFFFFF",
+        text: "#111827",
+        textSecondary: "#6B7280",
+        primary: "#2563EB",
+        border: "#E5E7EB",
+
+        // Elementos especiales
+        mapBackground: "#F3F4F6",
+        mapText: "#111827",
+      };
+
+  return (
+    <ThemeContext.Provider
+      value={{
+        dark,
+        setDark: cambiarTema,
+        toggleTheme,
+        colors,
+      }}
+    >
+      {children}
+    </ThemeContext.Provider>
+  );
+};
+
+export const useTheme = () => {
+  const context = useContext(ThemeContext);
+
+  if (!context) {
+    throw new Error(
+      "useTheme debe utilizarse dentro de ThemeProvider"
+    );
+  }
+
+  return context;
+};
