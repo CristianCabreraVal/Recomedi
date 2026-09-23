@@ -44,6 +44,21 @@ export default function Layout() {
           ),
         }}
       />
+      <Tabs.Screen
+  name="actividad"
+  options={{
+    title: "Actividad",
+    tabBarIcon: ({ color, size }) => (
+      <Ionicons
+        name="fitness"
+        size={size}
+        color={color}
+      />
+    ),
+  }}
+/>
+      
+  
 
       <Tabs.Screen
   name="perfil"
