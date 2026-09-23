@@ -2014,23 +2014,16 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
-  registerActivityButton: {
-    minHeight: 86,
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    flexDirection: "row",
-    alignItems: "center",
+registerActivityButton: {
+  minHeight: 86,
+  borderRadius: 20,
+  paddingHorizontal: 15,
+  paddingVertical: 12,
+  flexDirection: "row",
+  alignItems: "center",
 
-    elevation: 4,
-
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-  },
+  boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.18)",
+},
 
   registerActivityIcon: {
     width: 54,

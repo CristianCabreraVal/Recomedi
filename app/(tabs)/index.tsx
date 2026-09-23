@@ -8,7 +8,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useTheme } from "../../hooks/useTheme";
-import { generarMensaje } from "../../ml/notificaciones";
 import { generarRecomendaciones } from "../../ml/recomendaciones";
 
 export default function Home() {
@@ -16,51 +15,76 @@ export default function Home() {
   const router = useRouter();
 
   const [usuario, setUsuario] = useState<any>(null);
-  const [recomendaciones, setRecomendaciones] = useState<string[]>([]);
+  const [recomendaciones, setRecomendaciones] =
+  useState<string[]>([]);
+  const [ultimaRecomendacion, setUltimaRecomendacion] =
+  useState<string | null>(null);
+
+  const probarRecomendacion = () => {
+  try {
+    if (recomendaciones.length === 0) {
+      setUltimaRecomendacion(
+        "No hay recomendaciones disponibles en este momento."
+      );
+      return;
+    }
+
+    let indice: number;
+
+    do {
+      indice = Math.floor(
+        Math.random() * recomendaciones.length
+      );
+    } while (
+      recomendaciones.length > 1 &&
+      recomendaciones[indice] === ultimaRecomendacion
+    );
+
+    setUltimaRecomendacion(recomendaciones[indice]);
+  } catch (error) {
+    console.error(
+      "Error generando recomendación:",
+      error
+    );
+
+    setUltimaRecomendacion(
+      "No fue posible generar la recomendación."
+    );
+  }
+};
 
   useEffect(() => {
-    const cargarUsuario = async () => {
-      try {
-        const data = await AsyncStorage.getItem("usuario");
-
-        if (!data) {
-          setUsuario(null);
-          setRecomendaciones([]);
-          return;
-        }
-
-        const user = JSON.parse(data);
-
-        setUsuario(user);
-
-        const rec = generarRecomendaciones(user);
-        setRecomendaciones(rec);
-      } catch (error) {
-        console.error("Error cargando usuario:", error);
-      }
-    };
-
-    cargarUsuario();
-  }, []);
-
-  const probarRecomendacion = async () => {
+  const cargarUsuario = async () => {
     try {
       const data = await AsyncStorage.getItem("usuario");
 
-      const usuarioActual = data ? JSON.parse(data) : null;
+      if (!data) {
+        setUsuario(null);
 
-      const mensaje = generarMensaje(usuarioActual);
+        const rec = generarRecomendaciones();
+        setRecomendaciones(rec);
 
-      Alert.alert("Recomedi", mensaje);
+        return;
+      }
+
+      const user = JSON.parse(data);
+
+      setUsuario(user);
+
+      const rec = generarRecomendaciones(user);
+      setRecomendaciones(rec);
     } catch (error) {
-      console.error("Error generando recomendación:", error);
+      console.error("Error cargando usuario:", error);
 
-      Alert.alert(
-        "Recomedi",
-        "No fue posible generar la recomendación."
-      );
+      // Incluso si ocurre un error con el perfil,
+      // las recomendaciones generales siguen disponibles.
+      const rec = generarRecomendaciones();
+      setRecomendaciones(rec);
     }
   };
+
+  cargarUsuario();
+}, []);
 
   return (
     <SafeAreaView
@@ -97,22 +121,22 @@ export default function Home() {
         {/* RECOMENDACIÓN DESTACADA */}
         <View style={styles.mainCard}>
           <Text style={styles.mainTitle}>
-            Recomendación personalizada
-          </Text>
+  Recomendación personalizada
+</Text>
 
-          <Text style={styles.mainText}>
-            Mantener controles médicos periódicos ayuda a
-            prevenir enfermedades.
-          </Text>
+<Text style={styles.mainText}>
+  {ultimaRecomendacion ??
+    "Presiona el botón para recibir una recomendación."}
+</Text>
 
-          <TouchableOpacity
-            style={styles.button}
-            onPress={probarRecomendacion}
-          >
-            <Text style={styles.buttonText}>
-              Ver recomendación
-            </Text>
-          </TouchableOpacity>
+<TouchableOpacity
+  style={styles.button}
+  onPress={probarRecomendacion}
+>
+  <Text style={styles.buttonText}>
+    Ver recomendación
+  </Text>
+</TouchableOpacity>
         </View>
 
         {/* RECORDATORIOS */}

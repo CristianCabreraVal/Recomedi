@@ -8,7 +8,7 @@ export default function Layout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Index",
+          title: "Inicio",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home" size={size} color={color} />
           ),

@@ -25,23 +25,35 @@ const ThemeContext = createContext<Theme | undefined>(undefined);
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [dark, setDark] = useState(false);
+useEffect(() => {
+  const cargarTema = async () => {
+    try {
+      const data = await AsyncStorage.getItem("config");
 
-  useEffect(() => {
-    const cargarTema = async () => {
-      try {
-        const data = await AsyncStorage.getItem("config");
-
-        if (data) {
-          const config = JSON.parse(data);
-          setDark(config.modoOscuro ?? false);
-        }
-      } catch (error) {
-        console.error("Error al cargar el tema:", error);
+      if (!data) {
+        return;
       }
-    };
 
-    cargarTema();
-  }, []);
+      try {
+        const config = JSON.parse(data);
+
+        setDark(Boolean(config?.modoOscuro));
+      } catch (error) {
+        console.warn(
+          "La configuración guardada no es válida. Se restablecerá."
+        );
+
+        await AsyncStorage.removeItem("config");
+        setDark(false);
+      }
+    } catch (error) {
+      console.error("Error al cargar el tema:", error);
+      setDark(false);
+    }
+  };
+
+  cargarTema();
+}, []);
 
   const cambiarTema = async (value: boolean) => {
     setDark(value);
