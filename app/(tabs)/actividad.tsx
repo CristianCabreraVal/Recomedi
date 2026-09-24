@@ -1,22 +1,30 @@
+// Importación de componentes base de React Native para construir la interfaz y manejar eventos
 import {
-  View,
-  Text,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
   StyleSheet,
+  Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
+  View,
 } from "react-native";
 
+// Importación de hooks fundamentales de React
 import { useCallback, useState } from "react";
+// Hook de Expo Router para ejecutar acciones cuando la pantalla se vuelve visible
 import { useFocusEffect } from "expo-router";
+// Librería de iconos vectoriales incluida en Expo
 import { Ionicons } from "@expo/vector-icons";
+// Componente para evitar que el contenido se solape con los bordes físicos del dispositivo (notch, barra de estado)
 import { SafeAreaView } from "react-native-safe-area-context";
 
+// Importación del hook personalizado para obtener los colores del tema actual (claro u oscuro)
 import { useTheme } from "../../hooks/useTheme";
+// Instancias de autenticación y base de datos configuradas de Firebase
 import { auth, db } from "../../services/firebase";
 
+// Importación de funciones específicas de Firebase Firestore para manipular y consultar datos
 import {
   collection,
   doc,
@@ -28,6 +36,12 @@ import {
   setDoc,
 } from "firebase/firestore";
 
+/* ============================================================
+   TIPOS DE DATOS (TypeScript)
+============================================================ */
+
+// Define la estructura exacta de un documento de actividad en la base de datos.
+// Se usa "number | null" porque el usuario podría no registrar todas las métricas un día.
 type RegistroActividad = {
   id: string;
   fecha: string;
@@ -37,36 +51,58 @@ type RegistroActividad = {
   distancia: number | null;
 };
 
+// Limita los valores posibles para la variable métrica, evitando errores de escritura.
 type Metrica = "pasos" | "calorias" | "frecuenciaCardiaca" | "distancia";
 
+/* ============================================================
+   COMPONENTE PRINCIPAL DE LA PANTALLA
+============================================================ */
 export default function Actividad() {
+  // Obtenemos la paleta de colores actual dependiendo del tema del dispositivo
   const { colors } = useTheme();
 
+  // --- ESTADOS DEL FORMULARIO DE REGISTRO ---
+  // Inicializa la fecha con el día actual por defecto
   const [fecha, setFecha] = useState(obtenerFechaActual());
-
+  
+  // Estados para almacenar lo que el usuario escribe en los campos de texto
   const [pasos, setPasos] = useState("");
   const [frecuenciaCardiaca, setFrecuenciaCardiaca] = useState("");
   const [calorias, setCalorias] = useState("");
   const [distancia, setDistancia] = useState("");
 
+  // --- ESTADOS DE CARGA E INTERFAZ ---
+  // Controlan la aparición de los círculos de carga (spinners)
   const [guardando, setGuardando] = useState(false);
   const [cargandoDatos, setCargandoDatos] = useState(true);
 
+  // --- ESTADOS DE DATOS Y VISUALIZACIÓN ---
+  // Almacena el array de actividades descargadas desde Firestore
   const [registros, setRegistros] = useState<RegistroActividad[]>([]);
+  // Días que se van a consultar y mostrar en la gráfica (7 por defecto)
   const [periodo, setPeriodo] = useState(7);
+  // Métrica que se está mostrando actualmente en la gráfica principal
   const [metrica, setMetrica] = useState<Metrica>("pasos");
 
+  // Controla si se despliega o se oculta la sección para ingresar datos manualmente
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
 
+  // --- EFECTO DE CICLO DE VIDA ---
+  // Se ejecuta cada vez que la pantalla gana el foco o cuando cambia el "periodo".
+  // Su función principal es mantener los datos actualizados.
   useFocusEffect(
     useCallback(() => {
       cargarDatos(periodo);
     }, [periodo])
   );
 
+  /* ============================================================
+     FUNCIÓN PARA OBTENER DATOS DE FIREBASE
+  ============================================================ */
   async function cargarDatos(dias: number) {
     const usuario = auth.currentUser;
 
+    // Si no hay sesión iniciada, vaciamos los registros y detenemos la carga
     if (!usuario) {
       setRegistros([]);
       setCargandoDatos(false);
@@ -74,8 +110,9 @@ export default function Actividad() {
     }
 
     try {
-      setCargandoDatos(true);
+      setCargandoDatos(true); // Mostramos el indicador de carga
 
+      // 1. Apuntamos a la subcolección "actividad" dentro del documento del usuario actual
       const referencia = collection(
         db,
         "usuarios",
@@ -83,22 +120,25 @@ export default function Actividad() {
         "actividad"
       );
 
+      // 2. Construimos la consulta: Ordenamos por fecha (más reciente primero) y limitamos a la cantidad de "días"
       const consulta = query(
         referencia,
         orderBy("fecha", "desc"),
         limit(dias)
       );
 
+      // 3. Ejecutamos la petición a Firebase
       const resultado = await getDocs(consulta);
 
+      // 4. Transformamos los documentos crudos de Firebase a nuestro tipo "RegistroActividad"
       const datos: RegistroActividad[] = resultado.docs.map((documento) => {
         const data = documento.data();
 
+        // Validamos que cada campo sea un número; de lo contrario, forzamos un valor null
         return {
           id: documento.id,
           fecha: data.fecha ?? documento.id,
-          pasos:
-            typeof data.pasos === "number" ? data.pasos : null,
+          pasos: typeof data.pasos === "number" ? data.pasos : null,
           frecuenciaCardiaca:
             typeof data.frecuenciaCardiaca === "number"
               ? data.frecuenciaCardiaca
@@ -114,26 +154,30 @@ export default function Actividad() {
         };
       });
 
+      // 5. Ordenamos localmente de forma descendente para asegurar que las fechas estén correctas
       datos.sort((a, b) => b.fecha.localeCompare(a.fecha));
 
+      // 6. Guardamos los datos formateados en el estado de React
       setRegistros(datos);
     } catch (error) {
       console.error("Error cargando actividad:", error);
-
       Alert.alert(
         "Error",
         "No fue posible cargar los datos de actividad."
       );
-
-      setRegistros([]);
+      setRegistros([]); // En caso de error, dejamos la lista vacía
     } finally {
-      setCargandoDatos(false);
+      setCargandoDatos(false); // Ocultamos el indicador de carga en cualquier caso (éxito o error)
     }
   }
 
+  /* ============================================================
+     FUNCIÓN PARA GUARDAR DATOS EN FIREBASE
+  ============================================================ */
   async function guardarRegistro() {
     const usuario = auth.currentUser;
 
+    // Validación 1: Verificar que el usuario tenga sesión
     if (!usuario) {
       Alert.alert(
         "Sesión requerida",
@@ -142,11 +186,13 @@ export default function Actividad() {
       return;
     }
 
+    // Validación 2: Verificar que el campo fecha no esté vacío
     if (!fecha.trim()) {
       Alert.alert("Fecha requerida", "Ingresa una fecha.");
       return;
     }
 
+    // Validación 3: Al menos un campo numérico debe tener datos para que valga la pena guardar
     if (
       pasos.trim() === "" &&
       frecuenciaCardiaca.trim() === "" &&
@@ -161,8 +207,10 @@ export default function Actividad() {
     }
 
     try {
-      setGuardando(true);
+      setGuardando(true); // Activamos el spinner del botón guardar
 
+      // Construimos el objeto a guardar. 
+      // Si el campo de texto está vacío, enviamos null; si tiene texto, lo convertimos a Número.
       const registro = {
         fecha: fecha.trim(),
         pasos: pasos.trim() === "" ? null : Number(pasos),
@@ -175,9 +223,10 @@ export default function Actividad() {
         distancia:
           distancia.trim() === "" ? null : Number(distancia),
         origen: "manual",
-        actualizadoEn: serverTimestamp(),
+        actualizadoEn: serverTimestamp(), // Registra la fecha/hora exacta del servidor
       };
 
+      // Establecemos la ruta exacta del documento. Usamos la FECHA como ID del documento.
       const referencia = doc(
         db,
         "usuarios",
@@ -186,6 +235,8 @@ export default function Actividad() {
         fecha.trim()
       );
 
+      // Guardamos el documento. 
+      // IMPORTANTE: { merge: true } hace que si el documento ya existe, solo actualice los campos enviados sin borrar los demás.
       await setDoc(referencia, registro, { merge: true });
 
       Alert.alert(
@@ -193,26 +244,32 @@ export default function Actividad() {
         "Los datos de actividad se guardaron correctamente."
       );
 
+      // Refrescamos la información de la pantalla para reflejar los nuevos cambios
       await cargarDatos(periodo);
     } catch (error) {
       console.error("Error guardando actividad:", error);
-
       Alert.alert(
         "Error",
         "No fue posible guardar los datos. Intenta nuevamente."
       );
     } finally {
-      setGuardando(false);
+      setGuardando(false); // Desactivamos el spinner del botón
     }
   }
 
+  // --- CÁLCULOS DERIVADOS ---
+  // Busca si dentro de los registros descargados existe uno con la fecha de hoy
   const registroHoy = registros.find(
     (registro) => registro.fecha === obtenerFechaActual()
   );
 
+  // Calcula promedio y el valor más alto según la métrica actualmente seleccionada
   const promedio = calcularPromedio(registros, metrica);
   const mayor = obtenerMayor(registros, metrica);
 
+  /* ============================================================
+     RENDERIZADO DE LA INTERFAZ DE USUARIO (JSX)
+  ============================================================ */
   return (
     <SafeAreaView
       style={[
@@ -222,12 +279,13 @@ export default function Actividad() {
         },
       ]}
     >
+      {/* Contenedor principal desplazable (Scroll) */}
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        {/* ENCABEZADO */}
-
+        
+        {/* ENCABEZADO: Ícono y Títulos principales */}
         <View style={styles.header}>
           <View style={styles.headerIcon}>
             <Ionicons
@@ -262,8 +320,7 @@ export default function Actividad() {
           </View>
         </View>
 
-        {/* RESUMEN DE HOY */}
-
+        {/* SECCIÓN: RESUMEN DE HOY */}
         <Text
           style={[
             styles.sectionTitle,
@@ -275,6 +332,7 @@ export default function Actividad() {
           Resumen de hoy
         </Text>
 
+        {/* Cuadrícula (Grid) que muestra 4 tarjetas pequeñas con los datos del día actual */}
         <View style={styles.summaryGrid}>
           <SummaryCard
             icon="footsteps"
@@ -283,7 +341,7 @@ export default function Actividad() {
               registroHoy?.pasos !== null &&
               registroHoy?.pasos !== undefined
                 ? formatearNumero(registroHoy.pasos)
-                : "--"
+                : "--" // Muestra guiones si no hay dato
             }
             colors={colors}
           />
@@ -325,8 +383,7 @@ export default function Actividad() {
           />
         </View>
 
-        {/* GRAFICA */}
-
+        {/* SECCIÓN: GRÁFICA DE COMPARACIÓN */}
         <View style={styles.sectionHeader}>
           <View>
             <Text
@@ -354,8 +411,7 @@ export default function Actividad() {
           </View>
         </View>
 
-        {/* SELECTOR DE PERIODO */}
-
+        {/* SELECTOR DE PERIODO: Botones para cambiar entre 7, 14 y 30 días */}
         <View
           style={[
             styles.periodContainer,
@@ -368,11 +424,11 @@ export default function Actividad() {
           {[7, 14, 30].map((cantidad) => (
             <TouchableOpacity
               key={cantidad}
-              onPress={() => setPeriodo(cantidad)}
+              onPress={() => setPeriodo(cantidad)} // Actualiza el periodo, provocando que se vuelva a consultar Firebase
               style={[
                 styles.periodButton,
                 periodo === cantidad && {
-                  backgroundColor: colors.primary,
+                  backgroundColor: colors.primary, // Color sólido si es el botón activo
                 },
               ]}
             >
@@ -393,8 +449,7 @@ export default function Actividad() {
           ))}
         </View>
 
-        {/* SELECTOR DE METRICA */}
-
+        {/* SELECTOR DE MÉTRICA: Botones deslizables horizontalmente para cambiar qué métrica se grafica */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -404,7 +459,7 @@ export default function Actividad() {
             icon="footsteps"
             title="Pasos"
             active={metrica === "pasos"}
-            onPress={() => setMetrica("pasos")}
+            onPress={() => setMetrica("pasos")} // Actualiza la métrica visible
             colors={colors}
           />
 
@@ -435,8 +490,7 @@ export default function Actividad() {
           />
         </ScrollView>
 
-        {/* TARJETA DE GRAFICA */}
-
+        {/* TARJETA DE GRÁFICA: Contenedor visual del gráfico de barras */}
         <View
           style={[
             styles.chartCard,
@@ -446,6 +500,7 @@ export default function Actividad() {
             },
           ]}
         >
+          {/* Cabecera de la gráfica (Título dinámico e ícono) */}
           <View style={styles.chartHeader}>
             <View>
               <Text
@@ -487,7 +542,9 @@ export default function Actividad() {
             </View>
           </View>
 
+          {/* Renderizado condicional de la gráfica */}
           {cargandoDatos ? (
+            // 1. Estado de carga: Muestra el spinner si está consultando base de datos
             <View style={styles.chartLoading}>
               <ActivityIndicator
                 size="large"
@@ -506,6 +563,7 @@ export default function Actividad() {
               </Text>
             </View>
           ) : registros.length === 0 ? (
+            // 2. Estado vacío: Si se consultó pero no hay registros guardados en absoluto
             <View style={styles.emptyChart}>
               <Ionicons
                 name="bar-chart-outline"
@@ -537,6 +595,7 @@ export default function Actividad() {
               </Text>
             </View>
           ) : (
+            // 3. Estado con datos: Renderiza el componente de gráfica
             <BarChart
               registros={registros}
               metrica={metrica}
@@ -545,8 +604,7 @@ export default function Actividad() {
           )}
         </View>
 
-        {/* ESTADISTICAS DEL PERIODO */}
-
+        {/* SECCIÓN: ESTADÍSTICAS DEL PERIODO */}
         <Text
           style={[
             styles.sectionTitle,
@@ -567,6 +625,7 @@ export default function Actividad() {
             },
           ]}
         >
+          {/* Fila: Total de días registrados de los consultados */}
           <StatRow
             icon="calendar"
             title="Días registrados"
@@ -583,6 +642,7 @@ export default function Actividad() {
             ]}
           />
 
+          {/* Fila: Valor promedio matemático */}
           <StatRow
             icon="analytics"
             title="Promedio"
@@ -605,6 +665,7 @@ export default function Actividad() {
             ]}
           />
 
+          {/* Fila: El valor más alto registrado y en qué fecha fue */}
           <StatRow
             icon="trophy"
             title="Mayor registro"
@@ -620,8 +681,7 @@ export default function Actividad() {
           />
         </View>
 
-        {/* HISTORIAL */}
-
+        {/* SECCIÓN: HISTORIAL (Listado detallado) */}
         <View style={styles.historyHeader}>
           <View>
             <Text
@@ -648,6 +708,7 @@ export default function Actividad() {
             </Text>
           </View>
 
+          {/* Botón para refrescar (forzar recarga) los datos manualmente */}
           <TouchableOpacity
             onPress={() => cargarDatos(periodo)}
           >
@@ -659,6 +720,7 @@ export default function Actividad() {
           </TouchableOpacity>
         </View>
 
+        {/* Renderizado de las tarjetas del historial */}
         {registros.length === 0 ? (
           <View
             style={[
@@ -698,6 +760,7 @@ export default function Actividad() {
             </Text>
           </View>
         ) : (
+          // Itera el arreglo para renderizar una tarjeta por cada día registrado
           registros.map((registro) => (
             <HistoryCard
               key={registro.id}
@@ -707,279 +770,283 @@ export default function Actividad() {
           ))
         )}
 
-{/* FORMULARIO */}
+        {/* SECCIÓN: FORMULARIO DE REGISTRO MANUAL (Acordeón) */}
+        <View style={styles.formHeader}>
+          {/* Botón grande que muestra u oculta el formulario */}
+          <TouchableOpacity
+            onPress={() => setMostrarFormulario(!mostrarFormulario)}
+            activeOpacity={0.85}
+            style={[
+              styles.registerActivityButton,
+              {
+                backgroundColor: colors.primary,
+              },
+            ]}
+          >
+            <View style={styles.registerActivityIcon}>
+              <Ionicons
+                name={mostrarFormulario ? "close" : "add"}
+                size={28}
+                color="#FFFFFF"
+              />
+            </View>
 
-<View style={styles.formHeader}>
-  <TouchableOpacity
-    onPress={() => setMostrarFormulario(!mostrarFormulario)}
-    activeOpacity={0.85}
-    style={[
-      styles.registerActivityButton,
-      {
-        backgroundColor: colors.primary,
-      },
-    ]}
-  >
-    <View style={styles.registerActivityIcon}>
-      <Ionicons
-        name={mostrarFormulario ? "close" : "add"}
-        size={28}
-        color="#FFFFFF"
-      />
-    </View>
+            <View style={styles.registerActivityContent}>
+              <Text style={styles.registerActivityTitle}>
+                {mostrarFormulario
+                  ? "Ocultar formulario"
+                  : "Registrar mi actividad"}
+              </Text>
 
-    <View style={styles.registerActivityContent}>
-      <Text style={styles.registerActivityTitle}>
-        {mostrarFormulario
-          ? "Ocultar formulario"
-          : "Registrar mi actividad"}
-      </Text>
+              <Text style={styles.registerActivitySubtitle}>
+                {mostrarFormulario
+                  ? "Cierra la sección de registro"
+                  : "Añade los datos de actividad de tu día"}
+              </Text>
+            </View>
 
-      <Text style={styles.registerActivitySubtitle}>
-        {mostrarFormulario
-          ? "Cierra la sección de registro"
-          : "Añade los datos de actividad de tu día"}
-      </Text>
-    </View>
+            <View style={styles.registerActivityArrow}>
+              <Ionicons
+                name={mostrarFormulario ? "chevron-up" : "chevron-forward"}
+                size={22}
+                color="#FFFFFF"
+              />
+            </View>
+          </TouchableOpacity>
+        </View>
 
-    <View style={styles.registerActivityArrow}>
-      <Ionicons
-        name={mostrarFormulario ? "chevron-up" : "chevron-forward"}
-        size={22}
-        color="#FFFFFF"
-      />
-    </View>
-  </TouchableOpacity>
-</View>
+        {/* Si mostrarFormulario es verdadero, se despliega el contenido a continuación */}
+        {mostrarFormulario && (
+          <View style={styles.formContainer}>
+            {/* Mensaje de información sobre la captura manual */}
+            <View
+              style={[
+                styles.infoCard,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <View style={styles.infoHeader}>
+                <Ionicons
+                  name="information-circle-outline"
+                  size={22}
+                  color={colors.primary}
+                />
 
-{mostrarFormulario && (
-  <View style={styles.formContainer}>
-    <View
-      style={[
-        styles.infoCard,
-        {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-        },
-      ]}
-    >
-      <View style={styles.infoHeader}>
-        <Ionicons
-          name="information-circle-outline"
-          size={22}
-          color={colors.primary}
-        />
+                <Text
+                  style={[
+                    styles.infoTitle,
+                    {
+                      color: colors.text,
+                    },
+                  ]}
+                >
+                  Registro manual
+                </Text>
+              </View>
 
-        <Text
-          style={[
-            styles.infoTitle,
-            {
-              color: colors.text,
-            },
-          ]}
-        >
-          Registro manual
-        </Text>
-      </View>
+              <Text
+                style={[
+                  styles.infoText,
+                  {
+                    color: colors.textSecondary,
+                  },
+                ]}
+              >
+                Estos datos son registrados manualmente a partir de
+                la información que proporciona tu dispositivo.
+              </Text>
+            </View>
 
-      <Text
-        style={[
-          styles.infoText,
-          {
-            color: colors.textSecondary,
-          },
-        ]}
-      >
-        Estos datos son registrados manualmente a partir de
-        la información que proporciona tu dispositivo.
-      </Text>
-    </View>
+            {/* Inputs del formulario */}
+            <Text
+              style={[
+                styles.formSectionTitle,
+                {
+                  color: colors.text,
+                },
+              ]}
+            >
+              Fecha
+            </Text>
 
-    <Text
-      style={[
-        styles.formSectionTitle,
-        {
-          color: colors.text,
-        },
-      ]}
-    >
-      Fecha
-    </Text>
+            <TextInput
+              value={fecha}
+              onChangeText={setFecha}
+              placeholder="AAAA-MM-DD"
+              placeholderTextColor={colors.textSecondary}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                  color: colors.text,
+                },
+              ]}
+            />
 
-    <TextInput
-      value={fecha}
-      onChangeText={setFecha}
-      placeholder="AAAA-MM-DD"
-      placeholderTextColor={colors.textSecondary}
-      style={[
-        styles.input,
-        {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-          color: colors.text,
-        },
-      ]}
-    />
+            <Text
+              style={[
+                styles.formSectionTitle,
+                {
+                  color: colors.text,
+                  marginTop: 22,
+                },
+              ]}
+            >
+              Actividad
+            </Text>
 
-    <Text
-      style={[
-        styles.formSectionTitle,
-        {
-          color: colors.text,
-          marginTop: 22,
-        },
-      ]}
-    >
-      Actividad
-    </Text>
+            <Text
+              style={[
+                styles.label,
+                {
+                  color: colors.textSecondary,
+                },
+              ]}
+            >
+              Pasos
+            </Text>
 
-    <Text
-      style={[
-        styles.label,
-        {
-          color: colors.textSecondary,
-        },
-      ]}
-    >
-      Pasos
-    </Text>
+            <TextInput
+              value={pasos}
+              onChangeText={setPasos}
+              placeholder="Ej. 7342"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="numeric" // Despliega el teclado numérico del teléfono
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                  color: colors.text,
+                },
+              ]}
+            />
 
-    <TextInput
-      value={pasos}
-      onChangeText={setPasos}
-      placeholder="Ej. 7342"
-      placeholderTextColor={colors.textSecondary}
-      keyboardType="numeric"
-      style={[
-        styles.input,
-        {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-          color: colors.text,
-        },
-      ]}
-    />
+            <Text
+              style={[
+                styles.label,
+                {
+                  color: colors.textSecondary,
+                },
+              ]}
+            >
+              Frecuencia cardíaca
+            </Text>
 
-    <Text
-      style={[
-        styles.label,
-        {
-          color: colors.textSecondary,
-        },
-      ]}
-    >
-      Frecuencia cardíaca
-    </Text>
+            <TextInput
+              value={frecuenciaCardiaca}
+              onChangeText={setFrecuenciaCardiaca}
+              placeholder="Ej. 78"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="numeric"
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                  color: colors.text,
+                },
+              ]}
+            />
 
-    <TextInput
-      value={frecuenciaCardiaca}
-      onChangeText={setFrecuenciaCardiaca}
-      placeholder="Ej. 78"
-      placeholderTextColor={colors.textSecondary}
-      keyboardType="numeric"
-      style={[
-        styles.input,
-        {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-          color: colors.text,
-        },
-      ]}
-    />
+            <Text
+              style={[
+                styles.label,
+                {
+                  color: colors.textSecondary,
+                },
+              ]}
+            >
+              Calorías
+            </Text>
 
-    <Text
-      style={[
-        styles.label,
-        {
-          color: colors.textSecondary,
-        },
-      ]}
-    >
-      Calorías
-    </Text>
+            <TextInput
+              value={calorias}
+              onChangeText={setCalorias}
+              placeholder="Ej. 412"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="numeric"
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                  color: colors.text,
+                },
+              ]}
+            />
 
-    <TextInput
-      value={calorias}
-      onChangeText={setCalorias}
-      placeholder="Ej. 412"
-      placeholderTextColor={colors.textSecondary}
-      keyboardType="numeric"
-      style={[
-        styles.input,
-        {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-          color: colors.text,
-        },
-      ]}
-    />
+            <Text
+              style={[
+                styles.label,
+                {
+                  color: colors.textSecondary,
+                },
+              ]}
+            >
+              Distancia (km)
+            </Text>
 
-    <Text
-      style={[
-        styles.label,
-        {
-          color: colors.textSecondary,
-        },
-      ]}
-    >
-      Distancia (km)
-    </Text>
+            <TextInput
+              value={distancia}
+              onChangeText={setDistancia}
+              placeholder="Ej. 5.2"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="decimal-pad" // Teclado que permite el punto decimal
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                  color: colors.text,
+                },
+              ]}
+            />
 
-    <TextInput
-      value={distancia}
-      onChangeText={setDistancia}
-      placeholder="Ej. 5.2"
-      placeholderTextColor={colors.textSecondary}
-      keyboardType="decimal-pad"
-      style={[
-        styles.input,
-        {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-          color: colors.text,
-        },
-      ]}
-    />
+            {/* Botón para accionar el guardado en Firebase */}
+            <TouchableOpacity
+              onPress={guardarRegistro}
+              disabled={guardando} // Deshabilita el botón si la app ya está guardando
+              activeOpacity={0.85}
+              style={[
+                styles.button,
+                {
+                  backgroundColor: colors.primary,
+                  opacity: guardando ? 0.7 : 1, // Atenúa el botón si está cargando
+                },
+              ]}
+            >
+              {guardando ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <>
+                  <Ionicons
+                    name="save-outline"
+                    size={20}
+                    color="#FFFFFF"
+                  />
 
-    <TouchableOpacity
-      onPress={guardarRegistro}
-      disabled={guardando}
-      activeOpacity={0.85}
-      style={[
-        styles.button,
-        {
-          backgroundColor: colors.primary,
-          opacity: guardando ? 0.7 : 1,
-        },
-      ]}
-    >
-      {guardando ? (
-        <ActivityIndicator color="#FFFFFF" />
-      ) : (
-        <>
-          <Ionicons
-            name="save-outline"
-            size={20}
-            color="#FFFFFF"
-          />
-
-          <Text style={styles.buttonText}>
-            Guardar registro
-          </Text>
-        </>
-      )}
-    </TouchableOpacity>
-  </View>
-)}
+                  <Text style={styles.buttonText}>
+                    Guardar registro
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 /* ============================================================
-   COMPONENTE: TARJETA DE RESUMEN
+   SUBCOMPONENTE: TARJETA DE RESUMEN
+   (Se usa en la cuadrícula superior de "Resumen de hoy")
 ============================================================ */
-
 function SummaryCard({
   icon,
   title,
@@ -1043,9 +1110,9 @@ function SummaryCard({
 }
 
 /* ============================================================
-   COMPONENTE: BOTON DE METRICA
+   SUBCOMPONENTE: BOTÓN DE MÉTRICA
+   (Botones tipo pastilla debajo del selector de periodo)
 ============================================================ */
-
 function MetricButton({
   icon,
   title,
@@ -1065,6 +1132,7 @@ function MetricButton({
       style={[
         styles.metricButton,
         {
+          // Cambia el color del fondo y borde dependiendo de si está presionado
           backgroundColor: active
             ? colors.primary
             : colors.card,
@@ -1097,9 +1165,9 @@ function MetricButton({
 }
 
 /* ============================================================
-   COMPONENTE: GRAFICA DE BARRAS
+   SUBCOMPONENTE: GRÁFICA DE BARRAS
+   (Dibuja las barras dinámicamente)
 ============================================================ */
-
 function BarChart({
   registros,
   metrica,
@@ -1109,14 +1177,18 @@ function BarChart({
   metrica: Metrica;
   colors: any;
 }) {
+  // Invierte los datos para que el día más viejo quede a la izquierda y el actual a la derecha
   const datos = [...registros].reverse();
 
+  // Extrae un arreglo plano solo con los números (filtra los valores nulos)
   const valores = datos
     .map((registro) => obtenerValor(registro, metrica))
     .filter((valor): valor is number => valor !== null);
 
+  // Calcula el valor máximo matemáticamente; servirá para definir el 100% de la altura
   const maximo = Math.max(...valores, 1);
 
+  // Si no hay datos válidos, muestra un estado visual vacío
   if (valores.length === 0) {
     return (
       <View style={styles.noMetricData}>
@@ -1149,6 +1221,7 @@ function BarChart({
       {datos.map((registro) => {
         const valor = obtenerValor(registro, metrica);
 
+        // Si ese día no tiene datos registrados para esa métrica, renderiza una barra gris mínima
         if (valor === null) {
           return (
             <View
@@ -1180,11 +1253,14 @@ function BarChart({
           );
         }
 
+        // Calcula dinámicamente qué porcentaje de altura debe tener la barra respecto al valor máximo.
+        // Math.max asegura que aunque el valor sea muy bajo, la barra mida al menos 5% y sea visible.
         const porcentaje = Math.max(
           (valor / maximo) * 100,
           5
         );
 
+        // Verifica si la fecha que se está dibujando es la más reciente (índice 0 en registros originales)
         const esUltimo =
           registro.fecha === registros[0]?.fecha;
 
@@ -1209,7 +1285,9 @@ function BarChart({
                 style={[
                   styles.bar,
                   {
+                    // Asigna el tamaño porcentual calculado arriba
                     height: `${porcentaje}%`,
+                    // Resalta el día más reciente con un color opaco, el resto semitransparente ("66")
                     backgroundColor: esUltimo
                       ? colors.primary
                       : `${colors.primary}66`,
@@ -1236,9 +1314,9 @@ function BarChart({
 }
 
 /* ============================================================
-   COMPONENTE: ESTADISTICA
+   SUBCOMPONENTE: FILA DE ESTADÍSTICA
+   (Filas para Promedio, Días registrados y Mayor registro)
 ============================================================ */
-
 function StatRow({
   icon,
   title,
@@ -1249,7 +1327,7 @@ function StatRow({
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
   value: string;
-  subtitle?: string;
+  subtitle?: string; // Opcional, usado para poner la fecha bajo el récord
   colors: any;
 }) {
   return (
@@ -1310,9 +1388,9 @@ function StatRow({
 }
 
 /* ============================================================
-   COMPONENTE: HISTORIAL
+   SUBCOMPONENTE: TARJETA DE HISTORIAL
+   (Contenedor grande por cada día en la lista de abajo)
 ============================================================ */
-
 function HistoryCard({
   registro,
   colors,
@@ -1371,6 +1449,7 @@ function HistoryCard({
         </View>
       </View>
 
+      {/* Renderiza las 4 submétricas internas del historial */}
       <View style={styles.historyMetrics}>
         <HistoryMetric
           icon="footsteps"
@@ -1420,6 +1499,7 @@ function HistoryCard({
   );
 }
 
+// Componente diminuto usado internamente dentro de HistoryCard
 function HistoryMetric({
   icon,
   value,
@@ -1465,9 +1545,10 @@ function HistoryMetric({
 }
 
 /* ============================================================
-   FUNCIONES DE DATOS
+   UTILIDADES LÓGICAS (Cálculo de Datos)
 ============================================================ */
 
+// Retorna el valor dinámicamente dependiendo del string de la métrica (ej. registro['pasos'])
 function obtenerValor(
   registro: RegistroActividad,
   metrica: Metrica
@@ -1475,30 +1556,35 @@ function obtenerValor(
   return registro[metrica];
 }
 
+// Calcula el promedio filtrando nulos
 function calcularPromedio(
   registros: RegistroActividad[],
   metrica: Metrica
 ): number | null {
+  // Filtra del arreglo completo solamente los valores numéricos válidos
   const valores = registros
     .map((registro) => obtenerValor(registro, metrica))
     .filter((valor): valor is number => valor !== null);
 
   if (valores.length === 0) {
-    return null;
+    return null; // Evita error matemático si no hay datos
   }
 
+  // Suma todos los valores usando reduce
   const total = valores.reduce(
     (acumulado, valor) => acumulado + valor,
     0
   );
 
-  return total / valores.length;
+  return total / valores.length; // Retorna el promedio
 }
 
+// Encuentra el objeto (fecha y valor) más alto del historial para una métrica en particular
 function obtenerMayor(
   registros: RegistroActividad[],
   metrica: Metrica
 ): { valor: number; fecha: string } | null {
+  // Transforma el arreglo y elimina los nulos
   const disponibles = registros
     .map((registro) => {
       const valor = obtenerValor(registro, metrica);
@@ -1523,15 +1609,17 @@ function obtenerMayor(
     return null;
   }
 
+  // Reduce el array comparando elementos de dos en dos, reteniendo siempre el mayor
   return disponibles.reduce((mayor, actual) =>
     actual.valor > mayor.valor ? actual : mayor
   );
 }
 
 /* ============================================================
-   FUNCIONES DE PRESENTACION
+   UTILIDADES DE PRESENTACIÓN (Formatos de Textos e Iconos)
 ============================================================ */
 
+// Devuelve el string en español correcto dependiendo del valor seleccionado
 function obtenerNombreMetrica(metrica: Metrica) {
   switch (metrica) {
     case "pasos":
@@ -1545,6 +1633,7 @@ function obtenerNombreMetrica(metrica: Metrica) {
   }
 }
 
+// Devuelve el nombre del icono de Ionicons dependiente de la métrica
 function obtenerIconoMetrica(
   metrica: Metrica
 ): keyof typeof Ionicons.glyphMap {
@@ -1560,6 +1649,7 @@ function obtenerIconoMetrica(
   }
 }
 
+// Devuelve los prefijos para textos (bpm, kcal, km)
 function obtenerUnidad(metrica: Metrica) {
   switch (metrica) {
     case "pasos":
@@ -1573,50 +1663,47 @@ function obtenerUnidad(metrica: Metrica) {
   }
 }
 
+// Transforma "1500" a "1.500" según formato regional (Colombia en este caso)
 function formatearNumero(valor: number) {
   return Math.round(valor).toLocaleString("es-CO");
 }
 
+// Formateador condicional según el tipo de medida
 function formatearValor(
   valor: number,
   metrica: Metrica
 ) {
   if (metrica === "distancia") {
+    // La distancia siempre muestra 1 decimal (Ej. 5.2)
     return valor.toFixed(1);
   }
 
   if (metrica === "frecuenciaCardiaca") {
+    // El ritmo cardíaco nunca usa separación por miles (Ej. 120 bpm)
     return Math.round(valor).toString();
   }
 
+  // Por defecto (pasos, calorías) usa separación de miles (Ej. 1.500)
   return Math.round(valor).toLocaleString("es-CO");
 }
 
+// Pasa de "YYYY-MM-DD" a formato verbal: "15 de mayo de 2023"
 function formatearFecha(fecha: string) {
   const partes = fecha.split("-");
 
   if (partes.length !== 3) {
-    return fecha;
+    return fecha; // Previene error si el string falla
   }
 
   const [año, mes, dia] = partes;
 
   const meses = [
-    "enero",
-    "febrero",
-    "marzo",
-    "abril",
-    "mayo",
-    "junio",
-    "julio",
-    "agosto",
-    "septiembre",
-    "octubre",
-    "noviembre",
-    "diciembre",
+    "enero", "febrero", "marzo", "abril",
+    "mayo", "junio", "julio", "agosto",
+    "septiembre", "octubre", "noviembre", "diciembre",
   ];
 
-  const numeroMes = Number(mes) - 1;
+  const numeroMes = Number(mes) - 1; // Ajuste del índice de Array (enero es 0)
 
   if (!meses[numeroMes]) {
     return fecha;
@@ -1625,6 +1712,7 @@ function formatearFecha(fecha: string) {
   return `${Number(dia)} de ${meses[numeroMes]} de ${año}`;
 }
 
+// Pasa de "YYYY-MM-DD" a formato corto "DD/MM" para la gráfica
 function formatearFechaCorta(fecha: string) {
   const partes = fecha.split("-");
 
@@ -1637,10 +1725,12 @@ function formatearFechaCorta(fecha: string) {
   return `${dia}/${mes}`;
 }
 
+// Extrae la fecha actual del sistema operativo del dispositivo móvil
 function obtenerFechaActual() {
   const ahora = new Date();
 
   const año = ahora.getFullYear();
+  // padStart asegura que meses menores a 10 se completen con cero (ej. '05')
   const mes = String(ahora.getMonth() + 1).padStart(2, "0");
   const dia = String(ahora.getDate()).padStart(2, "0");
 
@@ -1648,9 +1738,11 @@ function obtenerFechaActual() {
 }
 
 /* ============================================================
-   ESTILOS
+   HOJAS DE ESTILO (StyleSheet)
+   Solo definen posición (flexbox), geometría (radios, márgenes) y fuentes.
+   Los colores (background, color, border) se aplican 'en línea' 
+   dentro de los componentes para reaccionar al Tema Claro/Oscuro.
 ============================================================ */
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -1711,12 +1803,12 @@ const styles = StyleSheet.create({
 
   summaryGrid: {
     flexDirection: "row",
-    flexWrap: "wrap",
+    flexWrap: "wrap", // Permite que los elementos pasen a la línea inferior si no caben
     justifyContent: "space-between",
   },
 
   summaryCard: {
-    width: "48%",
+    width: "48%", // Fuerza 2 columnas
     minHeight: 125,
     borderWidth: 1,
     borderRadius: 17,
@@ -1789,7 +1881,7 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     marginTop: 14,
     padding: 16,
-    overflow: "hidden",
+    overflow: "hidden", // Esconde elementos internos que se salgan de los bordes redondeados
   },
 
   chartHeader: {
@@ -1839,7 +1931,7 @@ const styles = StyleSheet.create({
   barArea: {
     width: 28,
     height: 135,
-    justifyContent: "flex-end",
+    justifyContent: "flex-end", // Empuja la barra hacia la base de la gráfica
     alignItems: "center",
   },
 
@@ -1941,7 +2033,7 @@ const styles = StyleSheet.create({
   },
 
   statDivider: {
-    height: 1,
+    height: 1, // Línea gris de separación entre filas
   },
 
   historyHeader: {
@@ -2005,25 +2097,22 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  /* ============================================================
-     BOTON PARA MOSTRAR / OCULTAR FORMULARIO
-  ============================================================ */
+  /* ESTILOS DEL FORMULARIO Y SU BOTÓN ACORDEÓN */
 
   formHeader: {
     marginTop: 32,
     marginBottom: 14,
   },
 
-registerActivityButton: {
-  minHeight: 86,
-  borderRadius: 20,
-  paddingHorizontal: 15,
-  paddingVertical: 12,
-  flexDirection: "row",
-  alignItems: "center",
-
-  boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.18)",
-},
+  registerActivityButton: {
+    minHeight: 86,
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.18)", // Sombra base para iOS y nueva web React Native
+  },
 
   registerActivityIcon: {
     width: 54,

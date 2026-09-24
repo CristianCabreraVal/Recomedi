@@ -1,13 +1,13 @@
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -16,9 +16,9 @@ import { useRouter } from "expo-router";
 import { auth, db } from "../../services/firebase";
 
 import {
-  doc,
-  setDoc,
-  getDoc,
+    doc,
+    getDoc,
+    setDoc,
 } from "firebase/firestore";
 
 export default function PerfilForm() {
@@ -260,7 +260,7 @@ export default function PerfilForm() {
           </View>
         </View>
 
-        {/* BOTÓN */}
+        /* BOTÓN */
 
         <TouchableOpacity
           style={styles.button}
