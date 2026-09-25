@@ -1,27 +1,58 @@
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
-import { useState, useCallback } from "react";
-import { useFocusEffect, useRouter } from "expo-router";
+import {
+  useFocusEffect,
+  useRouter,
+} from "expo-router";
+
+import {
+  useCallback,
+  useState,
+} from "react";
+
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { auth, db } from "../../services/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+} from "firebase/firestore";
+
 import { useTheme } from "../../hooks/useTheme";
+import { useUserRole } from "../../hooks/useUserRole";
+
+import {
+  auth,
+  db,
+} from "../../services/firebase";
 
 export default function Perfil() {
   const { colors } = useTheme();
 
-  const [usuario, setUsuario] = useState<any>(null);
-  const [cargando, setCargando] = useState(true);
+  const {
+    rol,
+    cargandoRol,
+    esAdmin,
+    esModerador,
+  } = useUserRole();
+
+  const [usuario, setUsuario] =
+    useState<any>(null);
+
+  const [cargando, setCargando] =
+    useState(true);
 
   const router = useRouter();
+
+  /* ============================================================
+     CARGAR PERFIL
+  ============================================================ */
 
   useFocusEffect(
     useCallback(() => {
@@ -29,23 +60,36 @@ export default function Perfil() {
         try {
           setCargando(true);
 
-          const uid = auth.currentUser?.uid;
+          const uid =
+            auth.currentUser?.uid;
 
           if (!uid) {
             setUsuario(null);
             return;
           }
 
-          const ref = doc(db, "usuarios", uid);
-          const snap = await getDoc(ref);
+          const referencia = doc(
+            db,
+            "usuarios",
+            uid
+          );
+
+          const snap =
+            await getDoc(referencia);
 
           if (snap.exists()) {
-            setUsuario(snap.data());
+            setUsuario(
+              snap.data()
+            );
           } else {
             setUsuario(null);
           }
         } catch (error) {
-          console.log("Error cargando perfil:", error);
+          console.log(
+            "Error cargando perfil:",
+            error
+          );
+
           setUsuario(null);
         } finally {
           setCargando(false);
@@ -56,18 +100,26 @@ export default function Perfil() {
     }, [])
   );
 
-  // CARGANDO PERFIL
+  /* ============================================================
+     CARGANDO PERFIL
+  ============================================================ */
+
   if (cargando) {
     return (
       <SafeAreaView
         style={[
           styles.container,
           {
-            backgroundColor: colors.background,
+            backgroundColor:
+              colors.background,
           },
         ]}
       >
-        <View style={styles.loadingContainer}>
+        <View
+          style={
+            styles.loadingContainer
+          }
+        >
           <ActivityIndicator
             size="large"
             color={colors.primary}
@@ -77,7 +129,8 @@ export default function Perfil() {
             style={[
               styles.loadingText,
               {
-                color: colors.textSecondary,
+                color:
+                  colors.textSecondary,
               },
             ]}
           >
@@ -88,7 +141,10 @@ export default function Perfil() {
     );
   }
 
-  // SI NO EXISTE PERFIL
+  /* ============================================================
+     SI NO EXISTE PERFIL
+  ============================================================ */
+
   if (!usuario) {
     return (
       <SafeAreaView
@@ -104,7 +160,10 @@ export default function Perfil() {
           <Text
             style={[
               styles.header,
-              { color: colors.primary },
+              {
+                color:
+                  colors.primary,
+              },
             ]}
           >
             Perfil
@@ -113,19 +172,30 @@ export default function Perfil() {
           <Text
             style={[
               styles.emptyText,
-              { color: colors.textSecondary },
+              {
+                color:
+                  colors.textSecondary,
+              },
             ]}
           >
             Aún no has creado tu perfil
           </Text>
 
           <TouchableOpacity
-            style={styles.button}
+            style={[
+              styles.button,
+              {
+                backgroundColor:
+                  colors.primary,
+              },
+            ]}
             onPress={() =>
               router.push("/perfil/form")
             }
           >
-            <Text style={styles.buttonText}>
+            <Text
+              style={styles.buttonText}
+            >
               Crear Perfil
             </Text>
           </TouchableOpacity>
@@ -134,13 +204,26 @@ export default function Perfil() {
     );
   }
 
-  // CALCULAR IMC
+  /* ============================================================
+     CALCULAR IMC
+  ============================================================ */
+
   const alturaMetros =
-    usuario.altura / 100;
+    Number(usuario.altura) / 100;
+
+  const peso =
+    Number(usuario.peso);
 
   const imc =
-    usuario.peso /
-    (alturaMetros * alturaMetros);
+    alturaMetros > 0
+      ? peso /
+        (alturaMetros *
+          alturaMetros)
+      : 0;
+
+  /* ============================================================
+     PANTALLA PRINCIPAL
+  ============================================================ */
 
   return (
     <SafeAreaView
@@ -153,27 +236,123 @@ export default function Perfil() {
       ]}
     >
       <ScrollView
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={
+          false
+        }
       >
-        {/* HEADER */}
+      {/* ======================================================
+    INFORMACIÓN DEL ROL
+====================================================== */}
 
-        <View style={styles.profileCard}>
+{!cargandoRol &&
+  (esAdmin || esModerador) && (
+    <View
+      style={[
+        styles.roleCard,
+        {
+          backgroundColor: colors.card,
+          borderColor: colors.border,
+        },
+      ]}
+    >
+      <View
+        style={[
+          styles.roleIcon,
+          {
+            backgroundColor: colors.background,
+          },
+        ]}
+      >
+        <Text style={styles.roleIconText}>
+          {esAdmin ? "👑" : "🛡️"}
+        </Text>
+      </View>
+
+      <View style={styles.roleContent}>
+        <Text
+          style={[
+            styles.roleTitle,
+            {
+              color: colors.text,
+            },
+          ]}
+        >
+          {esAdmin
+            ? "Cuenta de administrador"
+            : "Cuenta de moderador"}
+        </Text>
+
+        <Text
+          style={[
+            styles.roleText,
+            {
+              color: colors.textSecondary,
+            },
+          ]}
+        >
+          Rol actual:{" "}
+          <Text
+            style={[
+              styles.roleValue,
+              {
+                color: colors.primary,
+              },
+            ]}
+          >
+            {rol}
+          </Text>
+        </Text>
+
+        <Text
+          style={[
+            styles.roleText,
+            {
+              color: colors.textSecondary,
+            },
+          ]}
+        >
+          {esAdmin
+            ? "Tienes permisos administrativos."
+            : "Tienes permisos de moderación."}
+        </Text>
+      </View>
+    </View>
+  )}
+        {/* ======================================================
+            HEADER
+        ====================================================== */}
+
+        <View
+          style={styles.profileCard}
+        >
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {usuario.nombre?.charAt(0)}
+            <Text
+              style={
+                styles.avatarText
+              }
+            >
+              {usuario.nombre
+                ?.charAt(0)
+                ?.toUpperCase() || "U"}
             </Text>
           </View>
 
-          <Text style={styles.name}>
+          <Text
+            style={styles.name}
+          >
             {usuario.nombre}
           </Text>
 
-          <Text style={styles.subtitle}>
+          <Text
+            style={styles.subtitle}
+          >
             Perfil Médico Personal
           </Text>
         </View>
 
-        {/* DATOS */}
+        {/* ======================================================
+            DATOS PERSONALES
+        ====================================================== */}
 
         <View
           style={[
@@ -181,13 +360,18 @@ export default function Perfil() {
             {
               backgroundColor:
                 colors.card,
+              borderColor:
+                colors.border,
             },
           ]}
         >
           <Text
             style={[
               styles.section,
-              { color: colors.text },
+              {
+                color:
+                  colors.text,
+              },
             ]}
           >
             Información Personal
@@ -196,7 +380,10 @@ export default function Perfil() {
           <Text
             style={[
               styles.item,
-              { color: colors.text },
+              {
+                color:
+                  colors.text,
+              },
             ]}
           >
             Edad: {usuario.edad} años
@@ -205,7 +392,10 @@ export default function Perfil() {
           <Text
             style={[
               styles.item,
-              { color: colors.text },
+              {
+                color:
+                  colors.text,
+              },
             ]}
           >
             Peso: {usuario.peso} kg
@@ -214,7 +404,10 @@ export default function Perfil() {
           <Text
             style={[
               styles.item,
-              { color: colors.text },
+              {
+                color:
+                  colors.text,
+              },
             ]}
           >
             Altura: {usuario.altura} cm
@@ -223,14 +416,19 @@ export default function Perfil() {
           <Text
             style={[
               styles.item,
-              { color: colors.text },
+              {
+                color:
+                  colors.text,
+              },
             ]}
           >
             Género: {usuario.genero}
           </Text>
         </View>
 
-        {/* IMC */}
+        {/* ======================================================
+            IMC
+        ====================================================== */}
 
         <View
           style={[
@@ -238,19 +436,26 @@ export default function Perfil() {
             {
               backgroundColor:
                 colors.card,
+              borderColor:
+                colors.border,
             },
           ]}
         >
           <Text
             style={[
               styles.section,
-              { color: colors.text },
+              {
+                color:
+                  colors.text,
+              },
             ]}
           >
             Índice de Masa Corporal
           </Text>
 
-          <Text style={styles.imc}>
+          <Text
+            style={styles.imc}
+          >
             {imc.toFixed(1)}
           </Text>
 
@@ -273,7 +478,9 @@ export default function Perfil() {
           </Text>
         </View>
 
-        {/* CONDICIONES */}
+        {/* ======================================================
+            CONDICIONES MÉDICAS
+        ====================================================== */}
 
         <View
           style={[
@@ -281,21 +488,28 @@ export default function Perfil() {
             {
               backgroundColor:
                 colors.card,
+              borderColor:
+                colors.border,
             },
           ]}
         >
           <Text
             style={[
               styles.section,
-              { color: colors.text },
+              {
+                color:
+                  colors.text,
+              },
             ]}
           >
             Condiciones Médicas
           </Text>
 
-          <View style={styles.conditions}>
-            {usuario.condiciones?.length >
-            0 ? (
+          <View
+            style={styles.conditions}
+          >
+            {usuario.condiciones
+              ?.length > 0 ? (
               usuario.condiciones.map(
                 (
                   item: string,
@@ -313,7 +527,8 @@ export default function Perfil() {
                   >
                     <Text
                       style={{
-                        color: colors.text,
+                        color:
+                          colors.text,
                       }}
                     >
                       {item}
@@ -334,15 +549,27 @@ export default function Perfil() {
           </View>
         </View>
 
-        {/* BOTÓN */}
+        {/* ======================================================
+            BOTÓN EDITAR PERFIL
+        ====================================================== */}
 
         <TouchableOpacity
-          style={styles.button}
+          style={[
+            styles.button,
+            {
+              backgroundColor:
+                colors.primary,
+            },
+          ]}
           onPress={() =>
-            router.push("/perfil/form")
+            router.push(
+              "/perfil/form"
+            )
           }
         >
-          <Text style={styles.buttonText}>
+          <Text
+            style={styles.buttonText}
+          >
             Editar Perfil
           </Text>
         </TouchableOpacity>
@@ -351,11 +578,64 @@ export default function Perfil() {
   );
 }
 
+/* ============================================================
+   ESTILOS
+============================================================ */
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
   },
+
+  /* ==========================================================
+     ROL
+  ========================================================== */
+
+  roleCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 15,
+    borderRadius: 18,
+    borderWidth: 1,
+    marginBottom: 18,
+  },
+
+  roleIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+
+  roleIconText: {
+    fontSize: 23,
+  },
+
+  roleContent: {
+    flex: 1,
+  },
+
+  roleTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    marginBottom: 4,
+  },
+
+  roleText: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+
+  roleValue: {
+    fontWeight: "800",
+  },
+
+  /* ==========================================================
+     PERFIL
+  ========================================================== */
 
   profileCard: {
     backgroundColor: "#2563EB",
@@ -392,9 +672,14 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
 
+  /* ==========================================================
+     TARJETAS
+  ========================================================== */
+
   card: {
     padding: 20,
     borderRadius: 20,
+    borderWidth: 1,
     marginBottom: 18,
 
     shadowColor: "#000",
@@ -415,6 +700,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
+  /* ==========================================================
+     CONDICIONES
+  ========================================================== */
+
   conditions: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -427,6 +716,10 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
 
+  /* ==========================================================
+     IMC
+  ========================================================== */
+
   imc: {
     fontSize: 42,
     fontWeight: "bold",
@@ -437,8 +730,11 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
 
+  /* ==========================================================
+     BOTONES
+  ========================================================== */
+
   button: {
-    backgroundColor: "#2563EB",
     padding: 18,
     borderRadius: 18,
     alignItems: "center",
@@ -450,6 +746,10 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 16,
   },
+
+  /* ==========================================================
+     ESTADO VACÍO
+  ========================================================== */
 
   emptyCard: {
     flex: 1,
@@ -465,6 +765,10 @@ const styles = StyleSheet.create({
     fontSize: 30,
     fontWeight: "bold",
   },
+
+  /* ==========================================================
+     CARGANDO
+  ========================================================== */
 
   loadingContainer: {
     flex: 1,

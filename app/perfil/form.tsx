@@ -1,10 +1,10 @@
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import { useEffect, useState } from "react";
@@ -16,9 +16,9 @@ import { useRouter } from "expo-router";
 import { auth, db } from "../../services/firebase";
 
 import {
-    doc,
-    getDoc,
-    setDoc,
+  doc,
+  getDoc,
+  setDoc,
 } from "firebase/firestore";
 
 export default function PerfilForm() {
@@ -260,7 +260,7 @@ export default function PerfilForm() {
           </View>
         </View>
 
-        /* BOTÓN */
+        {/* BOTÓN */}
 
         <TouchableOpacity
           style={styles.button}

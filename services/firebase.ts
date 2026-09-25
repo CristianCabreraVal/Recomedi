@@ -3,14 +3,9 @@ import type { Auth } from "firebase/auth";
 import {
   getAuth,
   initializeAuth,
+  inMemoryPersistence,
 } from "firebase/auth";
 
-// Firebase 12 + Expo/React Native puede mostrar TS2305
-// aunque la función exista en el bundle nativo.
-// @ts-ignore
-import { getReactNativePersistence } from "firebase/auth";
-
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getFirestore } from "firebase/firestore";
 import { Platform } from "react-native";
 
@@ -24,18 +19,29 @@ const firebaseConfig = {
   measurementId: "G-BBD04HXZPS",
 };
 
-const app = getApps().length > 0
-  ? getApp()
-  : initializeApp(firebaseConfig);
+const app =
+  getApps().length > 0
+    ? getApp()
+    : initializeApp(firebaseConfig);
 
 let auth: Auth;
 
 if (Platform.OS === "web") {
-  auth = getAuth(app);
+  try {
+    auth = initializeAuth(app, {
+      persistence: inMemoryPersistence,
+    });
+  } catch (error: any) {
+    if (error?.code === "auth/already-initialized") {
+      auth = getAuth(app);
+    } else {
+      throw error;
+    }
+  }
 } else {
   try {
     auth = initializeAuth(app, {
-      persistence: getReactNativePersistence(AsyncStorage),
+      persistence: inMemoryPersistence,
     });
   } catch (error: any) {
     if (error?.code === "auth/already-initialized") {
@@ -49,4 +55,3 @@ if (Platform.OS === "web") {
 const db = getFirestore(app);
 
 export { app, auth, db };
-

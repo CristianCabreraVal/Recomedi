@@ -1,24 +1,33 @@
 import { useState } from "react";
+
 import {
   Alert,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity
+  TouchableOpacity,
 } from "react-native";
 
-import { signInWithEmailAndPassword } from "firebase/auth";
+import {
+  signInWithEmailAndPassword,
+} from "firebase/auth";
+
 import { auth } from "../../services/firebase";
 
 import { useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+
+import {
+  SafeAreaView,
+} from "react-native-safe-area-context";
 
 export default function Login() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+
+  const [loading, setLoading] =
+    useState(false);
 
   const login = async () => {
     const correo = email.trim();
@@ -29,46 +38,88 @@ export default function Login() {
         "Campos incompletos",
         "Ingresa tu correo y contraseña."
       );
+
       return;
     }
 
-    // Validar formato básico del correo
+    // Validar formato básico
     if (!correo.includes("@")) {
       Alert.alert(
         "Correo inválido",
         "Ingresa un correo electrónico válido."
       );
+
       return;
     }
 
     try {
       setLoading(true);
 
-      const resultado = await signInWithEmailAndPassword(
-        auth,
-        correo,
-        password
+      const resultado =
+        await signInWithEmailAndPassword(
+          auth,
+          correo,
+          password
+        );
+
+      console.log(
+        "Inicio de sesión correcto"
       );
 
-      console.log("Inicio de sesión correcto");
-      console.log("Usuario:", resultado.user.email);
-
-      Alert.alert(
-        "Correcto",
-        "Inicio de sesión exitoso.",
-        [
-          {
-            text: "Continuar",
-            onPress: () => {
-              // El _layout.tsx puede encargarse
-              // de detectar al usuario autenticado.
-            },
-          },
-        ]
+      console.log(
+        "Usuario:",
+        resultado.user.email
       );
 
+      /*
+       * Obtener los Custom Claims
+       *
+       * El true fuerza la renovación
+       * del token para obtener el rol
+       * actualizado.
+       */
+      const token =
+        await resultado.user.getIdTokenResult(
+          true
+        );
+
+      const rol =
+        token.claims.role;
+
+      console.log(
+        "Rol detectado:",
+        rol
+      );
+
+      /*
+       * ADMINISTRADOR
+       */
+      if (rol === "admin") {
+        router.replace("/admin");
+        return;
+      }
+
+      /*
+       * MODERADOR
+       *
+       * Todavía no hemos creado
+       * /moderador, así que por ahora
+       * lo enviamos a la aplicación normal.
+       */
+      if (rol === "moderador") {
+        router.replace("/(tabs)");
+        return;
+      }
+
+      /*
+       * USUARIO NORMAL
+       */
+      router.replace("/(tabs)");
     } catch (error: any) {
-      console.log("Firebase error:", error?.code);
+      console.log(
+        "Firebase error:",
+        error?.code
+      );
 
       switch (error?.code) {
         case "auth/invalid-credential":
@@ -120,7 +171,9 @@ export default function Login() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Iniciar Sesión</Text>
+      <Text style={styles.title}>
+        Iniciar Sesión
+      </Text>
 
       <TextInput
         placeholder="Correo"
@@ -151,63 +204,70 @@ export default function Login() {
         disabled={loading}
       >
         <Text style={styles.buttonText}>
-          {loading ? "Ingresando..." : "Ingresar"}
+          {loading
+            ? "Ingresando..."
+            : "Ingresar"}
         </Text>
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={() => router.push("/auth/register")}
+        onPress={() =>
+          router.push("/auth/register")
+        }
         disabled={loading}
       >
-        <Text style={styles.link}>Crear cuenta</Text>
+        <Text style={styles.link}>
+          Crear cuenta
+        </Text>
       </TouchableOpacity>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    padding: 25,
-    backgroundColor: "#F3F4F6",
-  },
+const styles =
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      justifyContent: "center",
+      padding: 25,
+      backgroundColor: "#F3F4F6",
+    },
 
-  title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    marginBottom: 30,
-    color: "#2563EB",
-    textAlign: "center",
-  },
+    title: {
+      fontSize: 32,
+      fontWeight: "bold",
+      marginBottom: 30,
+      color: "#2563EB",
+      textAlign: "center",
+    },
 
-  input: {
-    backgroundColor: "#fff",
-    padding: 15,
-    borderRadius: 14,
-    marginBottom: 15,
-  },
+    input: {
+      backgroundColor: "#fff",
+      padding: 15,
+      borderRadius: 14,
+      marginBottom: 15,
+    },
 
-  button: {
-    backgroundColor: "#2563EB",
-    padding: 15,
-    borderRadius: 14,
-    alignItems: "center",
-    marginTop: 10,
-  },
+    button: {
+      backgroundColor: "#2563EB",
+      padding: 15,
+      borderRadius: 14,
+      alignItems: "center",
+      marginTop: 10,
+    },
 
-  buttonDisabled: {
-    opacity: 0.6,
-  },
+    buttonDisabled: {
+      opacity: 0.6,
+    },
 
-  buttonText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
+    buttonText: {
+      color: "#fff",
+      fontWeight: "bold",
+    },
 
-  link: {
-    textAlign: "center",
-    marginTop: 20,
-    color: "#2563EB",
-  },
-});
+    link: {
+      textAlign: "center",
+      marginTop: 20,
+      color: "#2563EB",
+    },
+  });
