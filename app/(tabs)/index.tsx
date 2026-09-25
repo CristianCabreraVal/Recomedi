@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
 import { Ionicons } from "@expo/vector-icons";
+import { enviarNotificacionRecomendacion } from "../../services/notificationService";
 
 import { useTheme } from "../../hooks/useTheme";
 import { generarRecomendaciones } from "../../ml/recomendaciones";
@@ -20,12 +20,19 @@ export default function Home() {
   const [ultimaRecomendacion, setUltimaRecomendacion] =
   useState<string | null>(null);
 
-  const probarRecomendacion = () => {
+  const probarRecomendacion = async () => {
   try {
     if (recomendaciones.length === 0) {
-      setUltimaRecomendacion(
-        "No hay recomendaciones disponibles en este momento."
+      const mensaje =
+        "No hay recomendaciones disponibles en este momento.";
+
+      setUltimaRecomendacion(mensaje);
+
+      Alert.alert(
+        "Recomedi",
+        mensaje
       );
+
       return;
     }
 
@@ -40,15 +47,39 @@ export default function Home() {
       recomendaciones[indice] === ultimaRecomendacion
     );
 
-    setUltimaRecomendacion(recomendaciones[indice]);
+    const nuevaRecomendacion =
+      recomendaciones[indice];
+
+    // Mostrar la recomendación dentro de la aplicación
+    setUltimaRecomendacion(
+      nuevaRecomendacion
+    );
+
+    // Mantener el Alert que ya utilizábamos
+    Alert.alert(
+      "Recomendación de Recomedi",
+      nuevaRecomendacion
+    );
+
+    // Enviar la misma recomendación
+    // como notificación del sistema
+    await enviarNotificacionRecomendacion(
+      nuevaRecomendacion
+    );
   } catch (error) {
     console.error(
       "Error generando recomendación:",
       error
     );
 
-    setUltimaRecomendacion(
-      "No fue posible generar la recomendación."
+    const mensaje =
+      "No fue posible generar la recomendación.";
+
+    setUltimaRecomendacion(mensaje);
+
+    Alert.alert(
+      "Recomedi",
+      mensaje
     );
   }
 };
