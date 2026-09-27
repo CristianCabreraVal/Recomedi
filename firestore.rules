@@ -1,0 +1,77 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function estaAutenticado() {
+      return request.auth != null;
+    }
+
+    function esAdmin() {
+      return estaAutenticado()
+        && exists(
+          /databases/$(database)/documents/usuarios/$(request.auth.uid)
+        )
+        && get(
+          /databases/$(database)/documents/usuarios/$(request.auth.uid)
+        ).data.rol == "admin";
+    }
+
+    match /usuarios/{userId} {
+
+      // ADMIN puede consultar usuarios
+      allow get, list: if esAdmin();
+
+      // Cada usuario puede consultar su propio perfil
+      allow get: if estaAutenticado()
+        && request.auth.uid == userId;
+
+      // Crear perfil propio
+      allow create: if estaAutenticado()
+        && request.auth.uid == userId;
+
+      // ADMIN puede actualizar usuarios
+      allow update: if esAdmin()
+        && (
+          userId != request.auth.uid
+          || request.resource.data.rol == "admin"
+        );
+
+      // Usuario puede actualizar su propio perfil,
+      // pero no puede cambiar rol ni estado
+      allow update: if estaAutenticado()
+        && request.auth.uid == userId
+        && request.resource.data.rol == resource.data.rol
+        && request.resource.data.activo == resource.data.activo;
+
+      // ADMIN puede eliminar perfiles de otros usuarios
+      allow delete: if esAdmin()
+        && userId != request.auth.uid;
+
+
+      // ACTIVIDAD
+match /actividad/{actividadId} {
+
+  // El usuario puede leer su propia actividad
+  // y el administrador puede leer la actividad de otros usuarios
+  allow read: if estaAutenticado()
+    && (
+      request.auth.uid == userId
+      || esAdmin()
+    );
+
+  // Solo el propio usuario puede crear o modificar su actividad
+  allow create, update: if estaAutenticado()
+    && request.auth.uid == userId;
+
+  // El usuario puede eliminar su propia actividad
+  // y el administrador puede eliminar la de otros usuarios
+  allow delete: if estaAutenticado()
+    && (
+      request.auth.uid == userId
+      || (esAdmin() && userId != request.auth.uid)
+    );
+}
+    }
+  }
+}

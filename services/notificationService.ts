@@ -1,68 +1,161 @@
+import Constants from "expo-constants";
 import { Platform } from "react-native";
-import * as Notifications from "expo-notifications";
 
 /**
- * Configuración de cómo se muestran las notificaciones
- * cuando la aplicación está abierta.
+ * Comprueba si la aplicación está ejecutándose
+ * dentro de Expo Go.
  */
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+const esExpoGo =
+  Constants.appOwnership === "expo";
 
 /**
- * Solicita permiso para mostrar notificaciones
- * y prepara el canal de Android.
+ * En Android + Expo Go no utilizaremos
+ * expo-notifications.
+ *
+ * Esto permite seguir desarrollando y probando
+ * el resto de Recomedi normalmente.
  */
-export const prepararNotificaciones = async (): Promise<boolean> => {
-  try {
-    // Android necesita un canal de notificaciones.
-    if (Platform.OS === "android") {
-      await Notifications.setNotificationChannelAsync(
-        "recomedi",
-        {
-          name: "Recomedi",
-          importance: Notifications.AndroidImportance.HIGH,
-          vibrationPattern: [0, 250, 250, 250],
-          sound: "default",
-        }
+const puedeUsarNotificaciones =
+  !(Platform.OS === "android" && esExpoGo);
+
+/**
+ * Tipo para el módulo de notificaciones.
+ */
+type NotificationsModule = typeof import("expo-notifications");
+
+let Notifications: NotificationsModule | null = null;
+
+/**
+ * Carga expo-notifications solamente cuando
+ * realmente está disponible.
+ */
+const obtenerNotifications =
+  async (): Promise<NotificationsModule | null> => {
+    if (!puedeUsarNotificaciones) {
+      return null;
+    }
+
+    if (!Notifications) {
+      Notifications = await import(
+        "expo-notifications"
       );
     }
 
-    const permisos =
-      await Notifications.getPermissionsAsync();
+    return Notifications;
+  };
 
-    let estado = permisos.status;
+/**
+ * Configura el comportamiento de las notificaciones
+ * cuando la aplicación está abierta.
+ */
+const configurarNotificaciones = async () => {
+  const modulo =
+    await obtenerNotifications();
 
-    if (estado !== "granted") {
-      const nuevosPermisos =
-        await Notifications.requestPermissionsAsync();
-
-      estado = nuevosPermisos.status;
-    }
-
-    return estado === "granted";
-  } catch (error) {
-    console.error(
-      "Error preparando notificaciones:",
-      error
-    );
-
-    return false;
+  if (!modulo) {
+    return;
   }
+
+  modulo.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
 };
 
 /**
- * Muestra inmediatamente una notificación
+ * Solicita permisos y prepara el canal
+ * de notificaciones en Android.
+ */
+export const prepararNotificaciones =
+  async (): Promise<boolean> => {
+    try {
+      const modulo =
+        await obtenerNotifications();
+
+      /**
+       * Expo Go Android:
+       * las notificaciones se omiten.
+       */
+      if (!modulo) {
+        console.log(
+          "Notificaciones desactivadas en Expo Go Android."
+        );
+
+        return false;
+      }
+
+      /**
+       * Android necesita un canal.
+       */
+      if (Platform.OS === "android") {
+        await modulo.setNotificationChannelAsync(
+          "recomedi",
+          {
+            name: "Recomedi",
+            importance:
+              modulo.AndroidImportance.HIGH,
+            vibrationPattern: [
+              0,
+              250,
+              250,
+              250,
+            ],
+            sound: "default",
+          }
+        );
+      }
+
+      const permisos =
+        await modulo.getPermissionsAsync();
+
+      let estado = permisos.status;
+
+      if (estado !== "granted") {
+        const nuevosPermisos =
+          await modulo.requestPermissionsAsync();
+
+        estado = nuevosPermisos.status;
+      }
+
+      return estado === "granted";
+    } catch (error) {
+      console.error(
+        "Error preparando notificaciones:",
+        error
+      );
+
+      return false;
+    }
+  };
+
+/**
+ * Envía inmediatamente una notificación
  * con una recomendación de Recomedi.
  */
 export const enviarNotificacionRecomendacion =
-  async (recomendacion: string): Promise<boolean> => {
+  async (
+    recomendacion: string
+  ): Promise<boolean> => {
     try {
+      const modulo =
+        await obtenerNotifications();
+
+      /**
+       * Expo Go Android:
+       * no intentamos enviar la notificación.
+       */
+      if (!modulo) {
+        console.log(
+          "Notificación omitida porque Recomedi está ejecutándose en Expo Go Android."
+        );
+
+        return false;
+      }
+
       const permitido =
         await prepararNotificaciones();
 
@@ -74,7 +167,7 @@ export const enviarNotificacionRecomendacion =
         return false;
       }
 
-      await Notifications.scheduleNotificationAsync({
+      await modulo.scheduleNotificationAsync({
         content: {
           title: "Recomedi",
           body: recomendacion,
@@ -97,3 +190,12 @@ export const enviarNotificacionRecomendacion =
       return false;
     }
   };
+
+/**
+ * Configuramos las notificaciones solamente
+ * si el entorno las permite.
+ */
+if (puedeUsarNotificaciones) {
+  configurarNotificaciones();
+}
+
