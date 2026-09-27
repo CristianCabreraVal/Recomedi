@@ -285,7 +285,13 @@ export default function Actividad() {
         showsVerticalScrollIndicator={false}
       >
         
-        {/* ENCABEZADO: Ícono y Títulos principales */}
+        {/* ====================================================
+   ENCABEZADO DE ACTIVIDAD
+
+   Agrupa el icono de la sección, el título "Mi actividad"
+   y la descripción introductoria de la pantalla.
+        =================================================== */}
+        
         <View style={styles.header}>
           <View style={styles.headerIcon}>
             <Ionicons
@@ -332,7 +338,12 @@ export default function Actividad() {
           Resumen de hoy
         </Text>
 
-        {/* Cuadrícula (Grid) que muestra 4 tarjetas pequeñas con los datos del día actual */}
+        {/* ============================================================
+   RESUMEN DE HOY
+
+   Presenta las cuatro métricas disponibles para el día actual:
+   pasos, calorías, frecuencia cardíaca y distancia.
+============================================================ */}
         <View style={styles.summaryGrid}>
           <SummaryCard
             icon="footsteps"
@@ -383,7 +394,13 @@ export default function Actividad() {
           />
         </View>
 
-        {/* SECCIÓN: GRÁFICA DE COMPARACIÓN */}
+        {/* ============================================================
+   GRÁFICA
+
+   Muestra la evolución de la métrica seleccionada.
+   Puede presentar estados de carga, ausencia de datos o
+   información disponible.
+============================================================ */}
         <View style={styles.sectionHeader}>
           <View>
             <Text
@@ -792,7 +809,11 @@ export default function Actividad() {
             </View>
 
             <View style={styles.registerActivityContent}>
-              <Text style={styles.registerActivityTitle}>
+              <Text
+                  style={styles.registerActivitySubtitle}
+                  numberOfLines={2}
+                  ellipsizeMode="tail"
+              >
                 {mostrarFormulario
                   ? "Ocultar formulario"
                   : "Registrar mi actividad"}
@@ -1769,8 +1790,11 @@ const styles = StyleSheet.create({
     marginRight: 13,
   },
 
+  /* Permite que el texto del encabezado se reduzca sin empujar
+   otros elementos en pantallas pequeñas. */
   headerTextContainer: {
     flex: 1,
+    minWidth: 0,
   },
 
   title: {
@@ -2076,15 +2100,21 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
 
-  historyMetrics: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
+  /* Distribuye las cuatro métricas del historial de forma
+   proporcional al ancho disponible. */
+historyMetrics: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  gap: 4,
+},
 
-  historyMetric: {
-    alignItems: "center",
-    minWidth: 58,
-  },
+/* Cada métrica utiliza una fracción del ancho disponible
+   evitando que una cifra larga empuje a las demás. */
+historyMetric: {
+  flex: 1,
+  minWidth: 0,
+  alignItems: "center",
+},
 
   historyMetricValue: {
     fontSize: 13,
@@ -2123,8 +2153,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
+  /* Permite que los textos del botón se adapten a teléfonos
+   estrechos sin desplazar la flecha lateral. */
   registerActivityContent: {
     flex: 1,
+    minWidth: 0,
     marginLeft: 13,
   },
 

@@ -1,20 +1,9 @@
-import {
-  Stack,
-  useRouter,
-  useSegments,
-} from "expo-router";
-
+import {Stack,useRouter,useSegments,} from "expo-router";
 import { useEffect, useState } from "react";
+import {ActivityIndicator,View,} from "react-native";
 
 import { onAuthStateChanged } from "firebase/auth";
-
 import { auth } from "../services/firebase";
-
-import {
-  ActivityIndicator,
-  View,
-} from "react-native";
-
 import { ThemeProvider } from "../hooks/useTheme";
 
 type Rol =
