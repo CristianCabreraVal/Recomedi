@@ -1,5 +1,12 @@
-import { View, Text, StyleSheet, FlatList } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  useWindowDimensions,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 
 import { useTheme } from "../../hooks/useTheme";
 
@@ -25,60 +32,368 @@ const alertsData = [
 
 export default function Alerts() {
   const { colors } = useTheme();
+  const { width } = useWindowDimensions();
+
+  // A partir de 900 px se utiliza una distribución de dos columnas.
+  const pantallaAncha = width >= 900;
+
+  // Determina la apariencia visual según el nivel de alerta.
+  const obtenerNivel = (level: string) => {
+    if (level === "Alto") {
+      return {
+        icon: "warning" as const,
+        iconColor: "#DC2626",
+        iconBackground: "#FEE2E2",
+        textColor: "#DC2626",
+        indicatorWidth: "100%" as const,
+      };
+    }
+
+    return {
+      icon: "alert-circle" as const,
+      iconColor: "#D97706",
+      iconBackground: "#FEF3C7",
+      textColor: "#D97706",
+      indicatorWidth: "66%" as const,
+    };
+  };
 
   return (
     <SafeAreaView
       style={[
         styles.container,
-        { backgroundColor: colors.background },
+        {
+          backgroundColor: colors.background,
+        },
       ]}
     >
-      <Text style={styles.header}>
-        Alertas Epidemiológicas
-      </Text>
+      {/* ============================================================
+          ENCABEZADO
+      ============================================================ */}
+      <View style={styles.headerContainer}>
+        <View style={styles.headerTitleRow}>
+          {/* Icono principal de alertas */}
+          <View
+            style={[
+              styles.headerIcon,
+              {
+                backgroundColor: colors.card,
+              },
+            ]}
+          >
+            <Ionicons
+              name="warning"
+              size={25}
+              color="#DC2626"
+            />
+          </View>
 
+          {/* Título y descripción */}
+          <View style={styles.headerTextContainer}>
+            <Text
+              style={[
+                styles.header,
+                { color: colors.text },
+              ]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              Alertas Epidemiológicas
+            </Text>
+
+            <Text
+              style={[
+                styles.subheader,
+                { color: colors.textSecondary },
+              ]}
+              numberOfLines={2}
+              ellipsizeMode="tail"
+            >
+              Información sanitaria relevante y recomendaciones.
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* ============================================================
+          LISTA DE ALERTAS
+      ============================================================ */}
       <FlatList
         data={alertsData}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View
-            style={[
-              styles.card,
-              { backgroundColor: colors.card },
-            ]}
-          >
-            <Text
+        showsVerticalScrollIndicator={true}
+        contentContainerStyle={[
+          styles.listContent,
+          pantallaAncha && styles.listContentWide,
+        ]}
+        columnWrapperStyle={
+          pantallaAncha
+            ? styles.columnWrapperWide
+            : undefined
+        }
+        numColumns={pantallaAncha ? 2 : 1}
+        renderItem={({ item }) => {
+          const nivel = obtenerNivel(item.level);
+
+          return (
+            <View
               style={[
-                styles.title,
-                { color: colors.text },
+                styles.card,
+                {
+                  backgroundColor: colors.card,
+                },
+                pantallaAncha && styles.cardWide,
               ]}
             >
-              {item.disease}
-            </Text>
+              {/* ==================================================
+                  CABECERA DE ESTADO
+              ================================================== */}
+              <View style={styles.cardTop}>
+                <View
+                  style={[
+                    styles.alertIcon,
+                    {
+                      backgroundColor:
+                        nivel.iconBackground,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name={nivel.icon}
+                    size={25}
+                    color={nivel.iconColor}
+                  />
+                </View>
 
-            <Text style={styles.level}>
-              Nivel: {item.level}
-            </Text>
+                <View
+                  style={[
+                    styles.levelBadge,
+                    {
+                      backgroundColor:
+                        nivel.iconBackground,
+                    },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.levelDot,
+                      {
+                        backgroundColor:
+                          nivel.iconColor,
+                      },
+                    ]}
+                  />
 
-            <Text
-              style={[
-                styles.location,
-                { color: colors.text },
-              ]}
-            >
-              Ubicación: {item.location}
-            </Text>
+                  <Text
+                    style={[
+                      styles.level,
+                      {
+                        color: nivel.textColor,
+                      },
+                    ]}
+                  >
+                    {item.level}
+                  </Text>
+                </View>
+              </View>
 
-            <Text
-              style={[
-                styles.recommendation,
-                { color: colors.textSecondary },
-              ]}
-            >
-              {item.recommendation}
-            </Text>
-          </View>
-        )}
+              {/* ==================================================
+                  INDICADOR DE NIVEL
+              ================================================== */}
+              <View style={styles.riskSection}>
+                <View style={styles.riskLabelRow}>
+                  <Text
+                    style={[
+                      styles.riskLabel,
+                      {
+                        color: colors.textSecondary,
+                      },
+                    ]}
+                  >
+                    NIVEL DE ALERTA
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.riskValue,
+                      {
+                        color: nivel.textColor,
+                      },
+                    ]}
+                  >
+                    {item.level.toUpperCase()}
+                  </Text>
+                </View>
+
+                <View
+                  style={[
+                    styles.riskTrack,
+                    {
+                      backgroundColor:
+                        colors.background,
+                    },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.riskProgress,
+                      {
+                        width: nivel.indicatorWidth,
+                        backgroundColor:
+                          nivel.iconColor,
+                      },
+                    ]}
+                  />
+                </View>
+              </View>
+
+              {/* ==================================================
+                  INFORMACIÓN PRINCIPAL
+              ================================================== */}
+              <Text
+                style={[
+                  styles.title,
+                  { color: colors.text },
+                ]}
+              >
+                {item.disease}
+              </Text>
+
+              {/* Ubicación */}
+              <View style={styles.infoRow}>
+                <View
+                  style={[
+                    styles.infoIcon,
+                    {
+                      backgroundColor:
+                        colors.background,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="location-outline"
+                    size={17}
+                    color={colors.primary}
+                  />
+                </View>
+
+                <View style={styles.infoTextContainer}>
+                  <Text
+                    style={[
+                      styles.infoLabel,
+                      {
+                        color:
+                          colors.textSecondary,
+                      },
+                    ]}
+                  >
+                    UBICACIÓN
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.location,
+                      { color: colors.text },
+                    ]}
+                  >
+                    {item.location}
+                  </Text>
+                </View>
+              </View>
+
+              {/* ==================================================
+                  RECOMENDACIÓN SANITARIA
+              ================================================== */}
+              <View
+                style={[
+                  styles.recommendationBox,
+                  {
+                    backgroundColor:
+                      colors.background,
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.recommendationIcon,
+                    {
+                      backgroundColor:
+                        colors.card,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="shield-checkmark-outline"
+                    size={20}
+                    color={colors.primary}
+                  />
+                </View>
+
+                <View
+                  style={styles.recommendationContent}
+                >
+                  <Text
+                    style={[
+                      styles.recommendationLabel,
+                      {
+                        color:
+                          colors.textSecondary,
+                      },
+                    ]}
+                  >
+                    RECOMENDACIÓN
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.recommendation,
+                      {
+                        color: colors.text,
+                      },
+                    ]}
+                  >
+                    {item.recommendation}
+                  </Text>
+                </View>
+              </View>
+
+              {/* ==================================================
+                  INDICADOR FINAL
+              ================================================== */}
+              <View style={styles.cardFooter}>
+                <View style={styles.liveIndicator}>
+                  <View
+                    style={[
+                      styles.liveDot,
+                      {
+                        backgroundColor:
+                          nivel.iconColor,
+                      },
+                    ]}
+                  />
+
+                  <Text
+                    style={[
+                      styles.liveText,
+                      {
+                        color:
+                          colors.textSecondary,
+                      },
+                    ]}
+                  >
+                    ALERTA ACTIVA
+                  </Text>
+                </View>
+
+                <Ionicons
+                  name="pulse-outline"
+                  size={20}
+                  color={nivel.iconColor}
+                />
+              </View>
+            </View>
+          );
+        }}
         ListEmptyComponent={
           <Text
             style={[
@@ -94,51 +409,286 @@ export default function Alerts() {
   );
 }
 
+/* ============================================================
+   ESTILOS
+============================================================ */
+
 const styles = StyleSheet.create({
+  /* ==========================================================
+     ESTRUCTURA GENERAL
+  ========================================================== */
   container: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 15,
+  },
+
+  /* ==========================================================
+     ENCABEZADO
+  ========================================================== */
+  headerContainer: {
+    marginBottom: 20,
+  },
+
+  headerTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  headerTextContainer: {
+    flex: 1,
+    minWidth: 0,
+  },
+
+  headerIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
   },
 
   header: {
     fontSize: 30,
-    fontWeight: "bold",
-    color: "#DC2626",
-    marginBottom: 20,
+    fontWeight: "800",
   },
 
+  subheader: {
+    fontSize: 14,
+    marginTop: 5,
+  },
+
+  /* ==========================================================
+     LISTA
+  ========================================================== */
+  listContent: {
+    paddingBottom: 35,
+  },
+
+  listContentWide: {
+    maxWidth: 1180,
+    width: "100%",
+    alignSelf: "center",
+  },
+
+  columnWrapperWide: {
+    gap: 16,
+  },
+
+  /* ==========================================================
+     TARJETA DE ALERTA
+  ========================================================== */
   card: {
     padding: 20,
-    borderRadius: 18,
-    marginBottom: 15,
+    borderRadius: 28,
+    marginBottom: 16,
 
     shadowColor: "#000",
     shadowOpacity: 0.08,
-    shadowRadius: 8,
+    shadowRadius: 14,
+    shadowOffset: {
+      width: 0,
+      height: 6,
+    },
 
     elevation: 4,
   },
 
-  title: {
-    fontSize: 18,
-    fontWeight: "bold",
+  cardWide: {
+    flex: 1,
+  },
+
+  /* ==========================================================
+     CABECERA DE ESTADO
+  ========================================================== */
+  cardTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 18,
+  },
+
+  alertIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  levelBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+
+  levelDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 999,
+    marginRight: 7,
   },
 
   level: {
-    marginTop: 8,
-    color: "#DC2626",
-    fontWeight: "bold",
+    fontWeight: "800",
+    fontSize: 12,
+  },
+
+  /* ==========================================================
+     INDICADOR DE RIESGO
+  ========================================================== */
+  riskSection: {
+    marginBottom: 18,
+  },
+
+  riskLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 7,
+  },
+
+  riskLabel: {
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+
+  riskValue: {
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 0.8,
+  },
+
+  riskTrack: {
+    width: "100%",
+    height: 6,
+    borderRadius: 999,
+    overflow: "hidden",
+  },
+
+  riskProgress: {
+    height: "100%",
+    borderRadius: 999,
+  },
+
+  /* ==========================================================
+     INFORMACIÓN PRINCIPAL
+  ========================================================== */
+  title: {
+    fontSize: 24,
+    fontWeight: "900",
+    marginBottom: 14,
+  },
+
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+
+  infoIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+
+  infoTextContainer: {
+    flex: 1,
+    minWidth: 0,
+  },
+
+  infoLabel: {
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+    marginBottom: 2,
   },
 
   location: {
-    marginTop: 6,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
+  /* ==========================================================
+     RECOMENDACIÓN
+  ========================================================== */
+  recommendationBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    borderRadius: 18,
+  },
+
+  recommendationIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  recommendationContent: {
+    flex: 1,
+    minWidth: 0,
+    marginLeft: 10,
+  },
+
+  recommendationLabel: {
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+    marginBottom: 3,
   },
 
   recommendation: {
-    marginTop: 12,
+    fontSize: 13,
     lineHeight: 20,
+    fontWeight: "600",
   },
 
+  /* ==========================================================
+     PIE DE TARJETA
+  ========================================================== */
+  cardFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+
+    marginTop: 16,
+    paddingTop: 12,
+
+    borderTopWidth: 1,
+    borderTopColor: "#E2E8F0",
+  },
+
+  liveIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  liveDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 999,
+    marginRight: 7,
+  },
+
+  liveText: {
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+
+  /* ==========================================================
+     ESTADO VACÍO
+  ========================================================== */
   empty: {
     textAlign: "center",
     marginTop: 40,

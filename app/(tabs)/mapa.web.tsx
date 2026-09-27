@@ -8,9 +8,9 @@ import {
   View,
 } from "react-native";
 
-import { SafeAreaView } from "react-native-safe-area-context";
-
 import { useEffect, useState } from "react";
+
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Ionicons } from "@expo/vector-icons";
 
@@ -20,27 +20,68 @@ import { buscarCentrosMedicos } from "../../services/mapService";
 
 import { useTheme } from "../../hooks/useTheme";
 
+/* ============================================================
+   TIPO DE UBICACIÓN
+
+   Guarda las coordenadas obtenidas mediante expo-location.
+============================================================ */
+
+type Ubicacion = {
+  latitude: number;
+  longitude: number;
+};
+
+/* ============================================================
+   PANTALLA WEB DEL MAPA
+
+   Esta versión está destinada a la navegación web.
+
+   La lógica de ubicación y búsqueda se mantiene separada de
+   la interfaz para evitar modificar el funcionamiento del
+   servicio mapService.
+============================================================ */
+
 export default function MapaWeb() {
   const { colors } = useTheme();
 
+  /* ==========================================================
+     ESTADOS
+  ========================================================== */
+
+  // Coordenadas actuales del usuario.
   const [ubicacion, setUbicacion] =
-    useState<{
-      latitude: number;
-      longitude: number;
-    } | null>(null);
+    useState<Ubicacion | null>(null);
 
-  const [lugares, setLugares] = useState<any[]>([]);
+  // Centros médicos encontrados.
+  const [lugares, setLugares] =
+    useState<any[]>([]);
 
-  const [loading, setLoading] = useState(true);
+  // Estado general de carga.
+  const [loading, setLoading] =
+    useState(true);
 
-  const [error, setError] = useState("");
+  // Estado de búsqueda de establecimientos.
+  const [error, setError] =
+    useState("");
+
+  /* ==========================================================
+     CARGA INICIAL
+
+     Cuando la pantalla se abre:
+     1. Solicita permiso de ubicación.
+     2. Obtiene las coordenadas actuales.
+     3. Guarda la ubicación.
+     4. Busca centros médicos cercanos.
+  ========================================================== */
 
   useEffect(() => {
     const cargar = async () => {
       try {
+        // Solicita permiso para utilizar la ubicación.
         const permiso =
           await Location.requestForegroundPermissionsAsync();
 
+        // Si el permiso no fue concedido, informamos al usuario.
         if (permiso.status !== "granted") {
           setError(
             "No se concedió permiso para acceder a tu ubicación."
@@ -50,24 +91,32 @@ export default function MapaWeb() {
           return;
         }
 
+        // Obtiene la ubicación actual.
         const location =
           await Location.getCurrentPositionAsync({
             accuracy: Location.Accuracy.Balanced,
           });
 
-        const lat = location.coords.latitude;
-        const lng = location.coords.longitude;
+        const lat =
+          location.coords.latitude;
 
+        const lng =
+          location.coords.longitude;
+
+        // Guarda las coordenadas.
         setUbicacion({
           latitude: lat,
           longitude: lng,
         });
 
-        const data = await buscarCentrosMedicos(
-          lat,
-          lng
-        );
+        // Busca los centros médicos cercanos.
+        const data =
+          await buscarCentrosMedicos(
+            lat,
+            lng
+          );
 
+        // Guarda los resultados.
         setLugares(data);
       } catch (error) {
         console.log(
@@ -79,6 +128,7 @@ export default function MapaWeb() {
           "No fue posible obtener tu ubicación. Puedes intentar nuevamente."
         );
       } finally {
+        // Finaliza el estado de carga.
         setLoading(false);
       }
     };
@@ -88,6 +138,8 @@ export default function MapaWeb() {
 
   /* ============================================================
      ABRIR UBICACIÓN DEL USUARIO
+
+     Abre OpenStreetMap utilizando las coordenadas actuales.
   ============================================================ */
 
   const abrirMapa = () => {
@@ -105,12 +157,19 @@ export default function MapaWeb() {
 
   /* ============================================================
      ABRIR CENTRO MÉDICO
+
+     Utiliza las coordenadas de un establecimiento para abrir
+     su ubicación específica en OpenStreetMap.
   ============================================================ */
 
   const abrirLugar = (lugar: any) => {
-    const lat = Number(lugar.lat);
-    const lon = Number(lugar.lon);
+    const lat =
+      Number(lugar.lat);
 
+    const lon =
+      Number(lugar.lon);
+
+    // Evita abrir una ubicación inválida.
     if (
       Number.isNaN(lat) ||
       Number.isNaN(lon)
@@ -127,7 +186,9 @@ export default function MapaWeb() {
   };
 
   /* ============================================================
-     LOADING
+     ESTADO DE CARGA
+
+     Se muestra mientras se obtiene la posición del usuario.
   ============================================================ */
 
   if (loading) {
@@ -136,7 +197,8 @@ export default function MapaWeb() {
         style={[
           styles.loading,
           {
-            backgroundColor: colors.background,
+            backgroundColor:
+              colors.background,
           },
         ]}
       >
@@ -144,13 +206,14 @@ export default function MapaWeb() {
           style={[
             styles.loadingIcon,
             {
-              backgroundColor: colors.card,
+              backgroundColor:
+                colors.card,
             },
           ]}
         >
           <Ionicons
-            name="map-outline"
-            size={32}
+            name="location-outline"
+            size={31}
             color={colors.primary}
           />
         </View>
@@ -168,396 +231,102 @@ export default function MapaWeb() {
             },
           ]}
         >
-          Buscando centros médicos...
+          Obteniendo tu ubicación...
         </Text>
 
         <Text
           style={[
             styles.loadingSubtitle,
             {
-              color: colors.textSecondary,
+              color:
+                colors.textSecondary,
             },
           ]}
         >
-          Estamos buscando establecimientos cercanos a tu ubicación.
+          Estamos preparando el mapa y buscando
+          centros médicos cercanos.
         </Text>
       </View>
     );
   }
+
+  /* ============================================================
+     INTERFAZ PRINCIPAL
+  ============================================================ */
 
   return (
     <SafeAreaView
       style={[
         styles.container,
         {
-          backgroundColor: colors.background,
+          backgroundColor:
+            colors.background,
         },
       ]}
     >
       <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={true}
+        contentContainerStyle={
+          styles.scroll
+        }
       >
-        {/* ======================================================
-            ENCABEZADO
-        ====================================================== */}
+        <View style={styles.content}>
 
-        <View style={styles.headerContainer}>
+          {/* ==================================================
+              ENCABEZADO
+          ================================================== */}
+
           <View
-            style={[
-              styles.headerIcon,
-              {
-                backgroundColor: colors.card,
-              },
-            ]}
-          >
-            <Ionicons
-              name="medical"
-              size={30}
-              color={colors.primary}
-            />
-          </View>
-
-          <View style={styles.headerTextContainer}>
-            <Text
-              style={[
-                styles.header,
-                {
-                  color: colors.text,
-                },
-              ]}
-            >
-              Centros médicos cercanos
-            </Text>
-
-            <Text
-              style={[
-                styles.subtitle,
-                {
-                  color: colors.textSecondary,
-                },
-              ]}
-            >
-              Hospitales, clínicas y centros de salud cerca de ti
-            </Text>
-          </View>
-        </View>
-
-        {/* ======================================================
-            ERROR
-        ====================================================== */}
-
-        {error !== "" && (
-          <View
-            style={[
-              styles.errorCard,
-              {
-                backgroundColor: colors.card,
-                borderColor: colors.border,
-              },
-            ]}
+            style={
+              styles.headerContainer
+            }
           >
             <View
-              style={[
-                styles.errorIcon,
-                {
-                  backgroundColor: colors.background,
-                },
-              ]}
+              style={
+                styles.headerTextContainer
+              }
             >
-              <Ionicons
-                name="warning-outline"
-                size={24}
-                color={colors.primary}
-              />
-            </View>
-
-            <Text
-              style={[
-                styles.errorText,
-                {
-                  color: colors.text,
-                },
-              ]}
-            >
-              {error}
-            </Text>
-          </View>
-        )}
-
-        {/* ======================================================
-            UBICACIÓN
-        ====================================================== */}
-
-        {ubicacion && (
-          <View
-            style={[
-              styles.locationCard,
-              {
-                backgroundColor: colors.card,
-                borderColor: colors.border,
-              },
-            ]}
-          >
-            <View style={styles.locationHeader}>
-              <View
+              <Text
                 style={[
-                  styles.locationIcon,
+                  styles.eyebrow,
                   {
-                    backgroundColor:
-                      colors.background,
+                    color:
+                      colors.primary,
                   },
                 ]}
               >
-                <Ionicons
-                  name="location"
-                  size={23}
-                  color={colors.primary}
-                />
-              </View>
-
-              <View style={styles.locationHeaderText}>
-                <Text
-                  style={[
-                    styles.locationTitle,
-                    {
-                      color: colors.text,
-                    },
-                  ]}
-                >
-                  Tu ubicación
-                </Text>
-
-                <Text
-                  style={[
-                    styles.locationSubtitle,
-                    {
-                      color:
-                        colors.textSecondary,
-                    },
-                  ]}
-                >
-                  Ubicación utilizada para encontrar centros cercanos
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.coordinatesContainer}>
-              <View
-                style={[
-                  styles.coordinateBox,
-                  {
-                    backgroundColor:
-                      colors.background,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.coordinateLabel,
-                    {
-                      color:
-                        colors.textSecondary,
-                    },
-                  ]}
-                >
-                  Latitud
-                </Text>
-
-                <Text
-                  style={[
-                    styles.coordinateValue,
-                    {
-                      color: colors.text,
-                    },
-                  ]}
-                >
-                  {ubicacion.latitude.toFixed(5)}
-                </Text>
-              </View>
-
-              <View
-                style={[
-                  styles.coordinateBox,
-                  {
-                    backgroundColor:
-                      colors.background,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.coordinateLabel,
-                    {
-                      color:
-                        colors.textSecondary,
-                    },
-                  ]}
-                >
-                  Longitud
-                </Text>
-
-                <Text
-                  style={[
-                    styles.coordinateValue,
-                    {
-                      color: colors.text,
-                    },
-                  ]}
-                >
-                  {ubicacion.longitude.toFixed(5)}
-                </Text>
-              </View>
-            </View>
-
-            <Pressable
-              onPress={abrirMapa}
-              style={({ pressed }) => [
-                styles.mapButton,
-                {
-                  backgroundColor:
-                    colors.primary,
-                  opacity: pressed ? 0.8 : 1,
-                },
-              ]}
-            >
-              <Ionicons
-                name="map-outline"
-                size={19}
-                color="#FFFFFF"
-              />
-
-              <Text style={styles.mapButtonText}>
-                Ver mi ubicación en OpenStreetMap
+                MAPA DE SALUD
               </Text>
-            </Pressable>
-          </View>
-        )}
 
-        {/* ======================================================
-            RESULTADOS
-        ====================================================== */}
+              <Text
+                style={[
+                  styles.header,
+                  {
+                    color:
+                      colors.text,
+                  },
+                ]}
+              >
+                Centros médicos cercanos
+              </Text>
 
-        <View style={styles.resultsHeader}>
-          <View>
-            <Text
-              style={[
-                styles.resultsTitle,
-                {
-                  color: colors.text,
-                },
-              ]}
-            >
-              Centros encontrados
-            </Text>
-
-            <Text
-              style={[
-                styles.resultsSubtitle,
-                {
-                  color:
-                    colors.textSecondary,
-                },
-              ]}
-            >
-              {lugares.length > 0
-                ? `${lugares.length} establecimientos encontrados cerca de ti`
-                : "No encontramos establecimientos registrados cerca de ti"}
-            </Text>
-          </View>
-
-          <View
-            style={[
-              styles.resultsBadge,
-              {
-                backgroundColor:
-                  colors.card,
-                borderColor:
-                  colors.border,
-              },
-            ]}
-          >
-            <Ionicons
-              name="location-outline"
-              size={16}
-              color={colors.primary}
-            />
-
-            <Text
-              style={[
-                styles.resultsBadgeText,
-                {
-                  color: colors.primary,
-                },
-              ]}
-            >
-              5 km
-            </Text>
-          </View>
-        </View>
-
-        {/* ======================================================
-            SIN RESULTADOS
-        ====================================================== */}
-
-        {lugares.length === 0 ? (
-          <View
-            style={[
-              styles.emptyCard,
-              {
-                backgroundColor:
-                  colors.card,
-                borderColor:
-                  colors.border,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.emptyIcon,
-                {
-                  backgroundColor:
-                    colors.background,
-                },
-              ]}
-            >
-              <Ionicons
-                name="medical-outline"
-                size={34}
-                color={colors.textSecondary}
-              />
+              <Text
+                style={[
+                  styles.subtitle,
+                  {
+                    color:
+                      colors.textSecondary,
+                  },
+                ]}
+              >
+                Encuentra hospitales, clínicas
+                y centros de salud cerca de ti.
+              </Text>
             </View>
 
-            <Text
-              style={[
-                styles.emptyTitle,
-                {
-                  color: colors.text,
-                },
-              ]}
-            >
-              No se encontraron centros médicos
-            </Text>
-
-            <Text
-              style={[
-                styles.emptyText,
-                {
-                  color:
-                    colors.textSecondary,
-                },
-              ]}
-            >
-              No hay establecimientos médicos registrados
-              cerca de tu ubicación.
-            </Text>
-          </View>
-        ) : (
-          lugares.map((lugar, index) => (
             <View
-              key={lugar.id || index}
               style={[
-                styles.card,
+                styles.headerBadge,
                 {
                   backgroundColor:
                     colors.card,
@@ -566,272 +335,670 @@ export default function MapaWeb() {
                 },
               ]}
             >
-              {/* CABECERA */}
+              <Ionicons
+                name="location-outline"
+                size={16}
+                color={colors.primary}
+              />
 
-              <View style={styles.cardHeader}>
-                <View
+              <Text
+                style={[
+                  styles.headerBadgeText,
+                  {
+                    color:
+                      colors.primary,
+                  },
+                ]}
+              >
+                Cerca de ti
+              </Text>
+            </View>
+          </View>
+
+          {/* ==================================================
+              ERROR
+          ================================================== */}
+
+          {error !== "" && (
+            <View
+              style={[
+                styles.errorCard,
+                {
+                  backgroundColor:
+                    colors.card,
+                  borderColor:
+                    colors.border,
+                },
+              ]}
+            >
+              <View
+                style={[
+                  styles.errorIcon,
+                  {
+                    backgroundColor:
+                      colors.background,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="warning-outline"
+                  size={23}
+                  color={colors.primary}
+                />
+              </View>
+
+              <View
+                style={
+                  styles.errorContent
+                }
+              >
+                <Text
                   style={[
-                    styles.cardIcon,
+                    styles.errorTitle,
                     {
-                      backgroundColor:
-                        colors.background,
+                      color:
+                        colors.text,
                     },
                   ]}
                 >
-                  <Ionicons
-                    name={obtenerIconoCentro(
-                      lugar
-                    )}
-                    size={26}
-                    color={colors.primary}
-                  />
-                </View>
-
-                <View
-                  style={
-                    styles.cardHeaderText
-                  }
-                >
-                  <Text
-                    style={[
-                      styles.cardTitle,
-                      {
-                        color: colors.text,
-                      },
-                    ]}
-                    numberOfLines={2}
-                  >
-                    {lugar.display_name ||
-                      lugar.tags?.name ||
-                      "Centro médico"}
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.cardType,
-                      {
-                        color:
-                          colors.primary,
-                      },
-                    ]}
-                  >
-                    {obtenerTipoCentro(
-                      lugar
-                    )}
-                  </Text>
-                </View>
-              </View>
-
-              {/* DISTANCIA */}
-
-              <View style={styles.infoRow}>
-                <View style={styles.infoIcon}>
-                  <Ionicons
-                    name="location-outline"
-                    size={18}
-                    color={colors.primary}
-                  />
-                </View>
+                  No fue posible obtener la ubicación
+                </Text>
 
                 <Text
                   style={[
-                    styles.infoText,
+                    styles.errorText,
                     {
                       color:
                         colors.textSecondary,
                     },
                   ]}
                 >
-                  {formatearDistancia(
-                    lugar.distanciaKm
-                  )}
+                  {error}
                 </Text>
               </View>
+            </View>
+          )}
 
-              {/* DIRECCIÓN */}
+          {/* ==================================================
+              UBICACIÓN
+          ================================================== */}
+<View style={styles.dashboardGrid}>
 
-              {obtenerDireccion(lugar) !==
-                "" && (
+  {/* ==================================================
+      COLUMNA IZQUIERDA
+  ================================================== */}
+
+  <View style={styles.leftColumn}>
+
+    {/* UBICACIÓN */}
+
+    {ubicacion && (
+      <View
+        style={[
+          styles.locationCard,
+          {
+            backgroundColor: colors.card,
+            borderColor: colors.border,
+          },
+        ]}
+      >
+        <View style={styles.locationHeader}>
+          <View
+            style={[
+              styles.locationIcon,
+              {
+                backgroundColor: colors.background,
+              },
+            ]}
+          >
+            <Ionicons
+              name="location"
+              size={22}
+              color={colors.primary}
+            />
+          </View>
+
+          <View style={styles.locationTextContainer}>
+            <Text
+              style={[
+                styles.locationTitle,
+                {
+                  color: colors.text,
+                },
+              ]}
+            >
+              Tu ubicación
+            </Text>
+
+            <Text
+              style={[
+                styles.locationSubtitle,
+                {
+                  color: colors.textSecondary,
+                },
+              ]}
+            >
+              Esta posición se utiliza para encontrar centros
+              médicos cercanos.
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.coordinatesContainer}>
+          <View
+            style={[
+              styles.coordinateBox,
+              {
+                backgroundColor: colors.background,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.coordinateLabel,
+                {
+                  color: colors.textSecondary,
+                },
+              ]}
+            >
+              LATITUD
+            </Text>
+
+            <Text
+              style={[
+                styles.coordinateValue,
+                {
+                  color: colors.text,
+                },
+              ]}
+            >
+              {ubicacion.latitude.toFixed(5)}
+            </Text>
+          </View>
+
+          <View
+            style={[
+              styles.coordinateBox,
+              {
+                backgroundColor: colors.background,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.coordinateLabel,
+                {
+                  color: colors.textSecondary,
+                },
+              ]}
+            >
+              LONGITUD
+            </Text>
+
+            <Text
+              style={[
+                styles.coordinateValue,
+                {
+                  color: colors.text,
+                },
+              ]}
+            >
+              {ubicacion.longitude.toFixed(5)}
+            </Text>
+          </View>
+        </View>
+
+        <Pressable
+          onPress={abrirMapa}
+          style={({ pressed }) => [
+            styles.locationButton,
+            {
+              backgroundColor: colors.primary,
+              opacity: pressed ? 0.82 : 1,
+            },
+          ]}
+        >
+          <Ionicons
+            name="map-outline"
+            size={18}
+            color="#FFFFFF"
+          />
+
+          <Text style={styles.locationButtonText}>
+            Ver mi ubicación
+          </Text>
+
+          <Ionicons
+            name="open-outline"
+            size={16}
+            color="#FFFFFF"
+          />
+        </Pressable>
+      </View>
+    )}
+
+  </View>
+
+  {/* ==================================================
+      COLUMNA DERECHA
+  ================================================== */}
+
+  <View style={styles.rightColumn}>
+
+    {/* CABECERA DE RESULTADOS */}
+
+    <View style={styles.resultsHeader}>
+      <View style={styles.resultsHeaderText}>
+        <Text
+          style={[
+            styles.resultsTitle,
+            {
+              color: colors.text,
+            },
+          ]}
+        >
+          Centros encontrados
+        </Text>
+
+        <Text
+          style={[
+            styles.resultsSubtitle,
+            {
+              color: colors.textSecondary,
+            },
+          ]}
+        >
+          {lugares.length > 0
+            ? `${lugares.length} establecimientos encontrados cerca de ti`
+            : "No encontramos establecimientos registrados cerca de ti"}
+        </Text>
+      </View>
+
+      <View
+        style={[
+          styles.resultsCount,
+          {
+            backgroundColor: colors.card,
+            borderColor: colors.border,
+          },
+        ]}
+      >
+        <Text
+          style={[
+            styles.resultsCountNumber,
+            {
+              color: colors.primary,
+            },
+          ]}
+        >
+          {lugares.length}
+        </Text>
+
+        <Text
+          style={[
+            styles.resultsCountLabel,
+            {
+              color: colors.textSecondary,
+            },
+          ]}
+        >
+          lugares
+        </Text>
+      </View>
+    </View>
+
+    {/* SIN RESULTADOS */}
+
+    {lugares.length === 0 && (
+      <View
+        style={[
+          styles.emptyCard,
+          {
+            backgroundColor: colors.card,
+            borderColor: colors.border,
+          },
+        ]}
+      >
+        <View
+          style={[
+            styles.emptyIcon,
+            {
+              backgroundColor: colors.background,
+            },
+          ]}
+        >
+          <Ionicons
+            name="medical-outline"
+            size={32}
+            color={colors.textSecondary}
+          />
+        </View>
+
+        <Text
+          style={[
+            styles.emptyTitle,
+            {
+              color: colors.text,
+            },
+          ]}
+        >
+          No se encontraron centros médicos
+        </Text>
+
+        <Text
+          style={[
+            styles.emptyText,
+            {
+              color: colors.textSecondary,
+            },
+          ]}
+        >
+          No hay establecimientos médicos registrados cerca
+          de tu ubicación.
+        </Text>
+      </View>
+    )}
+
+    {/* LISTA DE CENTROS */}
+
+    <View style={styles.resultsGrid}>
+      {lugares.map((lugar, index) => (
+        <View
+          key={lugar.id || index}
+          style={[
+            styles.card,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          {/* CABECERA */}
+
+          <View style={styles.cardHeader}>
+            <View
+              style={[
+                styles.cardIcon,
+                {
+                  backgroundColor: colors.background,
+                },
+              ]}
+            >
+              <Ionicons
+                name={obtenerIconoCentro(lugar)}
+                size={25}
+                color={colors.primary}
+              />
+            </View>
+
+            <View style={styles.cardHeaderText}>
+              <Text
+                style={[
+                  styles.cardType,
+                  {
+                    color: colors.primary,
+                  },
+                ]}
+              >
+                {obtenerTipoCentro(lugar).toUpperCase()}
+              </Text>
+
+              <Text
+                style={[
+                  styles.cardTitle,
+                  {
+                    color: colors.text,
+                  },
+                ]}
+                numberOfLines={2}
+              >
+                {lugar.display_name ||
+                  lugar.tags?.name ||
+                  "Centro médico"}
+              </Text>
+            </View>
+
+            <View
+              style={[
+                styles.distanceBadge,
+                {
+                  backgroundColor: colors.background,
+                },
+              ]}
+            >
+              <Ionicons
+                name="navigate-outline"
+                size={14}
+                color={colors.primary}
+              />
+
+              <Text
+                style={[
+                  styles.distanceText,
+                  {
+                    color: colors.primary,
+                  },
+                ]}
+              >
+                {formatearDistancia(lugar.distanciaKm)}
+              </Text>
+            </View>
+          </View>
+
+          {/* INFORMACIÓN */}
+
+          <View style={styles.infoContainer}>
+
+            {obtenerDireccion(lugar) !== "" && (
+              <View style={styles.infoRow}>
                 <View
-                  style={styles.infoRow}
+                  style={[
+                    styles.infoIcon,
+                    {
+                      backgroundColor: colors.background,
+                    },
+                  ]}
                 >
-                  <View
-                    style={styles.infoIcon}
-                  >
-                    <Ionicons
-                      name="home-outline"
-                      size={18}
-                      color={colors.primary}
-                    />
-                  </View>
+                  <Ionicons
+                    name="home-outline"
+                    size={16}
+                    color={colors.primary}
+                  />
+                </View>
 
+                <View style={styles.infoContent}>
                   <Text
                     style={[
-                      styles.infoText,
+                      styles.infoLabel,
                       {
-                        color:
-                          colors.textSecondary,
+                        color: colors.textSecondary,
                       },
                     ]}
                   >
-                    {obtenerDireccion(
-                      lugar
-                    )}
+                    Dirección
                   </Text>
-                </View>
-              )}
-
-              {/* HORARIO */}
-
-              {lugar.tags
-                ?.opening_hours && (
-                <View
-                  style={styles.infoRow}
-                >
-                  <View
-                    style={styles.infoIcon}
-                  >
-                    <Ionicons
-                      name="time-outline"
-                      size={18}
-                      color={colors.primary}
-                    />
-                  </View>
-
-                  <View
-                    style={styles.infoContent}
-                  >
-                    <Text
-                      style={[
-                        styles.infoLabel,
-                        {
-                          color:
-                            colors.textSecondary,
-                        },
-                      ]}
-                    >
-                      Horario registrado
-                    </Text>
-
-                    <Text
-                      style={[
-                        styles.infoValue,
-                        {
-                          color:
-                            colors.text,
-                        },
-                      ]}
-                    >
-                      {formatearHorario(
-                        lugar.tags
-                          .opening_hours
-                      )}
-                    </Text>
-                  </View>
-                </View>
-              )}
-
-              {/* ESPECIALIDAD */}
-
-              {lugar.tags
-                ?.speciality && (
-                <View
-                  style={styles.infoRow}
-                >
-                  <View
-                    style={styles.infoIcon}
-                  >
-                    <Ionicons
-                      name="medkit-outline"
-                      size={18}
-                      color={colors.primary}
-                    />
-                  </View>
-
-                  <View
-                    style={styles.infoContent}
-                  >
-                    <Text
-                      style={[
-                        styles.infoLabel,
-                        {
-                          color:
-                            colors.textSecondary,
-                        },
-                      ]}
-                    >
-                      Especialidad
-                    </Text>
-
-                    <Text
-                      style={[
-                        styles.infoValue,
-                        {
-                          color:
-                            colors.text,
-                        },
-                      ]}
-                    >
-                      {formatearEspecialidad(
-                        lugar.tags.speciality
-                      )}
-                    </Text>
-                  </View>
-                </View>
-              )}
-
-              {/* TELÉFONO */}
-
-              {lugar.tags?.phone && (
-                <View
-                  style={styles.infoRow}
-                >
-                  <View
-                    style={styles.infoIcon}
-                  >
-                    <Ionicons
-                      name="call-outline"
-                      size={18}
-                      color={colors.primary}
-                    />
-                  </View>
 
                   <Text
                     style={[
-                      styles.infoText,
+                      styles.infoValue,
                       {
-                        color:
-                          colors.textSecondary,
+                        color: colors.text,
+                      },
+                    ]}
+                  >
+                    {obtenerDireccion(lugar)}
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {lugar.tags?.opening_hours && (
+              <View style={styles.infoRow}>
+                <View
+                  style={[
+                    styles.infoIcon,
+                    {
+                      backgroundColor: colors.background,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="time-outline"
+                    size={16}
+                    color={colors.primary}
+                  />
+                </View>
+
+                <View style={styles.infoContent}>
+                  <Text
+                    style={[
+                      styles.infoLabel,
+                      {
+                        color: colors.textSecondary,
+                      },
+                    ]}
+                  >
+                    Horario
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.infoValue,
+                      {
+                        color: colors.text,
+                      },
+                    ]}
+                  >
+                    {formatearHorario(
+                      lugar.tags.opening_hours
+                    )}
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {lugar.tags?.speciality && (
+              <View style={styles.infoRow}>
+                <View
+                  style={[
+                    styles.infoIcon,
+                    {
+                      backgroundColor: colors.background,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="medkit-outline"
+                    size={16}
+                    color={colors.primary}
+                  />
+                </View>
+
+                <View style={styles.infoContent}>
+                  <Text
+                    style={[
+                      styles.infoLabel,
+                      {
+                        color: colors.textSecondary,
+                      },
+                    ]}
+                  >
+                    Especialidad
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.infoValue,
+                      {
+                        color: colors.text,
+                      },
+                    ]}
+                  >
+                    {formatearEspecialidad(
+                      lugar.tags.speciality
+                    )}
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {lugar.tags?.phone && (
+              <View style={styles.infoRow}>
+                <View
+                  style={[
+                    styles.infoIcon,
+                    {
+                      backgroundColor: colors.background,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="call-outline"
+                    size={16}
+                    color={colors.primary}
+                  />
+                </View>
+
+                <View style={styles.infoContent}>
+                  <Text
+                    style={[
+                      styles.infoLabel,
+                      {
+                        color: colors.textSecondary,
+                      },
+                    ]}
+                  >
+                    Teléfono
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.infoValue,
+                      {
+                        color: colors.text,
                       },
                     ]}
                   >
                     {lugar.tags.phone}
                   </Text>
                 </View>
-              )}
+              </View>
+            )}
 
-              {/* WEB */}
-
-              {lugar.tags?.website && (
+            {lugar.tags?.website && (
+              <View style={styles.infoRow}>
                 <View
-                  style={styles.infoRow}
+                  style={[
+                    styles.infoIcon,
+                    {
+                      backgroundColor: colors.background,
+                    },
+                  ]}
                 >
-                  <View
-                    style={styles.infoIcon}
+                  <Ionicons
+                    name="globe-outline"
+                    size={16}
+                    color={colors.primary}
+                  />
+                </View>
+
+                <View style={styles.infoContent}>
+                  <Text
+                    style={[
+                      styles.infoLabel,
+                      {
+                        color: colors.textSecondary,
+                      },
+                    ]}
                   >
-                    <Ionicons
-                      name="globe-outline"
-                      size={18}
-                      color={colors.primary}
-                    />
-                  </View>
+                    Sitio web
+                  </Text>
 
                   <Text
                     style={[
-                      styles.infoText,
+                      styles.infoValue,
                       {
-                        color:
-                          colors.textSecondary,
+                        color: colors.text,
                       },
                     ]}
                     numberOfLines={1}
@@ -839,90 +1006,98 @@ export default function MapaWeb() {
                     {lugar.tags.website}
                   </Text>
                 </View>
-              )}
-
-              {/* BOTÓN */}
-
-              <Pressable
-                onPress={() =>
-                  abrirLugar(lugar)
-                }
-                style={({ pressed }) => [
-                  styles.placeButton,
-                  {
-                    borderColor:
-                      colors.primary,
-                    backgroundColor:
-                      pressed
-                        ? colors.background
-                        : "transparent",
-                  },
-                ]}
-              >
-                <Ionicons
-                  name="map-outline"
-                  size={18}
-                  color={colors.primary}
-                />
-
-                <Text
-                  style={[
-                    styles.placeButtonText,
-                    {
-                      color:
-                        colors.primary,
-                    },
-                  ]}
-                >
-                  Ver ubicación en mapa
-                </Text>
-
-                <Ionicons
-                  name="open-outline"
-                  size={16}
-                  color={colors.primary}
-                />
-              </Pressable>
-
-              {/* FUENTE */}
-
-              <View
-                style={[
-                  styles.cardFooter,
-                  {
-                    borderTopColor:
-                      colors.border,
-                  },
-                ]}
-              >
-                <Ionicons
-                  name="information-circle-outline"
-                  size={15}
-                  color={colors.textSecondary}
-                />
-
-                <Text
-                  style={[
-                    styles.footerText,
-                    {
-                      color:
-                        colors.textSecondary,
-                    },
-                  ]}
-                >
-                  Información registrada en OpenStreetMap
-                </Text>
               </View>
-            </View>
-          ))
-        )}
+            )}
+
+          </View>
+
+          {/* BOTÓN */}
+
+          <Pressable
+            onPress={() => abrirLugar(lugar)}
+            style={({ pressed }) => [
+              styles.placeButton,
+              {
+                borderColor: colors.primary,
+                backgroundColor: pressed
+                  ? colors.background
+                  : "transparent",
+              },
+            ]}
+          >
+            <Ionicons
+              name="map-outline"
+              size={17}
+              color={colors.primary}
+            />
+
+            <Text
+              style={[
+                styles.placeButtonText,
+                {
+                  color: colors.primary,
+                },
+              ]}
+            >
+              Ver ubicación
+            </Text>
+
+            <Ionicons
+              name="open-outline"
+              size={16}
+              color={colors.primary}
+            />
+          </Pressable>
+
+          {/* FUENTE */}
+
+          <View
+            style={[
+              styles.cardFooter,
+              {
+                borderTopColor: colors.border,
+              },
+            ]}
+          >
+            <Ionicons
+              name="information-circle-outline"
+              size={14}
+              color={colors.textSecondary}
+            />
+
+            <Text
+              style={[
+                styles.footerText,
+                {
+                  color: colors.textSecondary,
+                },
+              ]}
+            >
+              Información registrada en OpenStreetMap
+            </Text>
+          </View>
+        </View>
+      ))}
+    </View>
+
+  </View>
+
+</View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 /* ============================================================
-   FUNCIONES
+   FUNCIONES DE INFORMACIÓN
+
+   Estas funciones únicamente transforman los datos recibidos
+   desde mapService para mostrarlos correctamente.
+============================================================ */
+
+/* ============================================================
+   OBTENER TIPO DE CENTRO
 ============================================================ */
 
 function obtenerTipoCentro(
@@ -965,6 +1140,10 @@ function obtenerTipoCentro(
   return "Centro médico";
 }
 
+/* ============================================================
+   OBTENER ICONO DEL CENTRO
+============================================================ */
+
 function obtenerIconoCentro(
   lugar: any
 ): keyof typeof Ionicons.glyphMap {
@@ -992,6 +1171,16 @@ function obtenerIconoCentro(
   }
 }
 
+/* ============================================================
+   FORMATEAR DISTANCIA
+
+   Menos de 1 km:
+   → metros
+
+   1 km o más:
+   → kilómetros
+============================================================ */
+
 function formatearDistancia(
   distancia: number
 ): string {
@@ -1005,13 +1194,17 @@ function formatearDistancia(
   if (distancia < 1) {
     return `${Math.round(
       distancia * 1000
-    )} metros de distancia`;
+    )} metros`;
   }
 
   return `${distancia.toFixed(
     1
-  )} km de distancia`;
+  )} km`;
 }
+
+/* ============================================================
+   OBTENER DIRECCIÓN
+============================================================ */
 
 function obtenerDireccion(
   lugar: any
@@ -1034,6 +1227,10 @@ function obtenerDireccion(
     .join(" ");
 }
 
+/* ============================================================
+   FORMATEAR ESPECIALIDAD
+============================================================ */
+
 function formatearEspecialidad(
   especialidad: string
 ): string {
@@ -1047,6 +1244,10 @@ function formatearEspecialidad(
     .filter(Boolean)
     .join(", ");
 }
+
+/* ============================================================
+   FORMATEAR HORARIO
+============================================================ */
 
 function formatearHorario(
   horario: string
@@ -1121,14 +1322,30 @@ function formatearHorario(
 ============================================================ */
 
 const styles = StyleSheet.create({
+
+  /* ==========================================================
+     CONTENEDOR
+  ========================================================== */
+
   container: {
     flex: 1,
   },
 
   scroll: {
-    padding: 20,
-    paddingBottom: 50,
+    paddingBottom: 60,
   },
+
+  content: {
+    width: "100%",
+    maxWidth: 1180,
+    alignSelf: "center",
+    paddingHorizontal: 22,
+    paddingTop: 22,
+  },
+
+  /* ==========================================================
+     CARGA
+  ========================================================== */
 
   loading: {
     flex: 1,
@@ -1138,8 +1355,8 @@ const styles = StyleSheet.create({
   },
 
   loadingIcon: {
-    width: 64,
-    height: 64,
+    width: 63,
+    height: 63,
     borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
@@ -1149,38 +1366,43 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: "800",
     textAlign: "center",
   },
 
   loadingSubtitle: {
     marginTop: 6,
-    fontSize: 13,
-    lineHeight: 19,
+    maxWidth: 380,
+    fontSize: 12,
+    lineHeight: 18,
     textAlign: "center",
   },
 
+  /* ==========================================================
+     ENCABEZADO
+  ========================================================== */
+
   headerContainer: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
     marginBottom: 22,
-  },
-
-  headerIcon: {
-    width: 55,
-    height: 55,
-    borderRadius: 17,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 13,
   },
 
   headerTextContainer: {
     flex: 1,
+    paddingRight: 15,
+  },
+
+  eyebrow: {
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1.3,
+    marginBottom: 5,
   },
 
   header: {
-    fontSize: 26,
+    fontSize: 30,
     fontWeight: "800",
   },
 
@@ -1190,14 +1412,78 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
 
+  headerBadge: {
+    minHeight: 36,
+    paddingHorizontal: 11,
+    borderRadius: 11,
+    borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+  },
+
+  headerBadgeText: {
+    fontSize: 10,
+    fontWeight: "800",
+  },
+
+  /* ==========================================================
+     ERROR
+  ========================================================== */
+
+  errorCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 15,
+    borderRadius: 17,
+    borderWidth: 1,
+    marginBottom: 20,
+  },
+
+  errorIcon: {
+    width: 43,
+    height: 43,
+    borderRadius: 13,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 11,
+  },
+
+  errorContent: {
+    flex: 1,
+  },
+
+  errorTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    marginBottom: 3,
+  },
+
+  errorText: {
+    fontSize: 12,
+    lineHeight: 18,
+  },
+
+  /* ==========================================================
+     UBICACIÓN
+  ========================================================== */
+
   locationCard: {
-    padding: 17,
+    padding: 16,
     borderRadius: 19,
     borderWidth: 1,
-    marginBottom: 24,
+    marginBottom: 28,
 
-    boxShadow:
-      "0px 3px 8px rgba(0, 0, 0, 0.08)",
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+
+    elevation: 2,
   },
 
   locationHeader: {
@@ -1206,15 +1492,15 @@ const styles = StyleSheet.create({
   },
 
   locationIcon: {
-    width: 45,
-    height: 45,
+    width: 46,
+    height: 46,
     borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 11,
   },
 
-  locationHeaderText: {
+  locationTextContainer: {
     flex: 1,
   },
 
@@ -1224,79 +1510,69 @@ const styles = StyleSheet.create({
   },
 
   locationSubtitle: {
-    fontSize: 12,
-    lineHeight: 17,
     marginTop: 3,
+    fontSize: 11,
+    lineHeight: 17,
   },
 
   coordinatesContainer: {
     flexDirection: "row",
     gap: 9,
-    marginTop: 15,
+    marginTop: 14,
   },
 
   coordinateBox: {
     flex: 1,
-    padding: 11,
+    minHeight: 57,
     borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    justifyContent: "center",
   },
 
   coordinateLabel: {
-    fontSize: 10,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 0.8,
     marginBottom: 3,
   },
 
   coordinateValue: {
-    fontSize: 13,
-    fontWeight: "700",
-  },
-
-  mapButton: {
-    marginTop: 15,
-    minHeight: 48,
-    paddingHorizontal: 14,
-    borderRadius: 13,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 8,
-  },
-
-  mapButtonText: {
-    color: "#FFFFFF",
+    fontSize: 14,
     fontWeight: "800",
-    fontSize: 13,
   },
 
-  errorCard: {
-    padding: 16,
-    borderRadius: 17,
-    borderWidth: 1,
-    marginBottom: 20,
+  locationButton: {
+    minHeight: 44,
+    marginTop: 13,
+    borderRadius: 12,
+    paddingHorizontal: 13,
     flexDirection: "row",
     alignItems: "center",
-  },
-
-  errorIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
     justifyContent: "center",
-    alignItems: "center",
-    marginRight: 10,
+    gap: 7,
   },
 
-  errorText: {
-    flex: 1,
-    fontSize: 13,
-    lineHeight: 19,
+  locationButtonText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "800",
   },
+
+  /* ==========================================================
+     RESULTADOS
+  ========================================================== */
 
   resultsHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 14,
+  },
+
+  resultsHeaderText: {
+    flex: 1,
+    paddingRight: 12,
   },
 
   resultsTitle: {
@@ -1306,135 +1582,222 @@ const styles = StyleSheet.create({
 
   resultsSubtitle: {
     marginTop: 4,
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 11,
+    lineHeight: 17,
   },
 
-  resultsBadge: {
-    minWidth: 65,
-    height: 34,
+  resultsCount: {
+    minWidth: 72,
     paddingHorizontal: 9,
-    borderRadius: 11,
+    paddingVertical: 7,
+    borderRadius: 12,
     borderWidth: 1,
-    flexDirection: "row",
-    justifyContent: "center",
     alignItems: "center",
-    gap: 5,
+    justifyContent: "center",
   },
 
-  resultsBadgeText: {
-    fontSize: 12,
+  resultsCountNumber: {
+    fontSize: 17,
     fontWeight: "800",
   },
 
-  card: {
-    padding: 17,
-    borderRadius: 20,
-    marginBottom: 14,
-    borderWidth: 1,
-
-    boxShadow:
-      "0px 3px 8px rgba(0, 0, 0, 0.08)",
+  resultsCountLabel: {
+    marginTop: 1,
+    fontSize: 8,
+    fontWeight: "700",
   },
+
+  resultsList: {
+    width: "100%",
+  },
+
+  dashboardGrid: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  alignItems: "flex-start",
+  gap: 16,
+},
+
+leftColumn: {
+  flexGrow: 1,
+  flexBasis: 330,
+  minWidth: 300,
+},
+
+rightColumn: {
+  flexGrow: 2,
+  flexBasis: 600,
+  minWidth: 500,
+},
+
+resultsGrid: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  gap: 12,
+},
+
+  /* ==========================================================
+     TARJETA
+  ========================================================== */
+
+  card: {
+  flexGrow: 1,
+  flexBasis: 300,
+  minWidth: 280,
+
+  padding: 15,
+  borderRadius: 18,
+  marginBottom: 12,
+  borderWidth: 1,
+
+  shadowColor: "#000",
+  shadowOpacity: 0.05,
+  shadowRadius: 7,
+  shadowOffset: {
+    width: 0,
+    height: 3,
+  },
+
+  elevation: 2,
+},
 
   cardHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 15,
+    marginBottom: 12,
   },
 
   cardIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 15,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
+    marginRight: 10,
   },
 
   cardHeaderText: {
     flex: 1,
-  },
-
-  cardTitle: {
-    fontSize: 17,
-    fontWeight: "800",
-    lineHeight: 22,
+    minWidth: 0,
   },
 
   cardType: {
-    fontSize: 12,
-    fontWeight: "700",
-    marginTop: 3,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+    marginBottom: 3,
+  },
+
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    lineHeight: 20,
+  },
+
+  distanceBadge: {
+    maxWidth: 105,
+    paddingHorizontal: 7,
+    paddingVertical: 6,
+    borderRadius: 9,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginLeft: 7,
+  },
+
+  distanceText: {
+    fontSize: 8,
+    fontWeight: "800",
+  },
+
+  /* ==========================================================
+     INFORMACIÓN
+  ========================================================== */
+
+  infoContainer: {
+    width: "100%",
   },
 
   infoRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    marginTop: 10,
+    marginTop: 8,
   },
 
   infoIcon: {
-    width: 26,
+    width: 27,
+    height: 27,
+    borderRadius: 8,
+    justifyContent: "center",
     alignItems: "center",
     marginRight: 8,
   },
 
   infoContent: {
     flex: 1,
+    minWidth: 0,
   },
 
   infoLabel: {
-    fontSize: 11,
-    marginBottom: 2,
-  },
-
-  infoText: {
-    flex: 1,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 9,
+    fontWeight: "700",
+    marginBottom: 1,
   },
 
   infoValue: {
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 12,
+    lineHeight: 18,
     fontWeight: "600",
   },
 
+  /* ==========================================================
+     BOTÓN
+  ========================================================== */
+
   placeButton: {
-    marginTop: 16,
-    minHeight: 45,
-    paddingHorizontal: 13,
+    minHeight: 43,
+    marginTop: 15,
     borderRadius: 12,
     borderWidth: 1,
+    paddingHorizontal: 12,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    flexDirection: "row",
     gap: 7,
   },
 
   placeButtonText: {
+    fontSize: 12,
     fontWeight: "800",
-    fontSize: 13,
   },
 
+  /* ==========================================================
+     PIE
+  ========================================================== */
+
   cardFooter: {
-    marginTop: 15,
-    paddingTop: 11,
+    marginTop: 13,
+    paddingTop: 10,
     borderTopWidth: 1,
     flexDirection: "row",
     alignItems: "center",
   },
 
   footerText: {
-    fontSize: 10,
-    marginLeft: 5,
     flex: 1,
+    marginLeft: 5,
+    fontSize: 9,
+    lineHeight: 14,
   },
 
+  /* ==========================================================
+     SIN RESULTADOS
+  ========================================================== */
+
   emptyCard: {
-    padding: 26,
-    borderRadius: 20,
+    paddingHorizontal: 25,
+    paddingVertical: 32,
+    borderRadius: 19,
     borderWidth: 1,
     alignItems: "center",
   },
@@ -1455,9 +1818,10 @@ const styles = StyleSheet.create({
   },
 
   emptyText: {
-    fontSize: 13,
-    lineHeight: 19,
-    textAlign: "center",
     marginTop: 6,
+    maxWidth: 400,
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: "center",
   },
 });

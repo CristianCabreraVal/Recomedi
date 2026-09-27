@@ -1,226 +1,486 @@
-import { useState } from "react";
+/* ============================================================
+   IMPORTACIONES
+============================================================ */
 
+import { useState } from "react";
 import {
   Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
+  View,
 } from "react-native";
-
 import {
   reload,
   signInWithEmailAndPassword,
 } from "firebase/auth";
-
-import { auth } from "../../services/firebase";
-
+import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
-import { SafeAreaView } from "react-native-safe-area-context";
-
+import { auth } from "../../services/firebase";
 import { obtenerRolUsuario } from "../../services/rolService";
 
-
+/* ============================================================
+   LOGIN
+============================================================ */
 
 export default function Login() {
   const router = useRouter();
 
+  /* ==========================================================
+     ESTADOS
+  ========================================================== */
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [mostrarPassword, setMostrarPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  /* ==========================================================
+     INICIAR SESIÓN (Lógica del Archivo 1)
+  ========================================================== */
+
   const login = async () => {
-  const correo = email.trim().toLowerCase();
+    const correo = email.trim().toLowerCase();
 
-  if (!correo || !password) {
-    Alert.alert(
-      "Error",
-      "Completa todos los campos"
-    );
-    return;
-  }
+    /* --------------------------------------------------------
+       VALIDAR CAMPOS
+    -------------------------------------------------------- */
+    if (!correo || !password) {
+      Alert.alert(
+        "Campos incompletos",
+        "Ingresa tu correo y contraseña."
+      );
+      return;
+    }
 
-  if (!correo.includes("@")) {
-    Alert.alert(
-      "Error",
-      "Ingresa un correo válido"
-    );
-    return;
-  }
+    if (!correo.includes("@")) {
+      Alert.alert(
+        "Correo inválido",
+        "Ingresa un correo electrónico válido."
+      );
+      return;
+    }
 
-  try {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const resultado =
-      await signInWithEmailAndPassword(
+      /* ------------------------------------------------------
+         AUTENTICAR CON FIREBASE
+      ------------------------------------------------------ */
+      const resultado = await signInWithEmailAndPassword(
         auth,
         correo,
         password
       );
 
-    console.log(
-      "Inicio de sesión correcto"
-    );
+      console.log("Inicio de sesión correcto");
+      console.log("Usuario:", resultado.user.email);
 
-    console.log(
-      "Usuario:",
-      resultado.user.email
-    );
+      /* ------------------------------------------------------
+         ACTUALIZAR DATOS DE FIREBASE AUTH
+      ------------------------------------------------------ */
+      await reload(resultado.user);
 
-    /*
-     * Actualizar los datos de Firebase Authentication
-     */
-    await reload(resultado.user);
+      /* ------------------------------------------------------
+         BLOQUEAR EL ACCESO SI EL CORREO NO ESTÁ VERIFICADO
+      ------------------------------------------------------ */
+      if (!resultado.user.emailVerified) {
+        router.replace("/auth/verificar");
+        return;
+      }
 
-    /*
-     * BLOQUEAR EL ACCESO SI EL CORREO
-     * TODAVÍA NO ESTÁ VERIFICADO
-     */
-    if (!resultado.user.emailVerified) {
-      router.replace("/auth/verificar");
-      return;
+      /* ------------------------------------------------------
+         OBTENER ROL DESDE FIRESTORE
+      ------------------------------------------------------ */
+      const rol = await obtenerRolUsuario(resultado.user.uid);
+      console.log("ROL:", rol);
+
+      /* ------------------------------------------------------
+         REDIRECCIÓN SEGÚN ROL
+      ------------------------------------------------------ */
+      if (rol === "admin") {
+        router.replace("/admin");
+        return;
+      }
+
+      // Usuario normal o moderador
+      router.replace("/(tabs)");
+
+    } catch (error: any) {
+      console.error("Error iniciando sesión:", error);
+
+      /* ------------------------------------------------------
+         MENSAJES DE ERROR (Del Archivo 2)
+      ------------------------------------------------------ */
+      switch (error?.code) {
+        case "auth/invalid-credential":
+          Alert.alert(
+            "No se pudo iniciar sesión",
+            "El correo o la contraseña no son correctos."
+          );
+          break;
+        case "auth/invalid-email":
+          Alert.alert(
+            "Correo inválido",
+            "El formato del correo electrónico no es válido."
+          );
+          break;
+        case "auth/user-disabled":
+          Alert.alert(
+            "Cuenta deshabilitada",
+            "Esta cuenta ha sido deshabilitada."
+          );
+          break;
+        case "auth/too-many-requests":
+          Alert.alert(
+            "Demasiados intentos",
+            "Se han realizado demasiados intentos. Intenta nuevamente más tarde."
+          );
+          break;
+        case "auth/network-request-failed":
+          Alert.alert(
+            "Error de conexión",
+            "No se pudo conectar con Firebase. Comprueba tu conexión a Internet."
+          );
+          break;
+        default:
+          Alert.alert(
+            "Error",
+            error?.message || "No fue posible iniciar sesión. Intenta nuevamente."
+          );
+          break;
+      }
+    } finally {
+      setLoading(false);
     }
+  };
 
-    /*
-     * Obtener rol desde Firestore
-     */
-    const rol = await obtenerRolUsuario(
-      resultado.user.uid
-    );
-
-    console.log(
-      "ROL:",
-      rol
-    );
-
-    /*
-     * Administrador
-     */
-    if (rol === "admin") {
-      router.replace("/admin");
-      return;
-    }
-
-    /*
-     * Usuario normal o moderador
-     */
-    router.replace("/(tabs)");
-  } catch (error: any) {
-    console.error(
-      "Error iniciando sesión:",
-      error
-    );
-
-    Alert.alert(
-      "Error",
-      error?.message ||
-        "No fue posible iniciar sesión."
-    );
-  } finally {
-    setLoading(false);
-  }
-};
-  
+  /* ==========================================================
+     INTERFAZ (Diseño del Archivo 2)
+  ========================================================== */
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>
-        Iniciar Sesión
-      </Text>
-
-      <TextInput
-        placeholder="Correo"
-        style={styles.input}
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        autoCorrect={false}
-      />
-
-      <TextInput
-        placeholder="Contraseña"
-        secureTextEntry
-        style={styles.input}
-        value={password}
-        onChangeText={setPassword}
-        autoCapitalize="none"
-        autoCorrect={false}
-      />
-
-      <TouchableOpacity
-        style={[
-          styles.button,
-          loading && styles.buttonDisabled,
-        ]}
-        onPress={login}
-        disabled={loading}
+      <KeyboardAvoidingView
+        style={styles.keyboardContainer}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <Text style={styles.buttonText}>
-          {loading
-            ? "Ingresando..."
-            : "Ingresar"}
-        </Text>
-      </TouchableOpacity>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.formWrapper}>
 
-      <TouchableOpacity
-        onPress={() =>
-          router.push("/auth/register")
-        }
-        disabled={loading}
-      >
-        <Text style={styles.link}>
-          Crear cuenta
-        </Text>
-      </TouchableOpacity>
+            {/* ==================================================
+                ENCABEZADO
+            ================================================== */}
+            <View style={styles.header}>
+              <View style={styles.logoCircle}>
+                <Ionicons
+                  name="heart"
+                  size={28}
+                  color="#2563EB"
+                />
+              </View>
+              <Text style={styles.title}>Iniciar sesión</Text>
+              <Text style={styles.subtitle}>
+                Accede a tu cuenta de Recomedi
+              </Text>
+            </View>
+
+            {/* ==================================================
+                FORMULARIO
+            ================================================== */}
+            <View style={styles.formCard}>
+              
+              {/* ------------------------------------------------
+                  CORREO
+              ------------------------------------------------ */}
+              <View style={styles.field}>
+                <Text style={styles.label}>Correo electrónico</Text>
+                <View style={styles.inputContainer}>
+                  <Ionicons
+                    name="mail-outline"
+                    size={20}
+                    color="#64748B"
+                    style={styles.inputIcon}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholder="tu@correo.com"
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoComplete="email"
+                    editable={!loading}
+                  />
+                </View>
+              </View>
+
+              {/* ------------------------------------------------
+                  CONTRASEÑA
+              ------------------------------------------------ */}
+              <View style={styles.field}>
+                <Text style={styles.label}>Contraseña</Text>
+                <View style={styles.inputContainer}>
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={20}
+                    color="#64748B"
+                    style={styles.inputIcon}
+                  />
+                  <TextInput
+                    style={styles.passwordInput}
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="Ingresa tu contraseña"
+                    placeholderTextColor="#94A3B8"
+                    secureTextEntry={!mostrarPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoComplete="password"
+                    editable={!loading}
+                  />
+
+                  {/* --------------------------------------------
+                      BOTÓN MOSTRAR / OCULTAR
+                  -------------------------------------------- */}
+                  <Pressable
+                    onPress={() => setMostrarPassword(!mostrarPassword)}
+                    style={styles.eyeButton}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      mostrarPassword
+                        ? "Ocultar contraseña"
+                        : "Mostrar contraseña"
+                    }
+                    disabled={loading}
+                  >
+                    <Ionicons
+                      name={
+                        mostrarPassword
+                          ? "eye-off-outline"
+                          : "eye-outline"
+                      }
+                      size={22}
+                      color="#64748B"
+                    />
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* ==================================================
+                  BOTÓN INGRESAR
+              ================================================== */}
+              <Pressable
+                style={[
+                  styles.button,
+                  loading && styles.buttonDisabled,
+                ]}
+                onPress={login}
+                disabled={loading}
+              >
+                <Text style={styles.buttonText}>
+                  {loading ? "Ingresando..." : "Ingresar"}
+                </Text>
+              </Pressable>
+
+              {/* ==================================================
+                  REGISTRO
+              ================================================== */}
+              <View style={styles.bottomLink}>
+                <Text style={styles.bottomText}>
+                  ¿No tienes una cuenta?
+                </Text>
+                <Pressable
+                  onPress={() => router.push("/auth/register")}
+                  disabled={loading}
+                  hitSlop={6}
+                >
+                  <Text style={styles.link}>Crear cuenta</Text>
+                </Pressable>
+              </View>
+
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
+/* ============================================================
+   ESTILOS (Diseño del Archivo 2)
+============================================================ */
+
 const styles = StyleSheet.create({
+  /* ========================================================
+     CONTENEDOR GENERAL
+  ======================================================== */
   container: {
     flex: 1,
-    justifyContent: "center",
-    padding: 25,
     backgroundColor: "#F3F4F6",
   },
+  keyboardContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 30,
+  },
+  formWrapper: {
+    width: "100%",
+    maxWidth: 460,
+    alignSelf: "center",
+  },
 
+  /* ========================================================
+     ENCABEZADO
+  ======================================================== */
+  header: {
+    alignItems: "center",
+    marginBottom: 22,
+  },
+  logoCircle: {
+    width: 58,
+    height: 58,
+    borderRadius: 18,
+    backgroundColor: "#E8F0FE",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 14,
+  },
   title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    marginBottom: 30,
+    fontSize: 30,
+    fontWeight: "800",
     color: "#2563EB",
     textAlign: "center",
   },
-
-  input: {
-    backgroundColor: "#fff",
-    padding: 15,
-    borderRadius: 14,
-    marginBottom: 15,
+  subtitle: {
+    marginTop: 6,
+    fontSize: 14,
+    color: "#64748B",
+    textAlign: "center",
   },
 
-  button: {
-    backgroundColor: "#2563EB",
-    padding: 15,
-    borderRadius: 14,
+  /* ========================================================
+     TARJETA DEL FORMULARIO
+  ======================================================== */
+  formCard: {
+    width: "100%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 22,
+    paddingHorizontal: 20,
+    paddingVertical: 22,
+    shadowColor: "#000",
+    shadowOpacity: 0.07,
+    shadowRadius: 12,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    elevation: 4,
+  },
+
+  /* ========================================================
+     CAMPOS
+  ======================================================== */
+  field: {
+    width: "100%",
+    marginBottom: 17,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#334155",
+    marginBottom: 7,
+  },
+  inputContainer: {
+    width: "100%",
+    minHeight: 54,
+    flexDirection: "row",
     alignItems: "center",
-    marginTop: 10,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 14,
+  },
+  inputIcon: {
+    marginLeft: 14,
+  },
+  input: {
+    flex: 1,
+    minWidth: 0,
+    paddingHorizontal: 11,
+    paddingVertical: 14,
+    color: "#0F172A",
+    fontSize: 15,
+  },
+  passwordInput: {
+    flex: 1,
+    minWidth: 0,
+    paddingLeft: 11,
+    paddingRight: 4,
+    paddingVertical: 14,
+    color: "#0F172A",
+    fontSize: 15,
+  },
+  eyeButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
 
+  /* ========================================================
+     BOTÓN
+  ======================================================== */
+  button: {
+    minHeight: 54,
+    borderRadius: 14,
+    backgroundColor: "#2563EB",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 2,
+  },
   buttonDisabled: {
     opacity: 0.6,
   },
-
   buttonText: {
-    color: "#fff",
-    fontWeight: "bold",
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "800",
   },
 
-  link: {
-    textAlign: "center",
+  /* ========================================================
+     ENLACE INFERIOR
+  ======================================================== */
+  bottomLink: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    alignItems: "center",
     marginTop: 20,
+    gap: 5,
+  },
+  bottomText: {
+    fontSize: 13,
+    color: "#64748B",
+  },
+  link: {
+    fontSize: 13,
+    fontWeight: "800",
     color: "#2563EB",
   },
 });

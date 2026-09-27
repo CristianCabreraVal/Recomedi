@@ -1,7 +1,8 @@
-import {View,Text,Switch,StyleSheet,TouchableOpacity,} from "react-native";
+import {View,Text,Switch,StyleSheet,TouchableOpacity,ScrollView} from "react-native";
 import { useState, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Ionicons } from "@expo/vector-icons";
 
 import { signOut } from "firebase/auth";
 import { auth } from "../../services/firebase";
@@ -64,30 +65,56 @@ export default function Configuracion() {
     }
   };
 
-  return (
-    <SafeAreaView
-      style={[
-        styles.container,
-        { backgroundColor: colors.background },
-      ]}
+return (
+  <SafeAreaView
+    style={[
+      styles.container,
+      {
+        backgroundColor: colors.background,
+      },
+    ]}
+  >
+    <ScrollView
+      showsVerticalScrollIndicator={true}
+      contentContainerStyle={styles.scrollContent}
     >
-      <Text
-        style={[
-          styles.header,
-          { color: colors.primary },
-        ]}
-      >
-        Configuración
-      </Text>
+      {/* Encabezado */}
+      <View style={styles.headerContainer}>
+        <View
+          style={[
+            styles.headerIcon,
+            {
+              backgroundColor: colors.card,
+            },
+          ]}
+        >
+          <Ionicons
+            name="settings"
+            size={26}
+            color={colors.primary}
+          />
+        </View>
 
-      <Text
-        style={[
-          styles.subheader,
-          { color: colors.textSecondary },
-        ]}
-      >
-        Personaliza tu experiencia
-      </Text>
+        <View>
+          <Text
+            style={[
+              styles.header,
+              { color: colors.text },
+            ]}
+          >
+            Configuración
+          </Text>
+
+          <Text
+            style={[
+              styles.subheader,
+              { color: colors.textSecondary },
+            ]}
+          >
+            Personaliza tu experiencia
+          </Text>
+        </View>
+      </View>
 
       {/* Notificaciones */}
       <View
@@ -96,7 +123,15 @@ export default function Configuracion() {
           { backgroundColor: colors.card },
         ]}
       >
-        <View>
+        <View style={styles.optionIcon}>
+          <Ionicons
+            name="notifications"
+            size={23}
+            color="#2563EB"
+          />
+        </View>
+
+        <View style={styles.optionContent}>
           <Text
             style={[
               styles.optionTitle,
@@ -129,7 +164,24 @@ export default function Configuracion() {
           { backgroundColor: colors.card },
         ]}
       >
-        <View>
+        <View
+          style={[
+            styles.optionIcon,
+            {
+              backgroundColor: dark
+                ? "#312E81"
+                : "#EEF2FF",
+            },
+          ]}
+        >
+          <Ionicons
+            name="moon"
+            size={23}
+            color="#6366F1"
+          />
+        </View>
+
+        <View style={styles.optionContent}>
           <Text
             style={[
               styles.optionTitle,
@@ -162,23 +214,42 @@ export default function Configuracion() {
           { backgroundColor: colors.card },
         ]}
       >
-        <Text
+        <View
           style={[
-            styles.optionTitle,
-            { color: colors.text },
+            styles.optionIcon,
+            {
+              backgroundColor: dark
+                ? "#14532D"
+                : "#F0FDF4",
+            },
           ]}
         >
-          Alimentación saludable
-        </Text>
+          <Ionicons
+            name="nutrition"
+            size={23}
+            color="#16A34A"
+          />
+        </View>
 
-        <Text
-          style={[
-            styles.optionSubtitle,
-            { color: colors.textSecondary },
-          ]}
-        >
-          Próximamente recomendaciones personalizadas
-        </Text>
+        <View style={styles.optionContent}>
+          <Text
+            style={[
+              styles.optionTitle,
+              { color: colors.text },
+            ]}
+          >
+            Alimentación saludable
+          </Text>
+
+          <Text
+            style={[
+              styles.optionSubtitle,
+              { color: colors.textSecondary },
+            ]}
+          >
+            Próximamente recomendaciones personalizadas
+          </Text>
+        </View>
       </View>
 
       {/* Información */}
@@ -188,23 +259,42 @@ export default function Configuracion() {
           { backgroundColor: colors.card },
         ]}
       >
-        <Text
+        <View
           style={[
-            styles.optionTitle,
-            { color: colors.text },
+            styles.optionIcon,
+            {
+              backgroundColor: dark
+                ? "#164E63"
+                : "#ECFEFF",
+            },
           ]}
         >
-          Información
-        </Text>
+          <Ionicons
+            name="information-circle"
+            size={23}
+            color="#0891B2"
+          />
+        </View>
 
-        <Text
-          style={[
-            styles.optionSubtitle,
-            { color: colors.textSecondary },
-          ]}
-        >
-          Recomedi versión 1.0
-        </Text>
+        <View style={styles.optionContent}>
+          <Text
+            style={[
+              styles.optionTitle,
+              { color: colors.text },
+            ]}
+          >
+            Información
+          </Text>
+
+          <Text
+            style={[
+              styles.optionSubtitle,
+              { color: colors.textSecondary },
+            ]}
+          >
+            Recomedi versión 1.0
+          </Text>
+        </View>
       </View>
 
       {/* Cerrar sesión */}
@@ -212,68 +302,130 @@ export default function Configuracion() {
         style={styles.logoutButton}
         onPress={cerrarSesion}
       >
+        <Ionicons
+          name="log-out-outline"
+          size={21}
+          color="#FFFFFF"
+        />
+
         <Text style={styles.logoutText}>
           Cerrar sesión
         </Text>
       </TouchableOpacity>
-    </SafeAreaView>
-  );
+    </ScrollView>
+  </SafeAreaView>
+);
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 15,
+  },
+
+  scrollContent: {
+    width: "100%",
+    maxWidth: 900,
+    alignSelf: "center",
+    paddingBottom: 35,
+  },
+
+  headerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 25,
+  },
+
+  headerIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 17,
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    marginRight: 13,
   },
 
   header: {
     fontSize: 30,
-    fontWeight: "bold",
+    fontWeight: "800",
   },
 
   subheader: {
-    fontSize: 15,
-    marginTop: 4,
-    marginBottom: 25,
-  },
-
-  card: {
-    padding: 18,
-    borderRadius: 18,
-    marginBottom: 15,
-
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-
-    elevation: 4,
-
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
-  optionTitle: {
-    fontSize: 17,
-    fontWeight: "bold",
-  },
-
-  optionSubtitle: {
     fontSize: 14,
     marginTop: 4,
   },
 
-  logoutButton: {
-    backgroundColor: "#DC2626",
+  card: {
+    minHeight: 82,
+
     padding: 16,
-    borderRadius: 18,
-    marginTop: 5,
+
+    borderRadius: 22,
+    marginBottom: 14,
+
+    flexDirection: "row",
     alignItems: "center",
+
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: {
+      width: 0,
+      height: 5,
+    },
+
+    elevation: 3,
+  },
+
+  optionIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 15,
+
+    backgroundColor: "#EFF6FF",
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    marginRight: 13,
+  },
+
+  optionContent: {
+    flex: 1,
+    marginRight: 12,
+  },
+
+  optionTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+  },
+
+  optionSubtitle: {
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 4,
+  },
+
+  logoutButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+
+    backgroundColor: "#DC2626",
+
+    paddingVertical: 15,
+    borderRadius: 18,
+
+    marginTop: 6,
   },
 
   logoutText: {
     color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "800",
+    marginLeft: 8,
   },
 });
