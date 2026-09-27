@@ -9,6 +9,7 @@ import {
 } from "react-native";
 
 import {
+  reload,
   signInWithEmailAndPassword,
 } from "firebase/auth";
 
@@ -16,158 +17,111 @@ import { auth } from "../../services/firebase";
 
 import { useRouter } from "expo-router";
 
-import {
-  SafeAreaView,
-} from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+import { obtenerRolUsuario } from "../../services/rolService";
+
+
 
 export default function Login() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
-  const [loading, setLoading] =
-    useState(false);
+  const [loading, setLoading] = useState(false);
 
   const login = async () => {
-    const correo = email.trim();
+  const correo = email.trim().toLowerCase();
 
-    // Validar campos
-    if (!correo || !password) {
-      Alert.alert(
-        "Campos incompletos",
-        "Ingresa tu correo y contraseña."
+  if (!correo || !password) {
+    Alert.alert(
+      "Error",
+      "Completa todos los campos"
+    );
+    return;
+  }
+
+  if (!correo.includes("@")) {
+    Alert.alert(
+      "Error",
+      "Ingresa un correo válido"
+    );
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    const resultado =
+      await signInWithEmailAndPassword(
+        auth,
+        correo,
+        password
       );
 
+    console.log(
+      "Inicio de sesión correcto"
+    );
+
+    console.log(
+      "Usuario:",
+      resultado.user.email
+    );
+
+    /*
+     * Actualizar los datos de Firebase Authentication
+     */
+    await reload(resultado.user);
+
+    /*
+     * BLOQUEAR EL ACCESO SI EL CORREO
+     * TODAVÍA NO ESTÁ VERIFICADO
+     */
+    if (!resultado.user.emailVerified) {
+      router.replace("/auth/verificar");
       return;
     }
 
-    // Validar formato básico
-    if (!correo.includes("@")) {
-      Alert.alert(
-        "Correo inválido",
-        "Ingresa un correo electrónico válido."
-      );
+    /*
+     * Obtener rol desde Firestore
+     */
+    const rol = await obtenerRolUsuario(
+      resultado.user.uid
+    );
 
+    console.log(
+      "ROL:",
+      rol
+    );
+
+    /*
+     * Administrador
+     */
+    if (rol === "admin") {
+      router.replace("/admin");
       return;
     }
 
-    try {
-      setLoading(true);
+    /*
+     * Usuario normal o moderador
+     */
+    router.replace("/(tabs)");
+  } catch (error: any) {
+    console.error(
+      "Error iniciando sesión:",
+      error
+    );
 
-      const resultado =
-        await signInWithEmailAndPassword(
-          auth,
-          correo,
-          password
-        );
-
-      console.log(
-        "Inicio de sesión correcto"
-      );
-
-      console.log(
-        "Usuario:",
-        resultado.user.email
-      );
-
-      /*
-       * Obtener los Custom Claims
-       *
-       * El true fuerza la renovación
-       * del token para obtener el rol
-       * actualizado.
-       */
-      const token =
-        await resultado.user.getIdTokenResult(
-          true
-        );
-
-      const rol =
-        token.claims.role;
-
-      console.log(
-        "Rol detectado:",
-        rol
-      );
-
-      /*
-       * ADMINISTRADOR
-       */
-      if (rol === "admin") {
-        router.replace("/admin");
-        return;
-      }
-
-      /*
-       * MODERADOR
-       *
-       * Todavía no hemos creado
-       * /moderador, así que por ahora
-       * lo enviamos a la aplicación normal.
-       */
-      if (rol === "moderador") {
-        router.replace("/(tabs)");
-        return;
-      }
-
-      /*
-       * USUARIO NORMAL
-       */
-      router.replace("/(tabs)");
-    } catch (error: any) {
-      console.log(
-        "Firebase error:",
-        error?.code
-      );
-
-      switch (error?.code) {
-        case "auth/invalid-credential":
-          Alert.alert(
-            "No se pudo iniciar sesión",
-            "El correo o la contraseña no son correctos."
-          );
-          break;
-
-        case "auth/invalid-email":
-          Alert.alert(
-            "Correo inválido",
-            "El formato del correo electrónico no es válido."
-          );
-          break;
-
-        case "auth/user-disabled":
-          Alert.alert(
-            "Cuenta deshabilitada",
-            "Esta cuenta ha sido deshabilitada."
-          );
-          break;
-
-        case "auth/too-many-requests":
-          Alert.alert(
-            "Demasiados intentos",
-            "Se han realizado demasiados intentos. Intenta nuevamente más tarde."
-          );
-          break;
-
-        case "auth/network-request-failed":
-          Alert.alert(
-            "Error de conexión",
-            "No se pudo conectar con Firebase. Comprueba tu conexión a Internet."
-          );
-          break;
-
-        default:
-          Alert.alert(
-            "Error",
-            "No fue posible iniciar sesión. Intenta nuevamente."
-          );
-          break;
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+    Alert.alert(
+      "Error",
+      error?.message ||
+        "No fue posible iniciar sesión."
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+  
 
   return (
     <SafeAreaView style={styles.container}>
@@ -224,50 +178,49 @@ export default function Login() {
   );
 }
 
-const styles =
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      justifyContent: "center",
-      padding: 25,
-      backgroundColor: "#F3F4F6",
-    },
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    padding: 25,
+    backgroundColor: "#F3F4F6",
+  },
 
-    title: {
-      fontSize: 32,
-      fontWeight: "bold",
-      marginBottom: 30,
-      color: "#2563EB",
-      textAlign: "center",
-    },
+  title: {
+    fontSize: 32,
+    fontWeight: "bold",
+    marginBottom: 30,
+    color: "#2563EB",
+    textAlign: "center",
+  },
 
-    input: {
-      backgroundColor: "#fff",
-      padding: 15,
-      borderRadius: 14,
-      marginBottom: 15,
-    },
+  input: {
+    backgroundColor: "#fff",
+    padding: 15,
+    borderRadius: 14,
+    marginBottom: 15,
+  },
 
-    button: {
-      backgroundColor: "#2563EB",
-      padding: 15,
-      borderRadius: 14,
-      alignItems: "center",
-      marginTop: 10,
-    },
+  button: {
+    backgroundColor: "#2563EB",
+    padding: 15,
+    borderRadius: 14,
+    alignItems: "center",
+    marginTop: 10,
+  },
 
-    buttonDisabled: {
-      opacity: 0.6,
-    },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
 
-    buttonText: {
-      color: "#fff",
-      fontWeight: "bold",
-    },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
 
-    link: {
-      textAlign: "center",
-      marginTop: 20,
-      color: "#2563EB",
-    },
-  });
+  link: {
+    textAlign: "center",
+    marginTop: 20,
+    color: "#2563EB",
+  },
+});

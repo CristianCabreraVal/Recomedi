@@ -6,12 +6,17 @@ import {
 
 import { useEffect, useState } from "react";
 
-import { onAuthStateChanged } from "firebase/auth";
+import {
+  onAuthStateChanged,
+  reload,
+} from "firebase/auth";
 
 import { auth } from "../services/firebase";
+import { obtenerRolUsuario } from "../services/rolService";
 
 import {
   ActivityIndicator,
+  StyleSheet,
   View,
 } from "react-native";
 
@@ -32,77 +37,91 @@ export default function RootLayout() {
   const [rol, setRol] =
     useState<Rol>("usuario");
 
+  const [emailNoVerificado, setEmailNoVerificado] =
+    useState(false);
+
   const [cargando, setCargando] =
     useState(true);
 
   /* ============================================================
-     AUTENTICACIÓN + OBTENER ROL
+     AUTENTICACIÓN + VERIFICACIÓN DE CORREO + ROL
   ============================================================ */
 
   useEffect(() => {
-    const unsubscribe =
-      onAuthStateChanged(
-        auth,
-        async (user) => {
-          try {
-            setUsuario(user);
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      async (user) => {
+        try {
+          setUsuario(user);
 
-            /*
-             * No hay usuario autenticado
-             */
-            if (!user) {
-              setRol("usuario");
-              setCargando(false);
-              return;
-            }
-
-            /*
-             * Obtener Custom Claims de Firebase
-             */
-            const token =
-              await user.getIdTokenResult(true);
-
-            const rolFirebase =
-              token.claims.role;
-
-            console.log(
-              "Usuario autenticado:",
-              user.email
-            );
-
-            console.log(
-              "Rol detectado:",
-              rolFirebase
-            );
-
-            /*
-             * Validar roles permitidos
-             */
-            if (
-              rolFirebase === "admin" ||
-              rolFirebase === "moderador" ||
-              rolFirebase === "usuario"
-            ) {
-              setRol(rolFirebase);
-            } else {
-              /*
-               * Si no tiene un rol válido,
-               * se considera usuario normal.
-               */
-              setRol("usuario");
-            }
-          } catch (error) {
-            console.error(
-              "Error obteniendo el rol:",
-              error
-            );
-
+          /*
+           * No hay usuario autenticado
+           */
+          if (!user) {
             setRol("usuario");
-          } finally {
+            setEmailNoVerificado(false);
             setCargando(false);
+            return;
           }
+
+          /*
+           * Actualizar información de Firebase Authentication.
+           *
+           * Esto permite obtener el estado actual de
+           * emailVerified después de que el usuario haya
+           * verificado su correo.
+           */
+          await reload(user);
+
+          /*
+           * ======================================================
+           * CORREO NO VERIFICADO
+           * ======================================================
+           */
+          if (!user.emailVerified) {
+            setEmailNoVerificado(true);
+            setRol("usuario");
+            setCargando(false);
+            return;
+          }
+
+          /*
+           * El correo sí está verificado
+           */
+          setEmailNoVerificado(false);
+
+          /*
+           * ======================================================
+           * OBTENER ROL DESDE FIRESTORE
+           *
+           * usuarios/{uid}.rol
+           * ======================================================
+           */
+          const rolFirestore =
+            await obtenerRolUsuario(user.uid);
+
+          if (
+            rolFirestore === "admin" ||
+            rolFirestore === "moderador" ||
+            rolFirestore === "usuario"
+          ) {
+            setRol(rolFirestore);
+          } else {
+            setRol("usuario");
+          }
+        } catch (error) {
+          console.error(
+            "Error obteniendo datos del usuario:",
+            error
+          );
+
+          setRol("usuario");
+          setEmailNoVerificado(false);
+        } finally {
+          setCargando(false);
         }
-      );
+      }
+    );
 
     return unsubscribe;
   }, []);
@@ -116,11 +135,23 @@ export default function RootLayout() {
       return;
     }
 
+    /*
+     * Evitamos redirecciones cuando todavía
+     * no tenemos una ruta montada.
+     */
+    if (!segments) {
+      return;
+    }
+
     const enAuth =
       segments[0] === "auth";
 
     const enAdmin =
       segments[0] === "admin";
+
+    const enVerificar =
+      segments[0] === "auth" &&
+      segments[1] === "verificar";
 
     /*
      * ==========================================================
@@ -137,10 +168,31 @@ export default function RootLayout() {
 
     /*
      * ==========================================================
+     * CORREO NO VERIFICADO
+     *
+     * Puede permanecer únicamente en:
+     *
+     * /auth/verificar
+     * ==========================================================
+     */
+    if (emailNoVerificado) {
+      if (!enVerificar) {
+        router.replace("/auth/verificar");
+      }
+
+      return;
+    }
+
+    /*
+     * ==========================================================
      * USUARIO AUTENTICADO DENTRO DE /auth
      * ==========================================================
      */
-    if (usuario && enAuth) {
+    if (enAuth) {
+      /*
+       * Si ya está verificado y entra a /auth,
+       * enviamos al lugar correspondiente.
+       */
       if (rol === "admin") {
         router.replace("/admin");
       } else {
@@ -152,14 +204,10 @@ export default function RootLayout() {
 
     /*
      * ==========================================================
-     * ADMINISTRADOR
-     *
-     * Si el usuario es admin y está fuera del panel,
-     * lo llevamos al panel administrativo.
+     * ADMIN
      * ==========================================================
      */
     if (
-      usuario &&
       rol === "admin" &&
       !enAdmin
     ) {
@@ -169,9 +217,7 @@ export default function RootLayout() {
 
     /*
      * ==========================================================
-     * USUARIO NO ADMIN
-     *
-     * Si intenta entrar a /admin, vuelve a la app.
+     * NO ADMIN INTENTANDO ENTRAR A /admin
      * ==========================================================
      */
     if (
@@ -184,42 +230,48 @@ export default function RootLayout() {
   }, [
     usuario,
     rol,
+    emailNoVerificado,
     cargando,
     segments,
     router,
   ]);
 
   /* ============================================================
-     PANTALLA DE CARGA
-  ============================================================ */
+     NAVEGACIÓN
 
-  if (cargando) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        <ActivityIndicator
-          size="large"
-        />
-      </View>
-    );
-  }
-
-  /* ============================================================
-     NAVEGACIÓN PRINCIPAL
+     El Stack se monta siempre.
+     Mientras se comprueba autenticación/rol/verificación,
+     mostramos la capa de carga.
   ============================================================ */
 
   return (
     <ThemeProvider>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-        }}
-      />
+      <View style={styles.container}>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+          }}
+        />
+
+        {cargando && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" />
+          </View>
+        )}
+      </View>
     </ThemeProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+
+  loadingOverlay: {
+    ...StyleSheet.absoluteFill,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+  },
+});

@@ -1,15 +1,25 @@
 import { useState } from "react";
+
 import {
-  View,
+  Alert,
+  StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
+  TouchableOpacity
 } from "react-native";
 
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../../services/firebase";
+import {
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  signOut,
+} from "firebase/auth";
+
+import {
+  doc,
+  setDoc,
+} from "firebase/firestore";
+
+import { auth, db } from "../../services/firebase";
 
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -21,31 +31,117 @@ export default function Register() {
   const [password, setPassword] = useState("");
 
   const register = async () => {
-    if (!email || !password) {
-      Alert.alert("Error", "Completa todos los campos");
-      return;
-    }
+  const correo = email.trim().toLowerCase();
 
-    try {
-      await createUserWithEmailAndPassword(auth, email, password);
+  if (!correo || !password) {
+    Alert.alert(
+      "Error",
+      "Completa todos los campos"
+    );
+    return;
+  }
 
-      Alert.alert("Correcto", "Cuenta creada");
+  try {
+    console.log("1. Creando cuenta...");
 
-      router.replace("/auth/login");
-    } catch (error: any) {
-      Alert.alert("Error", error.message);
-    }
-  };
+    const resultado =
+      await createUserWithEmailAndPassword(
+        auth,
+        correo,
+        password
+      );
+
+    console.log(
+      "2. Cuenta creada:",
+      resultado.user.uid
+    );
+
+    console.log(
+      "3. Enviando correo de verificación..."
+    );
+
+    await sendEmailVerification(
+      resultado.user
+    );
+
+    console.log(
+      "4. Correo de verificación enviado correctamente"
+    );
+
+    console.log(
+      "5. Guardando usuario en Firestore..."
+    );
+
+    await setDoc(
+      doc(
+        db,
+        "usuarios",
+        resultado.user.uid
+      ),
+      {
+        uid: resultado.user.uid,
+        email:
+          resultado.user.email || correo,
+        rol: "usuario",
+        activo: true,
+        emailVerificado:
+          resultado.user.emailVerified,
+      }
+    );
+
+    console.log(
+      "6. Usuario guardado en Firestore"
+    );
+
+    await signOut(auth);
+
+    console.log(
+      "7. Sesión cerrada"
+    );
+
+    Alert.alert(
+      "Cuenta creada",
+      "Cuenta creada correctamente. Revisa tu correo para verificar la dirección."
+    );
+
+    router.replace("/auth/login");
+  } catch (error: any) {
+    console.error(
+      "ERROR EN REGISTRO:",
+      error
+    );
+
+    console.error(
+      "CODIGO DEL ERROR:",
+      error?.code
+    );
+
+    console.error(
+      "MENSAJE DEL ERROR:",
+      error?.message
+    );
+
+    Alert.alert(
+      "Error",
+      error?.message ||
+        "No fue posible crear la cuenta."
+    );
+  }
+};
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Crear Cuenta</Text>
+      <Text style={styles.title}>
+        Crear Cuenta
+      </Text>
 
       <TextInput
         placeholder="Correo"
         style={styles.input}
         value={email}
         onChangeText={setEmail}
+        autoCapitalize="none"
+        keyboardType="email-address"
       />
 
       <TextInput
@@ -56,8 +152,13 @@ export default function Register() {
         onChangeText={setPassword}
       />
 
-      <TouchableOpacity style={styles.button} onPress={register}>
-        <Text style={styles.buttonText}>Registrarse</Text>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={register}
+      >
+        <Text style={styles.buttonText}>
+          Registrarse
+        </Text>
       </TouchableOpacity>
     </SafeAreaView>
   );

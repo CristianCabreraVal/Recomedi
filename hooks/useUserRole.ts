@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
 
-import { auth } from "../services/firebase";
+import {
+  doc,
+  getDoc,
+} from "firebase/firestore";
+
+import {
+  auth,
+  db,
+} from "../services/firebase";
 
 type Rol =
   | "usuario"
@@ -25,19 +33,41 @@ export function useUserRole() {
           return;
         }
 
-        const token =
-          await usuario.getIdTokenResult(true);
+        const referencia = doc(
+          db,
+          "usuarios",
+          usuario.uid
+        );
+
+        const snap =
+          await getDoc(referencia);
+
+        if (!snap.exists()) {
+          setRol("usuario");
+          return;
+        }
+
+        const datos = snap.data();
 
         const rolFirebase =
-          token.claims.role;
+          datos.rol;
 
         if (
           rolFirebase === "admin" ||
           rolFirebase === "moderador" ||
           rolFirebase === "usuario"
         ) {
+          console.log(
+            "Rol detectado:",
+            rolFirebase
+          );
+
           setRol(rolFirebase);
         } else {
+          console.log(
+            "Rol detectado: usuario"
+          );
+
           setRol("usuario");
         }
       } catch (error) {

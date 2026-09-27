@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
   SafeAreaView,
@@ -19,10 +20,13 @@ import { useRouter } from "expo-router";
 import {
   actualizarEstadoUsuario,
   actualizarRolUsuario,
+  eliminarUsuarioDeFirestore,
   obtenerUsuarios,
   RolUsuario,
   UsuarioAdmin,
 } from "../../services/adminService";
+
+import { auth } from "../../services/firebase";
 
 type FiltroRol = "todos" | "usuario" | "moderador" | "admin";
 type FiltroEstado = "todos" | "activos" | "inactivos";
@@ -33,6 +37,8 @@ export default function UsuariosAdmin() {
   const [usuarios, setUsuarios] = useState<UsuarioAdmin[]>([]);
   const [cargando, setCargando] = useState(true);
   const [refrescando, setRefrescando] = useState(false);
+
+  const uidActual = auth.currentUser?.uid;
 
   const [busqueda, setBusqueda] = useState("");
   const [filtroRol, setFiltroRol] = useState<FiltroRol>("todos");
@@ -102,102 +108,238 @@ export default function UsuariosAdmin() {
     });
   }, [usuarios, busqueda, filtroRol, filtroEstado]);
 
-  const cambiarEstado = async (usuario: UsuarioAdmin) => {
-    const nuevoEstado = !usuario.activo;
+const cambiarEstado = async (usuario: UsuarioAdmin) => {
+  const nuevoEstado = !usuario.activo;
 
-    Alert.alert(
-      nuevoEstado ? "Activar usuario" : "Desactivar usuario",
-      nuevoEstado
-        ? `¿Quieres activar a ${usuario.nombre || "este usuario"}?`
-        : `¿Quieres desactivar a ${usuario.nombre || "este usuario"}?`,
-      [
-        {
-          text: "Cancelar",
-          style: "cancel",
-        },
-        {
-          text: nuevoEstado ? "Activar" : "Desactivar",
-          style: nuevoEstado ? "default" : "destructive",
-          onPress: async () => {
-            try {
-              setGuardando(true);
-
-              await actualizarEstadoUsuario(
-                usuario.uid,
-                nuevoEstado
-              );
-
-              setUsuarios((actuales) =>
-                actuales.map((item) =>
-                  item.uid === usuario.uid
-                    ? {
-                        ...item,
-                        activo: nuevoEstado,
-                      }
-                    : item
-                )
-              );
-            } catch (error) {
-              console.error(
-                "Error actualizando estado:",
-                error
-              );
-
-              Alert.alert(
-                "Error",
-                "No fue posible actualizar el estado del usuario."
-              );
-            } finally {
-              setGuardando(false);
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const seleccionarRol = async (rol: RolUsuario) => {
-    if (!usuarioSeleccionado) {
-      return;
-    }
-
+  const actualizar = async () => {
     try {
       setGuardando(true);
 
-      await actualizarRolUsuario(
-        usuarioSeleccionado.uid,
-        rol
+      await actualizarEstadoUsuario(
+        usuario.uid,
+        nuevoEstado
       );
 
       setUsuarios((actuales) =>
         actuales.map((item) =>
-          item.uid === usuarioSeleccionado.uid
+          item.uid === usuario.uid
             ? {
                 ...item,
-                rol,
+                activo: nuevoEstado,
               }
             : item
         )
       );
 
-      setModalRol(false);
-      setUsuarioSeleccionado(null);
-
-      Alert.alert(
-        "Rol actualizado",
-        `El perfil ahora tiene el rol "${rol}".`
+      console.log(
+        `Usuario ${usuario.uid}: activo = ${nuevoEstado}`
       );
     } catch (error) {
-      console.error("Error actualizando rol:", error);
-
-      Alert.alert(
-        "Error",
-        "No fue posible actualizar el rol."
+      console.error(
+        "Error actualizando estado del usuario:",
+        error
       );
+
+      if (Platform.OS === "web") {
+        window.alert(
+          "No fue posible actualizar el estado del usuario."
+        );
+      } else {
+        Alert.alert(
+          "Error",
+          "No fue posible actualizar el estado del usuario."
+        );
+      }
     } finally {
       setGuardando(false);
     }
   };
+
+  // En Web utilizamos confirm()
+  if (Platform.OS === "web") {
+    const confirmar = window.confirm(
+      nuevoEstado
+        ? `¿Quieres activar a ${
+            usuario.nombre || "este usuario"
+          }?`
+        : `¿Quieres desactivar a ${
+            usuario.nombre || "este usuario"
+          }?`
+    );
+
+    if (confirmar) {
+      await actualizar();
+    }
+
+    return;
+  }
+
+  // Android / iOS
+  Alert.alert(
+    nuevoEstado ? "Activar usuario" : "Desactivar usuario",
+    nuevoEstado
+      ? `¿Quieres activar a ${
+          usuario.nombre || "este usuario"
+        }?`
+      : `¿Quieres desactivar a ${
+          usuario.nombre || "este usuario"
+        }?`,
+    [
+      {
+        text: "Cancelar",
+        style: "cancel",
+      },
+      {
+        text: nuevoEstado ? "Activar" : "Desactivar",
+        style: nuevoEstado ? "default" : "destructive",
+        onPress: actualizar,
+      },
+    ]
+  );
+};
+const eliminarUsuario = async (
+  usuario: UsuarioAdmin
+) => {
+  if (!usuario.uid) {
+    return;
+  }
+
+  const eliminar = async () => {
+    try {
+      setGuardando(true);
+
+      await eliminarUsuarioDeFirestore(
+        usuario.uid
+      );
+
+      setUsuarios((actuales) =>
+        actuales.filter(
+          (item) =>
+            item.uid !== usuario.uid
+        )
+      );
+
+      if (
+        usuarioSeleccionado?.uid ===
+        usuario.uid
+      ) {
+        setUsuarioSeleccionado(null);
+        setModalRol(false);
+      }
+
+      if (Platform.OS === "web") {
+        window.alert(
+          "El usuario y sus datos fueron eliminados de Firestore."
+        );
+      } else {
+        Alert.alert(
+          "Usuario eliminado",
+          "El usuario y sus datos fueron eliminados de Firestore."
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Error eliminando usuario:",
+        error
+      );
+
+      if (Platform.OS === "web") {
+        window.alert(
+          "No fue posible eliminar el usuario."
+        );
+      } else {
+        Alert.alert(
+          "Error",
+          "No fue posible eliminar el usuario."
+        );
+      }
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  if (Platform.OS === "web") {
+    const confirmar = window.confirm(
+      `¿Eliminar definitivamente a ${
+        nombreUsuario(usuario)
+      }?\n\nSe eliminará su perfil y toda su actividad almacenada en Firestore.`
+    );
+
+    if (confirmar) {
+      await eliminar();
+    }
+
+    return;
+  }
+
+  Alert.alert(
+    "Eliminar usuario",
+    `¿Eliminar definitivamente a ${
+      nombreUsuario(usuario)
+    }?\n\nTambién se eliminará su actividad almacenada.`,
+    [
+      {
+        text: "Cancelar",
+        style: "cancel",
+      },
+      {
+        text: "Eliminar",
+        style: "destructive",
+        onPress: eliminar,
+      },
+    ]
+  );
+};
+const seleccionarRol = async (rol: RolUsuario) => {
+  if (!usuarioSeleccionado) {
+    return;
+  }
+
+  if (usuarioSeleccionado.uid === uidActual) {
+    Alert.alert(
+      "Acción no permitida",
+      "No puedes cambiar tu propio rol de administrador desde este panel."
+    );
+    return;
+  }
+
+  try {
+    setGuardando(true);
+
+    await actualizarRolUsuario(
+      usuarioSeleccionado.uid,
+      rol
+    );
+
+    setUsuarios((actuales) =>
+      actuales.map((item) =>
+        item.uid === usuarioSeleccionado.uid
+          ? {
+              ...item,
+              rol,
+            }
+          : item
+      )
+    );
+
+    setModalRol(false);
+    setUsuarioSeleccionado(null);
+
+    Alert.alert(
+      "Rol actualizado",
+      `El perfil ahora tiene el rol "${rol}".`
+    );
+  } catch (error) {
+    console.error("Error actualizando rol:", error);
+
+    Alert.alert(
+      "Error",
+      "No fue posible actualizar el rol."
+    );
+  } finally {
+    setGuardando(false);
+  }
+};
 
   const abrirSelectorRol = (usuario: UsuarioAdmin) => {
     setUsuarioSeleccionado(usuario);
@@ -562,45 +704,57 @@ export default function UsuariosAdmin() {
                   </View>
                 </View>
 
-                <View style={styles.actionsRow}>
-                  <Pressable
-                    style={styles.secondaryButton}
-                    onPress={() =>
-                      abrirSelectorRol(usuario)
-                    }
-                    disabled={guardando}
-                  >
-                    <Text style={styles.secondaryButtonText}>
-                      Cambiar rol
-                    </Text>
-                  </Pressable>
+<View style={styles.actionsRow}>
+  <Pressable
+    style={styles.secondaryButton}
+    onPress={() =>
+      abrirSelectorRol(usuario)
+    }
+    disabled={guardando}
+  >
+    <Text style={styles.secondaryButtonText}>
+      Cambiar rol
+    </Text>
+  </Pressable>
 
-                  <Pressable
-                    style={[
-                      styles.statusButton,
-                      usuario.activo
-                        ? styles.deactivateButton
-                        : styles.activateButton,
-                    ]}
-                    onPress={() =>
-                      cambiarEstado(usuario)
-                    }
-                    disabled={guardando}
-                  >
-                    <Text
-                      style={[
-                        styles.statusButtonText,
-                        usuario.activo
-                          ? styles.deactivateText
-                          : styles.activateText,
-                      ]}
-                    >
-                      {usuario.activo
-                        ? "Desactivar"
-                        : "Activar"}
-                    </Text>
-                  </Pressable>
-                </View>
+  <Pressable
+    style={[
+      styles.statusButton,
+      usuario.activo
+        ? styles.deactivateButton
+        : styles.activateButton,
+    ]}
+    onPress={() =>
+      cambiarEstado(usuario)
+    }
+    disabled={guardando}
+  >
+    <Text
+      style={[
+        styles.statusButtonText,
+        usuario.activo
+          ? styles.deactivateText
+          : styles.activateText,
+      ]}
+    >
+      {usuario.activo
+        ? "Desactivar"
+        : "Activar"}
+    </Text>
+  </Pressable>
+
+  <Pressable
+    style={styles.deleteButton}
+    onPress={() =>
+      eliminarUsuario(usuario)
+    }
+    disabled={guardando}
+  >
+    <Text style={styles.deleteButtonText}>
+      Eliminar
+    </Text>
+  </Pressable>
+</View>
               </View>
             ))
           )}
@@ -686,6 +840,22 @@ export default function UsuariosAdmin() {
 }
 
 const styles = StyleSheet.create({
+
+deleteButton: {
+  flex: 1,
+  minHeight: 44,
+  alignItems: "center",
+  justifyContent: "center",
+  borderRadius: 13,
+  backgroundColor: "#fee2e2",
+},
+
+deleteButtonText: {
+  fontSize: 13,
+  fontWeight: "700",
+  color: "#b91c1c",
+},
+
   safeArea: {
     flex: 1,
   },

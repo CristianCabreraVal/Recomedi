@@ -1,18 +1,18 @@
 import {
-    HttpsError,
-    onCall,
+  HttpsError,
+  onCall,
 } from "firebase-functions/v2/https";
 
 import {
-    initializeApp,
+  initializeApp,
 } from "firebase-admin/app";
 
 import {
-    getAuth,
+  getAuth,
 } from "firebase-admin/auth";
 
 import {
-    getFirestore,
+  getFirestore,
 } from "firebase-admin/firestore";
 
 initializeApp();
@@ -264,74 +264,62 @@ export const cambiarEstadoUsuario = onCall(
    ELIMINAR USUARIO
 ============================================================ */
 
-export const eliminarUsuario = onCall(
-  async (request) => {
-    verificarAdministrador(request);
+export const eliminarUsuario = onCall(async (request) => {
+  verificarAdministrador(request);
 
-    const uid =
-      request.data?.uid;
+  const uid = request.data?.uid;
 
-    if (
-      typeof uid !== "string" ||
-      !uid.trim()
-    ) {
-      throw new HttpsError(
-        "invalid-argument",
-        "UID de usuario inválido."
-      );
-    }
-
-    /*
-     * Evitar que el administrador
-     * se elimine a sí mismo.
-     */
-    if (
-      request.auth?.uid === uid
-    ) {
-      throw new HttpsError(
-        "failed-precondition",
-        "No puedes eliminar tu propia cuenta."
-      );
-    }
-
-    try {
-      /*
-       * Eliminar primero el documento
-       * del usuario y sus subcolecciones.
-       *
-       * Esto incluye:
-       * usuarios/{uid}
-       * usuarios/{uid}/actividad/...
-       */
-      const referenciaUsuario =
-        db.doc(
-          `usuarios/${uid}`
-        );
-
-      await db.recursiveDelete(
-        referenciaUsuario
-      );
-
-      /*
-       * Eliminar la cuenta de
-       * Firebase Authentication.
-       */
-      await auth.deleteUser(uid);
-
-      return {
-        success: true,
-        uid,
-      };
-    } catch (error) {
-      console.error(
-        "Error eliminando usuario:",
-        error
-      );
-
-      throw new HttpsError(
-        "internal",
-        "No fue posible eliminar el usuario."
-      );
-    }
+  if (typeof uid !== "string" || !uid.trim()) {
+    throw new HttpsError(
+      "invalid-argument",
+      "UID de usuario inválido."
+    );
   }
-);
+
+  if (request.auth?.uid === uid) {
+    throw new HttpsError(
+      "failed-precondition",
+      "No puedes eliminar tu propia cuenta."
+    );
+  }
+
+  try {
+    console.log("=== INICIO ELIMINACION ===");
+    console.log("UID recibido:", uid);
+    console.log("Administrador:", request.auth?.uid);
+
+    // 1. Eliminar documento y subcolecciones de Firestore
+    console.log("Eliminando datos de Firestore...");
+
+    const referenciaUsuario = db.doc(`usuarios/${uid}`);
+
+    await db.recursiveDelete(referenciaUsuario);
+
+    console.log("Firestore eliminado correctamente.");
+
+    // 2. Eliminar usuario de Firebase Authentication
+    console.log("Eliminando usuario de Authentication...");
+
+    await auth.deleteUser(uid);
+
+    console.log("Authentication eliminado correctamente.");
+
+    console.log("=== ELIMINACION COMPLETADA ===");
+
+    return {
+      success: true,
+      uid,
+    };
+  } catch (error: any) {
+    console.error("=== ERROR ELIMINANDO USUARIO ===");
+    console.error("UID:", uid);
+    console.error("Mensaje:", error?.message);
+    console.error("Código:", error?.code);
+    console.error("Error completo:", error);
+
+    throw new HttpsError(
+      "internal",
+      error?.message || "No fue posible eliminar el usuario."
+    );
+  }
+});

@@ -19,6 +19,7 @@ import {
   doc,
   getDoc,
   setDoc,
+  updateDoc,
 } from "firebase/firestore";
 
 export default function PerfilForm() {
@@ -78,49 +79,90 @@ export default function PerfilForm() {
   }, []);
 
   // 💾 Guardar perfil
-  const guardar = async () => {
-    if (
-      !nombre ||
-      !edad ||
-      !peso ||
-      !altura ||
-      !genero
-    ) {
-      alert("Completa todos los campos");
+const guardar = async () => {
+  if (
+    !nombre ||
+    !edad ||
+    !peso ||
+    !altura ||
+    !genero
+  ) {
+    alert("Completa todos los campos");
+    return;
+  }
+
+  try {
+    const usuarioActual = auth.currentUser;
+
+    if (!usuarioActual) {
+      alert("Debes iniciar sesión");
       return;
     }
 
-    try {
-      const uid = auth.currentUser?.uid;
+    const uid = usuarioActual.uid;
 
-      if (!uid) {
-        alert("Debes iniciar sesión");
-        return;
-      }
+    const referencia = doc(
+      db,
+      "usuarios",
+      uid
+    );
 
-      const perfil = {
-        nombre,
-        edad: Number(edad),
-        peso: Number(peso),
-        altura: Number(altura),
-        genero,
-        condiciones,
-      };
+    const perfil = {
+      nombre: nombre.trim(),
+      edad: Number(edad),
+      peso: Number(peso),
+      altura: Number(altura),
+      genero,
+      condiciones,
+      email: usuarioActual.email || "",
+      emailVerificado:
+        usuarioActual.emailVerified || false,
+    };
 
-      await setDoc(
-        doc(db, "usuarios", uid),
+    if (editando) {
+      // Editar perfil existente.
+      // Solo modifica los campos del perfil.
+      // rol y activo quedan intactos.
+      await updateDoc(
+        referencia,
         perfil
       );
-
-      alert("Perfil guardado correctamente");
-
-      router.back();
-    } catch (error) {
-      console.log(error);
-
-      alert("Error guardando perfil");
+    } else {
+      // Crear perfil por primera vez.
+      // Se conservan datos existentes y se
+      // establece el rol inicial como usuario.
+      await setDoc(
+        referencia,
+        {
+          uid,
+          ...perfil,
+          rol: "usuario",
+          activo: true,
+        },
+        {
+          merge: true,
+        }
+      );
     }
-  };
+
+    alert(
+      editando
+        ? "Perfil actualizado correctamente"
+        : "Perfil creado correctamente"
+    );
+
+    router.back();
+  } catch (error) {
+    console.log(
+      "Error guardando perfil:",
+      error
+    );
+
+    alert(
+      "No fue posible guardar el perfil"
+    );
+  }
+};
 
   return (
     <SafeAreaView style={styles.container}>
