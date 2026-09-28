@@ -609,7 +609,373 @@ function obtenerImagen(item) {
       )
     : "";
 }
+function extraerMeta(html, propiedades) {
+  for (const propiedad of propiedades) {
+    const expresion1 = new RegExp(
+      `<meta[^>]+property=["']${propiedad}["'][^>]+content=["']([^"']+)["'][^>]*>`,
+      "i"
+    );
 
+    const expresion2 = new RegExp(
+      `<meta[^>]+name=["']${propiedad}["'][^>]+content=["']([^"']+)["'][^>]*>`,
+      "i"
+    );
+
+    const expresion3 = new RegExp(
+      `<meta[^>]+content=["']([^"']+)["'][^>]+property=["']${propiedad}["'][^>]*>`,
+      "i"
+    );
+
+    const expresion4 = new RegExp(
+      `<meta[^>]+content=["']([^"']+)["'][^>]+name=["']${propiedad}["'][^>]*>`,
+      "i"
+    );
+
+    const coincidencia =
+      html.match(expresion1) ||
+      html.match(expresion2) ||
+      html.match(expresion3) ||
+      html.match(expresion4);
+
+    if (coincidencia?.[1]) {
+      return coincidencia[1];
+    }
+  }
+
+  return "";
+}
+
+function convertirUrlAbsoluta(valor, urlBase) {
+  if (!valor) {
+    return "";
+  }
+
+  try {
+    return normalizarUrl(
+      new URL(valor, urlBase).toString()
+    );
+  } catch {
+    return "";
+  }
+}
+
+function limpiarContenidoHtml(html = "") {
+  let contenido = String(html);
+
+  contenido = contenido
+    .replace(
+      /<script\b[^>]*>[\s\S]*?<\/script>/gi,
+      " "
+    )
+    .replace(
+      /<style\b[^>]*>[\s\S]*?<\/style>/gi,
+      " "
+    )
+    .replace(
+      /<nav\b[^>]*>[\s\S]*?<\/nav>/gi,
+      " "
+    )
+    .replace(
+      /<header\b[^>]*>[\s\S]*?<\/header>/gi,
+      " "
+    )
+    .replace(
+      /<footer\b[^>]*>[\s\S]*?<\/footer>/gi,
+      " "
+    )
+    .replace(
+      /<aside\b[^>]*>[\s\S]*?<\/aside>/gi,
+      " "
+    );
+
+  contenido = contenido
+    .replace(
+      /<\/(p|div|section|article|h1|h2|h3|h4|li|blockquote)>/gi,
+      "\n"
+    )
+    .replace(
+      /<(br|hr)\s*\/?>/gi,
+      "\n"
+    )
+    .replace(
+      /<li\b[^>]*>/gi,
+      "\n• "
+    )
+    .replace(
+      /<[^>]+>/g,
+      " "
+    )
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/\r/g, "")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n[ \t]+/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  return contenido;
+}
+
+function extraerArticleBodyDesdeJsonLd(html) {
+  const bloques =
+    html.match(
+      /<script[^>]+type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi
+    ) || [];
+
+  for (const bloque of bloques) {
+    const jsonTexto = bloque
+      .replace(
+        /<script[^>]*>/i,
+        ""
+      )
+      .replace(
+        /<\/script>\s*$/i,
+        ""
+      )
+      .trim();
+
+    try {
+      const datos = JSON.parse(
+        jsonTexto
+      );
+
+      const revisar = (objeto) => {
+        if (!objeto) {
+          return "";
+        }
+
+        if (
+          typeof objeto === "object" &&
+          typeof objeto.articleBody === "string" &&
+          objeto.articleBody.trim()
+        ) {
+          return objeto.articleBody.trim();
+        }
+
+        if (
+          typeof objeto === "object" &&
+          Array.isArray(objeto["@graph"])
+        ) {
+          for (
+            const elemento of objeto["@graph"]
+          ) {
+            const resultado =
+              revisar(elemento);
+
+            if (resultado) {
+              return resultado;
+            }
+          }
+        }
+
+        if (Array.isArray(objeto)) {
+          for (
+            const elemento of objeto
+          ) {
+            const resultado =
+              revisar(elemento);
+
+            if (resultado) {
+              return resultado;
+            }
+          }
+        }
+
+        return "";
+      };
+
+      const resultado =
+        revisar(datos);
+
+      if (resultado) {
+        return resultado;
+      }
+    } catch {
+      // Ignorar JSON-LD inválido.
+    }
+  }
+
+  return "";
+}
+
+function extraerImagenDesdePagina(
+  html,
+  urlBase
+) {
+  const imagenMeta =
+    extraerMeta(
+      html,
+      [
+        "og:image",
+        "twitter:image",
+        "twitter:image:src",
+      ]
+    );
+
+  if (imagenMeta) {
+    return convertirUrlAbsoluta(
+      imagenMeta,
+      urlBase
+    );
+  }
+
+  const imagenes =
+    html.match(
+      /<img\b[^>]*>/gi
+    ) || [];
+
+  for (const etiqueta of imagenes) {
+    const coincidencia =
+      etiqueta.match(
+        /\b(?:src|data-src|data-lazy-src)=["']([^"']+)["']/i
+      );
+
+    if (
+      coincidencia?.[1]
+    ) {
+      const url =
+        convertirUrlAbsoluta(
+          coincidencia[1],
+          urlBase
+        );
+
+      if (url) {
+        return url;
+      }
+    }
+  }
+
+  return "";
+}
+
+function extraerContenidoDesdePagina(
+  html
+) {
+  const desdeJsonLd =
+    extraerArticleBodyDesdeJsonLd(
+      html
+    );
+
+  if (desdeJsonLd) {
+    return limpiarContenidoHtml(
+      desdeJsonLd
+    );
+  }
+
+  const patrones = [
+    /<article\b[^>]*>([\s\S]*?)<\/article>/i,
+    /<main\b[^>]*>([\s\S]*?)<\/main>/i,
+  ];
+
+  for (const patron of patrones) {
+    const coincidencia =
+      html.match(patron);
+
+    if (
+      coincidencia?.[1]
+    ) {
+      const contenido =
+        limpiarContenidoHtml(
+          coincidencia[1]
+        );
+
+      if (
+        contenido.length >= 200
+      ) {
+        return contenido;
+      }
+    }
+  }
+
+  return "";
+}
+
+async function obtenerDatosDesdePaginaOficial(
+  url
+) {
+  if (!url) {
+    return {
+      imagenUrl: "",
+      contenido: "",
+    };
+  }
+
+  try {
+    console.log(
+      `Obteniendo imagen y contenido desde: ${url}`
+    );
+
+    const respuesta =
+      await fetch(
+        url,
+        {
+          headers: HEADERS,
+          redirect: "follow",
+          signal:
+            AbortSignal.timeout(
+              20000
+            ),
+        }
+      );
+
+    if (!respuesta.ok) {
+      console.log(
+        `La página oficial devolvió HTTP ${respuesta.status}`
+      );
+
+      return {
+        imagenUrl: "",
+        contenido: "",
+      };
+    }
+
+    const html =
+      await respuesta.text();
+
+    const imagenUrl =
+      extraerImagenDesdePagina(
+        html,
+        url
+      );
+
+    const contenido =
+      extraerContenidoDesdePagina(
+        html
+      );
+
+    console.log(
+      `Imagen encontrada: ${
+        imagenUrl ? "SI" : "NO"
+      }`
+    );
+
+    console.log(
+      `Contenido encontrado: ${
+        contenido ? "SI" : "NO"
+      }`
+    );
+
+    return {
+      imagenUrl,
+      contenido,
+    };
+  } catch (error) {
+    console.log(
+      `Error obteniendo datos de la página oficial: ${
+        error?.message || error
+      }`
+    );
+
+    return {
+      imagenUrl: "",
+      contenido: "",
+    };
+  }
+}
 function construirHuella(
   fuenteId,
   url,
@@ -746,6 +1112,102 @@ async function cargarExistentes() {
     huellas,
     titulos,
   };
+}
+async function enriquecerNoticiasExistentes() {
+  console.log(
+    "\n=============================================="
+  );
+
+  console.log(
+    "      ENRIQUECIENDO NOTICIAS EXISTENTES"
+  );
+
+  console.log(
+    "=============================================="
+  );
+
+  const snapshot =
+    await db
+      .collection(COLECCION)
+      .get();
+
+  let actualizadas = 0;
+
+  for (
+    const documento of snapshot.docs
+  ) {
+    const datos =
+      documento.data();
+
+    const urlOficial =
+      datos.urlOficial || "";
+
+    if (!urlOficial) {
+      continue;
+    }
+
+    if (
+      datos.imagenUrl &&
+      datos.contenido
+    ) {
+      continue;
+    }
+
+    console.log(
+      `\nProcesando noticia: ${
+        datos.titulo || documento.id
+      }`
+    );
+
+    const datosPagina =
+      await obtenerDatosDesdePaginaOficial(
+        urlOficial
+      );
+
+    const cambios = {};
+
+    if (
+      !datos.imagenUrl &&
+      datosPagina.imagenUrl
+    ) {
+      cambios.imagenUrl =
+        datosPagina.imagenUrl;
+    }
+
+    if (
+      !datos.contenido &&
+      datosPagina.contenido
+    ) {
+      cambios.contenido =
+        datosPagina.contenido;
+    }
+
+    if (
+      Object.keys(cambios).length > 0
+    ) {
+      await documento.ref.update(
+        cambios
+      );
+
+      actualizadas++;
+
+      console.log(
+        "Noticia actualizada correctamente."
+      );
+    } else {
+      console.log(
+        "No se encontraron nuevos datos."
+      );
+    }
+  }
+
+  console.log(
+    `\nNoticias enriquecidas: ${actualizadas}`
+  );
+
+  console.log(
+    "=============================================="
+  );
 }
 
 async function obtenerResultados(
@@ -1015,7 +1477,42 @@ async function procesarItem(
       0,
       40
     );
+ // ==========================================================
+  // OBTENER IMAGEN Y CONTENIDO DE LA PÁGINA OFICIAL
+  // ==========================================================
 
+  let imagenUrl =
+    obtenerImagen(item);
+
+  let contenido =
+    "";
+
+  if (
+    urlOficial &&
+    esArticuloValido(
+      fuente,
+      urlOficial
+    )
+  ) {
+    const datosPagina =
+      await obtenerDatosDesdePaginaOficial(
+        urlOficial
+      );
+
+    if (
+      datosPagina.imagenUrl
+    ) {
+      imagenUrl =
+        datosPagina.imagenUrl;
+    }
+
+    if (
+      datosPagina.contenido
+    ) {
+      contenido =
+        datosPagina.contenido;
+    }
+  }
   const noticia = {
     titulo,
 
@@ -1023,10 +1520,9 @@ async function procesarItem(
       resumen ||
       "Noticia publicada por una fuente oficial.",
 
-    contenido: "",
+      contenido,
 
-    imagenUrl:
-      obtenerImagen(item),
+      imagenUrl,
 
     categoria:
       determinarCategoria(
@@ -1257,6 +1753,8 @@ async function main() {
 
   const existentes =
     await cargarExistentes();
+
+      await enriquecerNoticiasExistentes();
 
   console.log(
     `Noticias existentes en Firebase: ${existentes.urls.size}`
