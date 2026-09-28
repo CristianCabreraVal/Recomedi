@@ -36,6 +36,7 @@ jobs:
             echo "ERROR: no existe el secreto FIREBASE_SERVICE_ACCOUNT_JSON"
             exit 1
           fi
+
           echo "Secreto FIREBASE_SERVICE_ACCOUNT_JSON detectado correctamente."
 
       - name: Recolectar noticias
