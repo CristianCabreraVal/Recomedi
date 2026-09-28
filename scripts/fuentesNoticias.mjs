@@ -2,30 +2,42 @@ export const FUENTES_NOTICIAS = [
   {
     id: "minsalud",
     nombre: "Ministerio de Salud y Protección Social",
-    tipo: "sitemap",
-    sitemapUrl: "https://www.minsalud.gov.co/sitemap.xml",
-    rutaPermitida: "/Comunicaciones/noticias/2026/Paginas/",
-    dominio: "www.minsalud.gov.co",
-    limite: 20,
+    dominio: "minsalud.gov.co",
+    consultas: [
+      'site:minsalud.gov.co/Comunicaciones/noticias/2026/Paginas/',
+      'site:minsalud.gov.co/Comunicaciones/noticias/2026/Paginas/ salud',
+      'site:minsalud.gov.co/Comunicaciones/noticias/2026/Paginas vacunación',
+      'site:minsalud.gov.co/Comunicaciones/noticias/2026/Paginas hospital',
+      'site:minsalud.gov.co/Comunicaciones/noticias/2026/Paginas vigilancia',
+    ],
+    limitePorConsulta: 15,
   },
 
   {
     id: "cundinamarca",
     nombre: "Secretaría de Salud de Cundinamarca",
-    tipo: "listado",
-    listadoUrl:
-      "https://www.cundinamarca.gov.co/dependencias/secsalud",
-    dominio: "www.cundinamarca.gov.co",
-    limite: 10,
+    dominio: "cundinamarca.gov.co",
+    consultas: [
+      'site:cundinamarca.gov.co/dependencias/secsalud/noticias/',
+      'site:cundinamarca.gov.co/dependencias/secsalud/noticias/ salud',
+      'site:cundinamarca.gov.co/dependencias/secsalud/noticias/ vacunación',
+      'site:cundinamarca.gov.co/dependencias/secsalud/noticias/ vigilancia',
+      'site:cundinamarca.gov.co/dependencias/secsalud/noticias/ hospital',
+    ],
+    limitePorConsulta: 15,
   },
 
   {
     id: "ins",
     nombre: "Instituto Nacional de Salud",
-    tipo: "listado",
-    listadoUrl:
-      "https://www.ins.gov.co/Comunicaciones/Paginas/Historico.aspx",
-    dominio: "www.ins.gov.co",
-    limite: 15,
+    dominio: "ins.gov.co",
+    consultas: [
+      'site:ins.gov.co/Noticias/Paginas/',
+      'site:ins.gov.co/Noticias/Paginas/ salud',
+      'site:ins.gov.co/Noticias/Paginas/ vigilancia epidemiológica',
+      'site:ins.gov.co/Noticias/Paginas/ enfermedad',
+      'site:ins.gov.co/Comunicaciones/Paginas/ salud',
+    ],
+    limitePorConsulta: 15,
   },
 ];

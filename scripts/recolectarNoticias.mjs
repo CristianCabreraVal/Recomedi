@@ -1,20 +1,39 @@
-import * as cheerio from "cheerio";
-import { cert, getApps, initializeApp } from "firebase-admin/app";
+import {
+  cert,
+  getApps,
+  initializeApp,
+} from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import crypto from "node:crypto";
+import Parser from "rss-parser";
 import { FUENTES_NOTICIAS } from "./fuentesNoticias.mjs";
 
 const COLECCION = "noticias";
 
+const GOOGLE_NEWS_RSS =
+  "https://news.google.com/rss/search";
+
+const parser = new Parser({
+  timeout: 30000,
+
+  headers: {
+    "User-Agent":
+      "Mozilla/5.0 (compatible; RecomediNewsCollector/1.0)",
+    Accept:
+      "application/rss+xml, application/xml, text/xml;q=0.9,*/*;q=0.8",
+  },
+});
+
 const HEADERS = {
   "User-Agent":
-    "Mozilla/5.0 (compatible; RecomediNewsCollector/1.0; +https://github.com/CristianCabreraVal/Recomedi)",
+    "Mozilla/5.0 (compatible; RecomediNewsCollector/1.0)",
   Accept:
     "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 };
 
 function obtenerCredencialesFirebase() {
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  const raw =
+    process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
   if (!raw) {
     throw new Error(
@@ -34,7 +53,9 @@ function obtenerCredencialesFirebase() {
 function iniciarFirebase() {
   if (getApps().length === 0) {
     initializeApp({
-      credential: cert(obtenerCredencialesFirebase()),
+      credential: cert(
+        obtenerCredencialesFirebase()
+      ),
     });
   }
 
@@ -45,12 +66,19 @@ const db = iniciarFirebase();
 
 function normalizarTexto(texto = "") {
   return String(texto)
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
     .replace(/\s+/g, " ")
     .trim();
 }
 
-function normalizarTitulo(texto = "") {
-  return normalizarTexto(texto)
+function normalizarTitulo(titulo = "") {
+  return normalizarTexto(titulo)
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -60,6 +88,10 @@ function normalizarTitulo(texto = "") {
 }
 
 function normalizarUrl(url = "") {
+  if (!url) {
+    return "";
+  }
+
   try {
     const resultado = new URL(url);
 
@@ -76,18 +108,23 @@ function normalizarUrl(url = "") {
     ];
 
     for (const parametro of parametrosEliminar) {
-      resultado.searchParams.delete(parametro);
+      resultado.searchParams.delete(
+        parametro
+      );
     }
 
-    return resultado.toString().replace(/\/$/, "");
+    return resultado
+      .toString()
+      .replace(/\/$/, "");
   } catch {
-    return normalizarTexto(url);
+    return String(url).trim();
   }
 }
 
 function obtenerHost(url = "") {
   try {
-    return new URL(url).hostname
+    return new URL(url)
+      .hostname
       .toLowerCase()
       .replace(/^www\./, "");
   } catch {
@@ -95,77 +132,307 @@ function obtenerHost(url = "") {
   }
 }
 
-function dominioPermitido(url, dominio) {
+function perteneceAlDominio(
+  url,
+  dominio
+) {
   const host = obtenerHost(url);
 
   if (!host) {
     return false;
   }
 
-  const esperado = dominio
-    .toLowerCase()
-    .replace(/^www\./, "");
+  const base =
+    dominio
+      .toLowerCase()
+      .replace(/^www\./, "");
 
   return (
-    host === esperado ||
-    host.endsWith(`.${esperado}`)
+    host === base ||
+    host.endsWith(`.${base}`)
   );
 }
 
-function convertirFecha(fecha = "") {
+function esArticuloValido(
+  fuente,
+  url
+) {
+  if (!url) {
+    return false;
+  }
+
+  const normalizada =
+    normalizarUrl(url);
+
+  if (
+    !perteneceAlDominio(
+      normalizada,
+      fuente.dominio
+    )
+  ) {
+    return false;
+  }
+
+  const minuscula =
+    normalizada.toLowerCase();
+
+  if (
+    minuscula.includes(
+      "/historico.aspx"
+    )
+  ) {
+    return false;
+  }
+
+  if (
+    minuscula.includes(
+      "/allnews.aspx"
+    )
+  ) {
+    return false;
+  }
+
+  if (
+    minuscula.includes(
+      "/forms/"
+    )
+  ) {
+    return false;
+  }
+
+  if (
+    minuscula.includes(
+      "periodicidad-divulgacion"
+    )
+  ) {
+    return false;
+  }
+
+  if (
+    minuscula.includes(
+      "ins-digital.aspx"
+    )
+  ) {
+    return false;
+  }
+
+  if (
+    fuente.id === "minsalud"
+  ) {
+    return (
+      minuscula.includes(
+        "/comunicaciones/noticias/2026/paginas/"
+      ) &&
+      minuscula.endsWith(
+        ".aspx"
+      )
+    );
+  }
+
+  if (
+    fuente.id === "cundinamarca"
+  ) {
+    return minuscula.includes(
+      "/dependencias/secsalud/noticias/"
+    );
+  }
+
+  if (
+    fuente.id === "ins"
+  ) {
+    return (
+      minuscula.includes(
+        "/noticias/paginas/"
+      ) &&
+      minuscula.endsWith(
+        ".aspx"
+      )
+    );
+  }
+
+  return false;
+}
+
+function construirFeedUrl(
+  consulta
+) {
+  const ahora =
+    new Date();
+
+  const fechaDesde =
+    new Date(
+      ahora.getTime() -
+        30 *
+          24 *
+          60 *
+          60 *
+          1000
+    );
+
+  const yyyy =
+    fechaDesde.getUTCFullYear();
+
+  const mm =
+    String(
+      fechaDesde.getUTCMonth() + 1
+    ).padStart(2, "0");
+
+  const dd =
+    String(
+      fechaDesde.getUTCDate()
+    ).padStart(2, "0");
+
+  const consultaFinal =
+    `${consulta} after:${yyyy}-${mm}-${dd}`;
+
+  const parametros =
+    new URLSearchParams({
+      q: consultaFinal,
+      hl: "es-419",
+      gl: "CO",
+      ceid: "CO:es-419",
+    });
+
+  return `${GOOGLE_NEWS_RSS}?${parametros.toString()}`;
+}
+
+async function resolverUrlGoogleNews(
+  url
+) {
+  if (!url) {
+    return "";
+  }
+
+  try {
+    const respuesta =
+      await fetch(url, {
+        method: "HEAD",
+        redirect: "manual",
+        headers: HEADERS,
+        signal:
+          AbortSignal.timeout(
+            15000
+          ),
+      });
+
+    const location =
+      respuesta.headers.get(
+        "location"
+      );
+
+    if (location) {
+      return normalizarUrl(
+        location
+      );
+    }
+  } catch {
+    // Se intenta posteriormente con GET.
+  }
+
+  try {
+    const respuesta =
+      await fetch(url, {
+        redirect: "manual",
+        headers: HEADERS,
+        signal:
+          AbortSignal.timeout(
+            15000
+          ),
+      });
+
+    const location =
+      respuesta.headers.get(
+        "location"
+      );
+
+    if (location) {
+      return normalizarUrl(
+        location
+      );
+    }
+  } catch {
+    return "";
+  }
+
+  return "";
+}
+
+function obtenerImagen(item) {
+  const enclosure =
+    item?.enclosure?.url;
+
+  if (enclosure) {
+    return normalizarUrl(
+      enclosure
+    );
+  }
+
+  const contenido =
+    item?.content ||
+    item?.description ||
+    "";
+
+  const coincidencia =
+    String(contenido).match(
+      /<img[^>]+src=["']([^"']+)["']/i
+    );
+
+  return coincidencia?.[1]
+    ? normalizarUrl(
+        coincidencia[1]
+      )
+    : "";
+}
+
+function construirHuella(
+  fuenteId,
+  url,
+  titulo
+) {
+  const identificador =
+    url ||
+    `${fuenteId}|${normalizarTitulo(
+      titulo
+    )}`;
+
+  return crypto
+    .createHash("sha256")
+    .update(
+      `${fuenteId}|${identificador}`
+    )
+    .digest("hex");
+}
+
+function convertirFecha(
+  fecha
+) {
   if (!fecha) {
     return null;
   }
 
-  const texto = normalizarTexto(fecha);
+  const resultado =
+    new Date(fecha);
 
-  const formatoDMY = texto.match(
-    /(\d{1,2})[-/](\d{1,2})[-/](\d{4})/
-  );
-
-  if (formatoDMY) {
-    const [, dia, mes, anio] = formatoDMY;
-
-    return new Date(
-      Date.UTC(
-        Number(anio),
-        Number(mes) - 1,
-        Number(dia)
-      )
-    ).toISOString();
-  }
-
-  const formatoYMD = texto.match(
-    /(\d{4})[-/](\d{1,2})[-/](\d{1,2})/
-  );
-
-  if (formatoYMD) {
-    const [, anio, mes, dia] = formatoYMD;
-
-    return new Date(
-      Date.UTC(
-        Number(anio),
-        Number(mes) - 1,
-        Number(dia)
-      )
-    ).toISOString();
-  }
-
-  const fechaConvertida = new Date(texto);
-
-  if (Number.isNaN(fechaConvertida.getTime())) {
+  if (
+    Number.isNaN(
+      resultado.getTime()
+    )
+  ) {
     return null;
   }
 
-  return fechaConvertida.toISOString();
+  return resultado.toISOString();
 }
 
-function determinarCategoria(titulo, resumen) {
+function determinarCategoria(
+  titulo,
+  resumen
+) {
   const texto =
     `${titulo} ${resumen}`.toLowerCase();
 
   if (
-    /alerta|brote|epidem|riesgo|emergencia|vigilancia|notificacion|notificación/.test(
+    /alerta|brote|epidem|vigilancia|riesgo|emergencia/.test(
       texto
     )
   ) {
@@ -173,7 +440,7 @@ function determinarCategoria(titulo, resumen) {
   }
 
   if (
-    /vacun|prevencion|prevención|campana|campaña|dengue|fiebre amarilla/.test(
+    /vacun|prevencion|prevención|dengue|fiebre amarilla|sarampion|sarampión/.test(
       texto
     )
   ) {
@@ -181,7 +448,7 @@ function determinarCategoria(titulo, resumen) {
   }
 
   if (
-    /hospital|medicamento|tratamiento|atencion|atención|servicio de salud|salud pública/.test(
+    /hospital|medicamento|servicio de salud|atencion|atención|tratamiento/.test(
       texto
     )
   ) {
@@ -191,60 +458,59 @@ function determinarCategoria(titulo, resumen) {
   return "general";
 }
 
-function construirHuella(fuenteId, url) {
-  return crypto
-    .createHash("sha256")
-    .update(
-      `${fuenteId}|${normalizarUrl(url)}`
-    )
-    .digest("hex");
-}
-
-async function descargar(url) {
-  const respuesta = await fetch(url, {
-    headers: HEADERS,
-    redirect: "follow",
-    signal: AbortSignal.timeout(30000),
-  });
-
-  if (!respuesta.ok) {
-    throw new Error(
-      `HTTP ${respuesta.status} al consultar ${url}`
-    );
-  }
-
-  return {
-    texto: await respuesta.text(),
-    urlFinal: respuesta.url,
-  };
-}
-
 async function cargarExistentes() {
   const snapshot =
-    await db.collection(COLECCION).get();
+    await db
+      .collection(COLECCION)
+      .get();
 
-  const urls = new Set();
-  const huellas = new Set();
-  const clavesTitulo = new Set();
+  const urls =
+    new Set();
 
-  for (const doc of snapshot.docs) {
-    const datos = doc.data();
+  const huellas =
+    new Set();
 
-    if (datos.fuenteUrl) {
+  const titulos =
+    new Set();
+
+  for (
+    const documento of snapshot.docs
+  ) {
+    const datos =
+      documento.data();
+
+    if (
+      datos.fuenteUrl
+    ) {
       urls.add(
-        normalizarUrl(datos.fuenteUrl)
+        normalizarUrl(
+          datos.fuenteUrl
+        )
       );
     }
 
-    if (datos.huella) {
-      huellas.add(String(datos.huella));
+    if (
+      datos.huella
+    ) {
+      huellas.add(
+        String(
+          datos.huella
+        )
+      );
     }
 
-    if (datos.fuenteId && datos.titulo) {
-      clavesTitulo.add(
-        `${datos.fuenteId}|${normalizarTitulo(
-          datos.titulo
-        )}`
+    if (
+      datos.fuenteId &&
+      datos.titulo
+    ) {
+      titulos.add(
+        `${
+          datos.fuenteId
+        }|${
+          normalizarTitulo(
+            datos.titulo
+          )
+        }`
       );
     }
   }
@@ -252,592 +518,362 @@ async function cargarExistentes() {
   return {
     urls,
     huellas,
-    clavesTitulo,
+    titulos,
   };
 }
 
-function extraerDatosArticulo(html, url) {
-  const $ = cheerio.load(html);
-
-  const meta = (selector) =>
-    normalizarTexto(
-      $(selector).first().attr("content") || ""
+async function obtenerResultados(
+  fuente,
+  consulta
+) {
+  const feedUrl =
+    construirFeedUrl(
+      consulta
     );
 
+  console.log(
+    `Consulta RSS: ${consulta}`
+  );
+
+  const feed =
+    await parser.parseURL(
+      feedUrl
+    );
+
+  if (
+    !Array.isArray(
+      feed.items
+    )
+  ) {
+    return [];
+  }
+
+  return feed.items.slice(
+    0,
+    fuente.limitePorConsulta
+  );
+}
+
+async function procesarItem(
+  fuente,
+  item,
+  existentes
+) {
   const titulo =
-    meta('meta[property="og:title"]') ||
-    meta('meta[name="twitter:title"]') ||
-    normalizarTexto($("h1").first().text()) ||
-    normalizarTexto($("title").first().text());
+    normalizarTexto(
+      item.title || ""
+    );
+
+  if (!titulo) {
+    return {
+      estado: "ignorada",
+      razon: "sin-titulo",
+    };
+  }
 
   const resumen =
-    meta('meta[property="og:description"]') ||
-    meta('meta[name="description"]') ||
     normalizarTexto(
-      $("article p").first().text()
-    ) ||
-    normalizarTexto(
-      $(".content p").first().text()
+      item.contentSnippet ||
+        item.summary ||
+        item.description ||
+        ""
     );
 
-  const imagenUrl =
-    meta('meta[property="og:image"]') ||
-    meta('meta[name="twitter:image"]');
-
-  let fecha =
-    meta('meta[property="article:published_time"]') ||
-    meta('meta[name="date"]') ||
-    "";
-
-  if (!fecha) {
-    const textoPagina = normalizarTexto(
-      $("body").text()
+  const urlGoogle =
+    normalizarUrl(
+      item.link || ""
     );
 
-    const coincidencias = [
-      textoPagina.match(
-        /\b\d{1,2}-\d{1,2}-\d{4}\b/
-      ),
-      textoPagina.match(
-        /\b\d{1,2}\/\d{1,2}\/\d{4}\b/
-      ),
-      textoPagina.match(
-        /\b\d{4}-\d{1,2}-\d{1,2}\b/
-      ),
-    ];
-
-    for (const coincidencia of coincidencias) {
-      if (coincidencia?.[0]) {
-        fecha = coincidencia[0];
-        break;
-      }
-    }
-  }
-
-  let imagenFinal = imagenUrl;
-
-  if (imagenFinal) {
-    try {
-      imagenFinal = new URL(
-        imagenFinal,
-        url
-      ).toString();
-    } catch {
-      imagenFinal = "";
-    }
-  }
-
-  return {
-    titulo: normalizarTexto(titulo),
-    resumen: normalizarTexto(resumen),
-    imagenUrl: normalizarUrl(imagenFinal),
-    fechaPublicacion: convertirFecha(fecha),
-  };
-}
-
-async function obtenerMinSalud() {
-  const fuente = FUENTES_NOTICIAS.find(
-    (item) => item.id === "minsalud"
-  );
-
-  console.log("\n[MIN SALUD]");
-  console.log(
-    `Consultando sitemap: ${fuente.sitemapUrl}`
-  );
-
-  const sitemapsVisitados = new Set();
-  const urlsEncontradas = [];
-
-  async function recorrerSitemap(url, nivel = 0) {
-    if (nivel > 2) {
-      return;
-    }
-
-    const urlNormalizada =
-      normalizarUrl(url);
-
-    if (
-      sitemapsVisitados.has(
-        urlNormalizada
-      )
-    ) {
-      return;
-    }
-
-    sitemapsVisitados.add(
-      urlNormalizada
+  const urlFuenteDeclarada =
+    normalizarUrl(
+      item?.source?.url ||
+        ""
     );
 
-    try {
-      const { texto } =
-        await descargar(urlNormalizada);
-
-      const $ = cheerio.load(
-        texto,
-        { xmlMode: true }
-      );
-
-      $("sitemap loc").each(
-        (_, elemento) => {
-          const child =
-            normalizarTexto($(elemento).text());
-
-          if (child) {
-            urlsEncontradas.push({
-              tipo: "sitemap",
-              url: child,
-            });
-          }
-        }
-      );
-
-      $("url").each((_, elemento) => {
-        const loc = normalizarTexto(
-          $(elemento)
-            .find("loc")
-            .first()
-            .text()
-        );
-
-        const lastmod =
-          normalizarTexto(
-            $(elemento)
-              .find("lastmod")
-              .first()
-              .text()
-          );
-
-        if (
-          loc &&
-          loc.includes(
-            fuente.rutaPermitida
-          ) &&
-          dominioPermitido(
-            loc,
-            fuente.dominio
-          )
-        ) {
-          urlsEncontradas.push({
-            tipo: "articulo",
-            url: loc,
-            lastmod,
-          });
-        }
-      });
-
-      const childSitemaps =
-        urlsEncontradas.filter(
-          (item) =>
-            item.tipo === "sitemap" &&
-            !sitemapsVisitados.has(
-              normalizarUrl(item.url)
-            )
-        );
-
-      urlsEncontradas.length =
-        urlsEncontradas.filter(
-          (item) => item.tipo === "articulo"
-        ).length;
-
-      for (const child of childSitemaps) {
-        await recorrerSitemap(
-          child.url,
-          nivel + 1
-        );
-      }
-    } catch (error) {
-      console.error(
-        `Error sitemap MinSalud: ${
-          error?.message || error
-        }`
-      );
-    }
-  }
-
-  await recorrerSitemap(
-    fuente.sitemapUrl
-  );
-
-  const articulos = [];
-
-  for (const item of urlsEncontradas) {
-    if (
-      item &&
-      item.url &&
-      dominioPermitido(
-        item.url,
-        fuente.dominio
-      )
-    ) {
-      articulos.push(item);
-    }
-  }
-
-  const unicos = new Map();
-
-  for (const articulo of articulos) {
-    unicos.set(
-      normalizarUrl(articulo.url),
-      articulo
-    );
-  }
-
-  return [...unicos.values()]
-    .sort((a, b) => {
-      const fechaA =
-        new Date(a.lastmod || 0).getTime();
-
-      const fechaB =
-        new Date(b.lastmod || 0).getTime();
-
-      return fechaB - fechaA;
-    })
-    .slice(0, fuente.limite);
-}
-
-async function obtenerListado(fuente) {
-  console.log(
-    `\n[${fuente.nombre}]`
-  );
-
-  console.log(
-    `Consultando: ${fuente.listadoUrl}`
-  );
-
-  const { texto } =
-    await descargar(
-      fuente.listadoUrl
+  const urlResuelta =
+    await resolverUrlGoogleNews(
+      urlGoogle
     );
 
-  const $ = cheerio.load(texto);
+  let fuenteUrl = "";
 
-  const candidatos = new Map();
+  if (
+    esArticuloValido(
+      fuente,
+      urlResuelta
+    )
+  ) {
+    fuenteUrl =
+      urlResuelta;
+  }
 
-  $("a[href]").each(
-    (_, elemento) => {
-      const titulo =
-        normalizarTexto(
-          $(elemento).text()
-        );
+  if (
+    !fuenteUrl &&
+    esArticuloValido(
+      fuente,
+      urlFuenteDeclarada
+    )
+  ) {
+    fuenteUrl =
+      urlFuenteDeclarada;
+  }
 
-      const href =
-        normalizarTexto(
-          $(elemento).attr("href")
-        );
+  if (!fuenteUrl) {
+    return {
+      estado: "ignorada",
+      razon:
+        "no-se-pudo-obtener-url-oficial",
+      titulo,
+    };
+  }
 
-      if (!titulo || !href) {
-        return;
-      }
+  const tituloNormalizado =
+    normalizarTitulo(
+      titulo
+    );
 
-      let url;
-
-      try {
-        url = new URL(
-          href,
-          fuente.listadoUrl
-        ).toString();
-      } catch {
-        return;
-      }
-
-      url = normalizarUrl(url);
-
-      if (
-        !dominioPermitido(
-          url,
-          fuente.dominio
-        )
-      ) {
-        return;
-      }
-
-      if (fuente.id === "cundinamarca") {
-        if (
-          !url.includes(
-            "/dependencias/secsalud/noticias/"
-          )
-        ) {
-          return;
-        }
-      }
-
-      if (fuente.id === "ins") {
-        if (
-          !url.includes(
-            "/Comunicaciones/Paginas/"
-          )
-        ) {
-          return;
-        }
-
-        if (
-          url.toLowerCase().includes(
-            "historico.aspx"
-          )
-        ) {
-          return;
-        }
-      }
-
-      if (titulo.length < 15) {
-        return;
-      }
-
-      candidatos.set(url, {
-        url,
-        titulo,
-      });
-    }
-  );
-
-  return [...candidatos.values()]
-    .slice(0, fuente.limite);
-}
-
-async function guardarArticulo(
-  fuente,
-  url,
-  existentes,
-  tituloListado = ""
-) {
-  const urlNormalizada =
-    normalizarUrl(url);
+  const claveTitulo =
+    `${fuente.id}|${tituloNormalizado}`;
 
   const huella =
     construirHuella(
       fuente.id,
-      urlNormalizada
+      fuenteUrl,
+      titulo
     );
 
   if (
     existentes.urls.has(
-      urlNormalizada
-    ) ||
-    existentes.huellas.has(huella)
+      fuenteUrl
+    )
   ) {
     return {
       estado: "duplicada",
-      titulo: tituloListado,
-      url: urlNormalizada,
+      titulo,
+      fuenteUrl,
     };
   }
 
-  try {
-    const {
-      texto,
-      urlFinal,
-    } = await descargar(
-      urlNormalizada
-    );
-
-    const datosArticulo =
-      extraerDatosArticulo(
-        texto,
-        urlFinal || urlNormalizada
-      );
-
-    const titulo =
-      datosArticulo.titulo ||
-      tituloListado;
-
-    if (!titulo) {
-      return {
-        estado: "ignorada",
-        razon: "sin-titulo",
-      };
-    }
-
-    const claveTitulo =
-      `${fuente.id}|${normalizarTitulo(
-        titulo
-      )}`;
-
-    if (
-      existentes.clavesTitulo.has(
-        claveTitulo
-      )
-    ) {
-      return {
-        estado: "duplicada",
-        titulo,
-        url: urlNormalizada,
-      };
-    }
-
-    const documentoId =
-      huella.slice(0, 40);
-
-    const noticia = {
-      titulo,
-
-      resumen:
-        datosArticulo.resumen ||
-        "Noticia publicada por la fuente oficial.",
-
-      contenido: "",
-
-      imagenUrl:
-        datosArticulo.imagenUrl || "",
-
-      categoria:
-        determinarCategoria(
-          titulo,
-          datosArticulo.resumen
-        ),
-
-      fuente: fuente.nombre,
-
-      fuenteId: fuente.id,
-
-      fuenteUrl:
-        normalizarUrl(
-          urlFinal || urlNormalizada
-        ),
-
-      fechaPublicacion:
-        datosArticulo.fechaPublicacion,
-
-      fechaCaptura:
-        new Date().toISOString(),
-
-      estado: "pendiente",
-
-      tipo: "externa",
-
-      creadoAutomaticamente: true,
-
-      revisado: false,
-
-      creadoPor:
-        "recolector-automatico",
-
-      huella,
-    };
-
-    await db
-      .collection(COLECCION)
-      .doc(documentoId)
-      .set(noticia);
-
-    existentes.urls.add(
-      noticia.fuenteUrl
-    );
-
-    existentes.huellas.add(
+  if (
+    existentes.huellas.has(
       huella
-    );
-
-    existentes.clavesTitulo.add(
-      claveTitulo
-    );
-
+    )
+  ) {
     return {
-      estado: "nueva",
+      estado: "duplicada",
       titulo,
-      url: noticia.fuenteUrl,
-    };
-  } catch (error) {
-    return {
-      estado: "error",
-      titulo: tituloListado,
-      url: urlNormalizada,
-      razon:
-        error?.message || String(error),
+      fuenteUrl,
     };
   }
+
+  if (
+    existentes.titulos.has(
+      claveTitulo
+    )
+  ) {
+    return {
+      estado: "duplicada",
+      titulo,
+      fuenteUrl,
+    };
+  }
+
+  const documentoId =
+    huella.slice(
+      0,
+      40
+    );
+
+  const noticia = {
+    titulo,
+
+    resumen:
+      resumen ||
+      "Noticia publicada por una fuente oficial.",
+
+    contenido: "",
+
+    imagenUrl:
+      obtenerImagen(item),
+
+    categoria:
+      determinarCategoria(
+        titulo,
+        resumen
+      ),
+
+    fuente:
+      fuente.nombre,
+
+    fuenteId:
+      fuente.id,
+
+    fuenteUrl,
+
+    urlRecoleccion:
+      urlGoogle,
+
+    fechaPublicacion:
+      convertirFecha(
+        item.isoDate ||
+          item.pubDate
+      ),
+
+    fechaCaptura:
+      new Date().toISOString(),
+
+    estado:
+      "pendiente",
+
+    tipo:
+      "externa",
+
+    creadoAutomaticamente:
+      true,
+
+    revisado:
+      false,
+
+    creadoPor:
+      "recolector-automatico",
+
+    huella,
+  };
+
+  await db
+    .collection(COLECCION)
+    .doc(documentoId)
+    .set(noticia);
+
+  existentes.urls.add(
+    fuenteUrl
+  );
+
+  existentes.huellas.add(
+    huella
+  );
+
+  existentes.titulos.add(
+    claveTitulo
+  );
+
+  return {
+    estado: "nueva",
+    titulo,
+    fuenteUrl,
+  };
 }
 
 async function procesarFuente(
   fuente,
   existentes
 ) {
-  let candidatos = [];
+  const resultadosUnicos =
+    new Map();
 
-  if (fuente.tipo === "sitemap") {
-    candidatos =
-      await obtenerMinSalud();
-  } else {
-    candidatos =
-      await obtenerListado(
-        fuente
+  for (
+    const consulta of fuente.consultas
+  ) {
+    try {
+      const items =
+        await obtenerResultados(
+          fuente,
+          consulta
+        );
+
+      console.log(
+        `Resultados: ${items.length}`
       );
+
+      for (
+        const item of items
+      ) {
+        const titulo =
+          normalizarTexto(
+            item.title || ""
+          );
+
+        const clave =
+          normalizarTitulo(
+            titulo
+          );
+
+        if (!clave) {
+          continue;
+        }
+
+        if (
+          !resultadosUnicos.has(
+            clave
+          )
+        ) {
+          resultadosUnicos.set(
+            clave,
+            item
+          );
+        }
+      }
+    } catch (error) {
+      console.error(
+        `Error en consulta de ${fuente.id}:`,
+        error?.message ||
+          error
+      );
+    }
   }
 
- console.log(
-  `Candidatos encontrados: ${candidatos.length}`
-);
-
-for (const candidato of candidatos) {
   console.log(
-    `CANDIDATO -> ${candidato.titulo || "SIN TITULO"}`
+    `Resultados únicos encontrados: ${resultadosUnicos.size}`
   );
-
-  console.log(
-    `URL -> ${candidato.url}`
-  );
-}
 
   let nuevas = 0;
   let duplicadas = 0;
   let ignoradas = 0;
-  let errores = 0;
 
-  for (const candidato of candidatos) {
+  for (
+    const item of resultadosUnicos.values()
+  ) {
     const resultado =
-      await guardarArticulo(
+      await procesarItem(
         fuente,
-        candidato.url,
-        existentes,
-        candidato.titulo
+        item,
+        existentes
       );
 
     if (
-      resultado.estado === "nueva"
+      resultado.estado ===
+      "nueva"
     ) {
       nuevas++;
 
       console.log(
-        `  + NUEVA: ${resultado.titulo}`
+        `+ NUEVA: ${resultado.titulo}`
       );
 
       console.log(
-        `    ${resultado.url}`
+        `  URL: ${resultado.fuenteUrl}`
       );
-    }
-
-    if (
-      resultado.estado === "duplicada"
+    } else if (
+      resultado.estado ===
+      "duplicada"
     ) {
       duplicadas++;
 
       console.log(
-        `  = DUPLICADA: ${
-          resultado.titulo
-        }`
+        `= DUPLICADA: ${resultado.titulo}`
       );
-    }
-
-    if (
-      resultado.estado === "ignorada"
-    ) {
+    } else {
       ignoradas++;
 
       console.log(
-        `  - IGNORADA: ${
-          resultado.razon
+        `- IGNORADA: ${
+          resultado.titulo ||
+          "sin título"
         }`
       );
-    }
-
-    if (
-      resultado.estado === "error"
-    ) {
-      errores++;
 
       console.log(
-        `  ! ERROR: ${
-          resultado.razon
-        }`
+        `  Motivo: ${resultado.razon}`
       );
     }
   }
@@ -846,7 +882,6 @@ for (const candidato of candidatos) {
     nuevas,
     duplicadas,
     ignoradas,
-    errores,
   };
 }
 
@@ -856,7 +891,7 @@ async function main() {
   );
 
   console.log(
-    "     RECOMEDI - RECOLECTOR DE NOTICIAS"
+    "      RECOMEDI - RECOLECTOR DE NOTICIAS"
   );
 
   console.log(
@@ -871,43 +906,42 @@ async function main() {
     await cargarExistentes();
 
   console.log(
-    `Noticias existentes en Firebase: ${
-      existentes.urls.size
-    }`
+    `Noticias existentes en Firebase: ${existentes.urls.size}`
   );
 
   let totalNuevas = 0;
   let totalDuplicadas = 0;
   let totalIgnoradas = 0;
-  let totalErrores = 0;
 
-  for (const fuente of FUENTES_NOTICIAS) {
-    try {
-      const resultado =
-        await procesarFuente(
-          fuente,
-          existentes
-        );
+  for (
+    const fuente of FUENTES_NOTICIAS
+  ) {
+    console.log(
+      `\n==============================================`
+    );
 
-      totalNuevas +=
-        resultado.nuevas;
+    console.log(
+      fuente.nombre
+    );
 
-      totalDuplicadas +=
-        resultado.duplicadas;
+    console.log(
+      `==============================================`
+    );
 
-      totalIgnoradas +=
-        resultado.ignoradas;
-
-      totalErrores +=
-        resultado.errores;
-    } catch (error) {
-      totalErrores++;
-
-      console.error(
-        `ERROR EN FUENTE ${fuente.id}:`,
-        error?.message || error
+    const resultado =
+      await procesarFuente(
+        fuente,
+        existentes
       );
-    }
+
+    totalNuevas +=
+      resultado.nuevas;
+
+    totalDuplicadas +=
+      resultado.duplicadas;
+
+    totalIgnoradas +=
+      resultado.ignoradas;
   }
 
   console.log(
@@ -935,19 +969,17 @@ async function main() {
   );
 
   console.log(
-    `Errores               : ${totalErrores}`
-  );
-
-  console.log(
     "=============================================="
   );
 }
 
-main().catch((error) => {
-  console.error(
-    "ERROR FATAL:",
-    error
-  );
+main().catch(
+  (error) => {
+    console.error(
+      "ERROR FATAL DEL RECOLECTOR:",
+      error
+    );
 
-  process.exitCode = 1;
-});
+    process.exitCode = 1;
+  }
+);

@@ -28,7 +28,7 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
-      - name: Verificar Firebase
+      - name: Verificar secreto de Firebase
         env:
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
         run: |
@@ -37,7 +37,7 @@ jobs:
             exit 1
           fi
 
-          echo "FIREBASE_SERVICE_ACCOUNT_JSON detectado correctamente."
+          echo "Secreto de Firebase detectado correctamente."
 
       - name: Recolectar noticias
         env:
