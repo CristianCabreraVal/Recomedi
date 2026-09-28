@@ -1107,6 +1107,151 @@ function extraerContenidoDesdePagina(
   return "";
 }
 
+function decodificarHtmlReader(texto = "") {
+  return String(texto)
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&#(\d+);/g, (_, codigo) =>
+      String.fromCharCode(Number(codigo))
+    );
+}
+
+function limpiarContenidoReader(texto = "") {
+  return decodificarHtmlReader(texto)
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/!\[[^\]]*\]\(([^)]+)\)/g, "")
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1")
+    .replace(/[*_~`]/g, "")
+    .replace(/\r/g, "")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n[ \t]+/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function extraerImagenDesdeReader(texto, urlBase) {
+  const coincidencias =
+    String(texto).match(
+      /!\[[^\]]*\]\(([^)]+)\)/g
+    ) || [];
+
+  for (const coincidencia of coincidencias) {
+    const match = coincidencia.match(
+      /!\[[^\]]*\]\(([^)]+)\)/
+    );
+
+    if (!match?.[1]) {
+      continue;
+    }
+
+    const imagen = convertirUrlAbsoluta(
+      match[1].trim(),
+      urlBase
+    );
+
+    if (imagen) {
+      return imagen;
+    }
+  }
+
+  return "";
+}
+
+async function obtenerDatosConReaderJina(url) {
+  if (!url) {
+    return {
+      imagenUrl: "",
+      contenido: "",
+    };
+  }
+
+  try {
+    const readerUrl =
+      `https://r.jina.ai/${url}`;
+
+    console.log(
+      `Intentando Reader como respaldo para: ${url}`
+    );
+
+    const respuesta = await fetch(
+      readerUrl,
+      {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (compatible; RecomediNewsCollector/1.0)",
+          Accept: "application/json,text/markdown,text/plain;q=0.9,*/*;q=0.8",
+        },
+        redirect: "follow",
+        signal:
+          AbortSignal.timeout(30000),
+      }
+    );
+
+    console.log(
+      `HTTP Reader: ${respuesta.status}`
+    );
+
+    if (!respuesta.ok) {
+      return {
+        imagenUrl: "",
+        contenido: "",
+      };
+    }
+
+    const textoRespuesta =
+      await respuesta.text();
+
+    let contenidoReader =
+      textoRespuesta;
+
+    try {
+      const json =
+        JSON.parse(textoRespuesta);
+
+      contenidoReader =
+        json?.data?.content ||
+        json?.content ||
+        textoRespuesta;
+    } catch {
+      // La respuesta también puede llegar como Markdown/texto.
+    }
+
+    const imagenUrl =
+      extraerImagenDesdeReader(
+        contenidoReader,
+        url
+      );
+
+    const contenido =
+      limpiarContenidoReader(
+        contenidoReader
+      );
+
+    return {
+      imagenUrl,
+      contenido:
+        contenido.length >= 200
+          ? contenido
+          : "",
+    };
+  } catch (error) {
+    console.log(
+      `Error usando Reader como respaldo: ${
+        error?.message || error
+      }`
+    );
+
+    return {
+      imagenUrl: "",
+      contenido: "",
+    };
+  }
+}
+
 async function obtenerDatosDesdePaginaOficial(
   url
 ) {
@@ -1122,28 +1267,34 @@ async function obtenerDatosDesdePaginaOficial(
       `Obteniendo imagen y contenido desde: ${url}`
     );
 
-    const respuesta =
-      await fetch(
-        url,
-        {
-          headers: HEADERS,
-          redirect: "follow",
-          signal:
-            AbortSignal.timeout(
-              30000
-            ),
-        }
-      );
+    const respuesta = await fetch(
+      url,
+      {
+        headers: {
+          ...HEADERS,
+          "Accept-Language":
+            "es-CO,es;q=0.9,en;q=0.8",
+          Referer:
+            "https://www.google.com/",
+        },
+        redirect: "follow",
+        signal:
+          AbortSignal.timeout(30000),
+      }
+    );
 
     console.log(
       `HTTP página oficial: ${respuesta.status}`
     );
 
     if (!respuesta.ok) {
-      return {
-        imagenUrl: "",
-        contenido: "",
-      };
+      console.log(
+        `Página oficial no accesible directamente (HTTP ${respuesta.status}).`
+      );
+
+      return await obtenerDatosConReaderJina(
+        url
+      );
     }
 
     const html =
@@ -1152,16 +1303,44 @@ async function obtenerDatosDesdePaginaOficial(
     const urlFinal =
       respuesta.url || url;
 
-    const imagenUrl =
+    let imagenUrl =
       extraerImagenDesdePagina(
         html,
         urlFinal
       );
 
-    const contenido =
+    let contenido =
       extraerContenidoDesdePagina(
         html
       );
+
+    // Si la página respondió pero no entregó alguno de los datos,
+    // usamos Reader como respaldo.
+    if (
+      !imagenUrl ||
+      !contenido
+    ) {
+      const datosReader =
+        await obtenerDatosConReaderJina(
+          url
+        );
+
+      if (
+        !imagenUrl &&
+        datosReader.imagenUrl
+      ) {
+        imagenUrl =
+          datosReader.imagenUrl;
+      }
+
+      if (
+        !contenido &&
+        datosReader.contenido
+      ) {
+        contenido =
+          datosReader.contenido;
+      }
+    }
 
     console.log(
       `Imagen encontrada: ${
@@ -1182,15 +1361,13 @@ async function obtenerDatosDesdePaginaOficial(
   } catch (error) {
     console.log(
       `Error obteniendo datos de la página oficial: ${
-        error?.message ||
-        error
+        error?.message || error
       }`
     );
 
-    return {
-      imagenUrl: "",
-      contenido: "",
-    };
+    return await obtenerDatosConReaderJina(
+      url
+    );
   }
 }
 
@@ -1366,9 +1543,15 @@ async function enriquecerNoticiasExistentes() {
     const datos =
       documento.data();
 
+    const tieneImagen =
+      String(datos.imagenUrl || "").trim().length > 0;
+
+    const tieneContenido =
+      String(datos.contenido || "").trim().length > 0;
+
     if (
-      datos.imagenUrl &&
-      datos.contenido
+      tieneImagen &&
+      tieneContenido
     ) {
       continue;
     }
@@ -1389,6 +1572,7 @@ async function enriquecerNoticiasExistentes() {
 
     let url = "";
 
+    // 1. URL oficial ya guardada.
     if (
       datos.urlOficial &&
       esArticuloValido(
@@ -1397,8 +1581,14 @@ async function enriquecerNoticiasExistentes() {
       )
     ) {
       url =
-        datos.urlOficial;
-    } else if (
+        normalizarUrl(
+          datos.urlOficial
+        );
+    }
+
+    // 2. fuenteUrl solamente si ya es una URL oficial válida.
+    if (
+      !url &&
       datos.fuenteUrl &&
       esArticuloValido(
         fuente,
@@ -1406,10 +1596,46 @@ async function enriquecerNoticiasExistentes() {
       )
     ) {
       url =
-        datos.fuenteUrl;
+        normalizarUrl(
+          datos.fuenteUrl
+        );
     }
 
-    // Nunca intentar extraer contenido de una URL de Google News.
+    // 3. Si la noticia antigua no tiene una URL oficial válida,
+    //    buscarla por título. Esto se usa únicamente para extraer
+    //    imagen/contenido y NO modifica las URLs almacenadas.
+    if (
+      !url &&
+      datos.titulo
+    ) {
+      console.log(
+        `\nBuscando URL oficial para enriquecer: ${datos.titulo}`
+      );
+
+      const urlPorTitulo =
+        await buscarUrlOficialPorTitulo(
+          fuente,
+          datos.titulo
+        );
+
+      if (
+        esArticuloValido(
+          fuente,
+          urlPorTitulo
+        )
+      ) {
+        url =
+          normalizarUrl(
+            urlPorTitulo
+          );
+
+        console.log(
+          `URL oficial encontrada para enriquecimiento: ${url}`
+        );
+      }
+    }
+
+    // Nunca intentar extraer desde Google News.
     if (!url) {
       console.log(
         `\nSin URL oficial válida para: ${
@@ -1441,7 +1667,7 @@ async function enriquecerNoticiasExistentes() {
     const cambios = {};
 
     if (
-      !datos.imagenUrl &&
+      !tieneImagen &&
       datosPagina.imagenUrl
     ) {
       cambios.imagenUrl =
@@ -1449,7 +1675,7 @@ async function enriquecerNoticiasExistentes() {
     }
 
     if (
-      !datos.contenido &&
+      !tieneContenido &&
       datosPagina.contenido
     ) {
       cambios.contenido =
