@@ -4,7 +4,7 @@ import {
   initializeApp,
 } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
-import googleNewsUrlDecoder from "google-news-url-decoder";
+import { GoogleDecoder } from "google-news-url-decoder";
 import crypto from "node:crypto";
 import Parser from "rss-parser";
 import { FUENTES_NOTICIAS } from "./fuentesNoticias.mjs";
@@ -25,7 +25,7 @@ const parser = new Parser({
   },
 });
 const decoder =
-  new googleNewsUrlDecoder.GoogleDecoder();
+  new GoogleDecoder();
 
 const HEADERS = {
   "User-Agent":
@@ -307,8 +307,6 @@ async function resolverUrlGoogleNews(url) {
   const urlNormalizada =
     normalizarUrl(url);
 
-  // Si ya es una URL oficial,
-  // no necesitamos decodificarla.
   if (
     !urlNormalizada.includes(
       "news.google.com"
@@ -317,39 +315,159 @@ async function resolverUrlGoogleNews(url) {
     return urlNormalizada;
   }
 
-  try {
-    console.log(
-      `Resolviendo URL de Google News...`
-    );
+  // ==========================================================
+  // INTENTO 1: DECODIFICADOR google-news-url-decoder
+  // ==========================================================
 
-    const resultado =
-      await decoder.decode(
-        urlNormalizada
+  for (let intento = 1; intento <= 2; intento++) {
+    try {
+      console.log(
+        `Resolviendo URL de Google News... intento ${intento}`
       );
 
-    if (
-      resultado?.status &&
-      resultado?.decoded_url
-    ) {
-      return normalizarUrl(
-        resultado.decoded_url
+      const resultado =
+        await decoder.decode(
+          urlNormalizada
+        );
+
+      if (
+        resultado?.status &&
+        resultado?.decoded_url
+      ) {
+        const urlDecodificada =
+          normalizarUrl(
+            resultado.decoded_url
+          );
+
+        console.log(
+          `URL oficial encontrada: ${urlDecodificada}`
+        );
+
+        return urlDecodificada;
+      }
+
+      console.log(
+        `Decoder sin resultado: ${
+          resultado?.message ||
+          "respuesta vacía"
+        }`
+      );
+    } catch (error) {
+      console.log(
+        `Error en intento ${intento}: ${
+          error?.message ||
+          error
+        }`
       );
     }
 
-    console.log(
-      `No se pudo decodificar la URL de Google News.`
+    await new Promise(
+      (resolve) =>
+        setTimeout(resolve, 1500)
     );
+  }
 
-    return "";
+  // ==========================================================
+  // INTENTO 2: EXTRAER LA URL DIRECTAMENTE DEL PAYLOAD
+  // ==========================================================
+
+  try {
+    const parsed =
+      new URL(
+        urlNormalizada
+      );
+
+    const partes =
+      parsed.pathname.split("/");
+
+    const indice =
+      partes.findIndex(
+        (parte) =>
+          parte === "articles"
+      );
+
+    if (indice !== -1) {
+      const codigo =
+        partes[indice + 1];
+
+      if (codigo) {
+        const base64 =
+          codigo
+            .replace(/-/g, "+")
+            .replace(/_/g, "/");
+
+        const relleno =
+          "=".repeat(
+            (4 -
+              (base64.length % 4)) %
+              4
+          );
+
+        const buffer =
+          Buffer.from(
+            base64 + relleno,
+            "base64"
+          );
+
+        const contenido =
+          buffer.toString(
+            "latin1"
+          );
+
+        const coincidencias =
+          contenido.match(
+            /https?:\/\/[^\x00-\x20"'<>]+/g
+          );
+
+        if (
+          Array.isArray(
+            coincidencias
+          )
+        ) {
+          for (
+            const posibleUrl of coincidencias
+          ) {
+            let limpia =
+              posibleUrl;
+
+            limpia =
+              limpia
+                .replace(
+                  /[),.;]+$/,
+                  ""
+                );
+
+            limpia =
+              normalizarUrl(
+                limpia
+              );
+
+            if (
+              limpia &&
+              !limpia.includes(
+                "news.google.com"
+              )
+            ) {
+              console.log(
+                `URL encontrada directamente: ${limpia}`
+              );
+
+              return limpia;
+            }
+          }
+        }
+      }
+    }
   } catch (error) {
-    console.error(
-      `Error decodificando Google News: ${
-        error?.message || error
+    console.log(
+      `Error en extracción directa: ${
+        error?.message ||
+        error
       }`
     );
-
-    return "";
   }
+
+  return "";
 }
 function obtenerImagen(item) {
   const enclosure =
@@ -612,15 +730,14 @@ async function procesarItem(
       urlFuenteDeclarada;
   }
 
-  if (!fuenteUrl) {
-    return {
-      estado: "ignorada",
-      razon:
-        "no-se-pudo-obtener-url-oficial",
-      titulo,
-    };
-  }
-
+if (!fuenteUrl) {
+  return {
+    estado: "ignorada",
+    razon:
+      "no-se-pudo-obtener-url-oficial-despues-de-3-intentos",
+    titulo,
+  };
+}
   const tituloNormalizado =
     normalizarTitulo(
       titulo
