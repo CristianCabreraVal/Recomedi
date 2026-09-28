@@ -17,7 +17,7 @@ import { useFocusEffect } from "expo-router";
 // Librería de iconos vectoriales incluida en Expo
 import { Ionicons } from "@expo/vector-icons";
 // Componente para evitar que el contenido se solape con los bordes físicos del dispositivo (notch, barra de estado)
-import { SafeAreaView } from "react-native-safe-area-context";
+
 
 // Importación del hook personalizado para obtener los colores del tema actual (claro u oscuro)
 import { useTheme } from "../../hooks/useTheme";
@@ -35,7 +35,11 @@ import {
   serverTimestamp,
   setDoc,
 } from "firebase/firestore";
+import BotonReportar from "../../components/BotonReportar";
 
+import {
+  MOTIVOS_GENERALES,
+} from "../../services/reportesService";
 /* ============================================================
    TIPOS DE DATOS (TypeScript)
 ============================================================ */
@@ -271,14 +275,14 @@ export default function Actividad() {
      RENDERIZADO DE LA INTERFAZ DE USUARIO (JSX)
   ============================================================ */
   return (
-    <SafeAreaView
-      style={[
-        styles.container,
-        {
-          backgroundColor: colors.background,
-        },
-      ]}
-    >
+    <View
+  style={[
+    styles.container,
+    {
+      backgroundColor: colors.background,
+    },
+  ]}
+>
       {/* Contenedor principal desplazable (Scroll) */}
       <ScrollView
         contentContainerStyle={styles.scroll}
@@ -1059,8 +1063,19 @@ export default function Actividad() {
             </TouchableOpacity>
           </View>
         )}
+        {/* ============================================================
+   REPORTE DE LA PANTALLA
+============================================================ */}
+
+<BotonReportar
+  recursoId="actividad"
+  recursoNombre="Actividad y estadísticas"
+  motivos={MOTIVOS_GENERALES}
+  textoBoton="Reportar un problema"
+  descripcionBoton="Reporta un problema con tus datos o estadísticas"
+/>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -1404,6 +1419,7 @@ function StatRow({
       >
         {value}
       </Text>
+      
     </View>
   );
 }

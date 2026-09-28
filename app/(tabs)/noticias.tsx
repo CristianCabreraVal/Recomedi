@@ -5,6 +5,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useTheme } from "../../hooks/useTheme";
+import BotonReportar from "../../components/BotonReportar";
+
+import {
+  MOTIVOS_NOTICIAS,
+} from "../../services/reportesService";
 
 const newsData = [
   {
@@ -56,7 +61,7 @@ export default function News() {
   };
 
   return (
-    <SafeAreaView
+    <View
       style={[
         styles.container,
         {
@@ -335,7 +340,14 @@ export default function News() {
           </View>
         )}
       </View>
-    </SafeAreaView>
+      <BotonReportar
+  recursoId="noticias"
+  recursoNombre="Noticias de salud"
+  motivos={MOTIVOS_NOTICIAS}
+  textoBoton="Reportar un problema"
+  descripcionBoton="Ayúdanos a mejorar las noticias"
+/>
+    </View>
   );
 }
 

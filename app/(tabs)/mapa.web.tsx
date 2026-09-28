@@ -20,6 +20,11 @@ import { buscarCentrosMedicos } from "../../services/mapService";
 
 import { useTheme } from "../../hooks/useTheme";
 
+import BotonReportar from "../../components/BotonReportar";
+
+import {
+  MOTIVOS_GENERALES,
+} from "../../services/reportesService";
 /* ============================================================
    TIPO DE UBICACIÓN
 
@@ -255,7 +260,7 @@ export default function MapaWeb() {
   ============================================================ */
 
   return (
-    <SafeAreaView
+    <View
       style={[
         styles.container,
         {
@@ -1084,8 +1089,15 @@ export default function MapaWeb() {
 
 </View>
         </View>
+        <BotonReportar
+  recursoId="mapa"
+  recursoNombre="Mapa de centros médicos"
+  motivos={MOTIVOS_GENERALES}
+  textoBoton="Reportar un problema"
+  descripcionBoton="Cuéntanos si encuentras un problema con el mapa"
+/>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

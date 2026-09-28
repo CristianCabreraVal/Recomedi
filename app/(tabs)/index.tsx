@@ -112,7 +112,11 @@ import {
   generarRecomendaciones,
 } from "../../ml/recomendaciones";
 
+import BotonReportar from "../../components/BotonReportar";
 
+import {
+  MOTIVOS_INICIO,
+} from "../../services/reportesService";
 /* ============================================================
    COMPONENTE PRINCIPAL
    ============================================================ */
@@ -460,7 +464,7 @@ export default function Home() {
      ========================================================== */
 
   return (
-    <SafeAreaView
+    <View
       style={[
         styles.container,
         {
@@ -1510,8 +1514,15 @@ export default function Home() {
           </View>
 
         </View>
+        <BotonReportar
+  recursoId="inicio"
+  recursoNombre="Página de inicio de Recomedi"
+  motivos={MOTIVOS_INICIO}
+  textoBoton="Reportar un problema"
+  descripcionBoton="Ayúdanos a mejorar esta pantalla"
+/>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

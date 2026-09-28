@@ -7,7 +7,11 @@ import {doc,getDoc,} from "firebase/firestore";
 import { useTheme } from "../../hooks/useTheme";
 import { useUserRole } from "../../hooks/useUserRole";
 import {auth,db,} from "../../services/firebase";
+import BotonReportar from "../../components/BotonReportar";
 
+import {
+  MOTIVOS_GENERALES,
+} from "../../services/reportesService";
 export default function Perfil() {
   const { colors } = useTheme();
 
@@ -86,7 +90,7 @@ const esMovil = width < 700;
 
 if (cargando) {
   return (
-    <SafeAreaView
+    <View
       style={[
         styles.container,
         {
@@ -113,7 +117,7 @@ if (cargando) {
           Cargando perfil...
         </Text>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -123,7 +127,7 @@ if (cargando) {
 
 if (!usuario) {
   return (
-    <SafeAreaView
+    <View
       style={[
         styles.container,
         {
@@ -174,7 +178,7 @@ if (!usuario) {
           </Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -199,7 +203,7 @@ const imc =
 ============================================================ */
 
 return (
-  <SafeAreaView
+  <View
     style={[
       styles.container,
       {
@@ -695,9 +699,16 @@ return (
           ✎  Editar Perfil
         </Text>
       </TouchableOpacity>
+      <BotonReportar
+  recursoId="perfil"
+  recursoNombre="Mi perfil"
+  motivos={MOTIVOS_GENERALES}
+  textoBoton="Reportar un problema"
+  descripcionBoton="Reporta un problema con tu perfil"
+/>
 
     </ScrollView>
-  </SafeAreaView>
+  </View>
 );
 }
 

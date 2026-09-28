@@ -73,5 +73,82 @@ match /actividad/{actividadId} {
     );
 }
     }
+    match /alertas/{alertaId} {
+
+  // Administradores pueden ver todas las alertas.
+  allow get, list: if esAdmin();
+
+  // Los usuarios autenticados solo pueden ver
+  // alertas que estén activas.
+  allow get: if estaAutenticado()
+    && resource.data.estado == "activa";
+
+  allow create: if esAdmin();
+
+  allow update: if esAdmin();
+
+  allow delete: if esAdmin();
+}
+
+
+match /centrosMedicos/{centroId} {
+
+  // Administradores pueden gestionar todos
+  // los centros.
+  allow get, list: if esAdmin();
+
+  // La aplicación pública puede consultar
+  // únicamente centros activos.
+  allow get: if estaAutenticado()
+    && resource.data.estado == "activo";
+
+  allow create: if esAdmin();
+
+  allow update: if esAdmin();
+
+  allow delete: if esAdmin();
+}
+match /reportes/{reporteId} {
+
+  /* ==========================================================
+     USUARIOS AUTENTICADOS
+  ========================================================== */
+
+  allow create: if estaAutenticado()
+    && request.resource.data.creadoPor == request.auth.uid
+    && request.resource.data.estado == "pendiente"
+    && request.resource.data.vecesReportado == 1;
+
+
+  allow get, list: if estaAutenticado()
+    && resource.data.creadoPor == request.auth.uid;
+
+
+  allow update: if estaAutenticado()
+    && resource.data.creadoPor == request.auth.uid
+    && request.resource.data.creadoPor == resource.data.creadoPor
+    && request.resource.data.vecesReportado ==
+       resource.data.vecesReportado + 1
+    && request.resource.data.estado == "pendiente";
+
+
+  /* ==========================================================
+     ADMINISTRADORES Y MODERADORES
+
+     Aquí posteriormente podrán revisar y gestionar
+     todos los reportes.
+  ========================================================== */
+
+  allow get, list, update, delete: if esAdmin()
+    || (
+      estaAutenticado()
+      && exists(
+        /databases/$(database)/documents/usuarios/$(request.auth.uid)
+      )
+      && get(
+        /databases/$(database)/documents/usuarios/$(request.auth.uid)
+      ).data.rol == "moderador"
+    );
+}
   }
 }

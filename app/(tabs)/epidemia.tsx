@@ -5,79 +5,173 @@ import {
   FlatList,
   useWindowDimensions,
 } from "react-native";
+
+import {
+  useEffect,
+  useState,
+} from "react";
+
 import { SafeAreaView } from "react-native-safe-area-context";
+
 import { Ionicons } from "@expo/vector-icons";
 
 import { useTheme } from "../../hooks/useTheme";
 
-const alertsData = [
-  {
-    id: "1",
-    disease: "Gripe común",
-    level: "Moderado",
-    location: "Bogotá",
-    recommendation:
-      "Usar mascarilla en lugares cerrados.",
-  },
+import BotonReportar from "../../components/BotonReportar";
 
-  {
-    id: "2",
-    disease: "Dengue",
-    level: "Alto",
-    location: "Zona cercana",
-    recommendation:
-      "Evitar acumulación de agua.",
-  },
-];
+import {
+  MOTIVOS_ALERTAS,
+} from "../../services/reportesService";
+
+import {
+  escucharAlertasActivas,
+  type AlertaPublica,
+} from "../../services/alertasPublicasService";
+
+/* ============================================================
+   COMPONENTE
+============================================================ */
 
 export default function Alerts() {
   const { colors } = useTheme();
-  const { width } = useWindowDimensions();
+
+  const { width } =
+    useWindowDimensions();
 
   // A partir de 900 px se utiliza una distribución de dos columnas.
-  const pantallaAncha = width >= 900;
+  const pantallaAncha =
+    width >= 900;
 
-  // Determina la apariencia visual según el nivel de alerta.
-  const obtenerNivel = (level: string) => {
-    if (level === "Alto") {
+  const [alertas, setAlertas] =
+    useState<AlertaPublica[]>([]);
+
+  const [cargandoAlertas, setCargandoAlertas] =
+    useState(true);
+
+  const [errorAlertas, setErrorAlertas] =
+    useState(false);
+
+  /* ==========================================================
+     ESCUCHAR ALERTAS ACTIVAS
+  ========================================================== */
+
+  useEffect(() => {
+    setCargandoAlertas(true);
+    setErrorAlertas(false);
+
+    const unsubscribe =
+      escucharAlertasActivas(
+        (nuevasAlertas) => {
+          setAlertas(nuevasAlertas);
+          setCargandoAlertas(false);
+          setErrorAlertas(false);
+        },
+        () => {
+          setAlertas([]);
+          setCargandoAlertas(false);
+          setErrorAlertas(true);
+        }
+      );
+
+    return unsubscribe;
+  }, []);
+
+  /* ==========================================================
+     NIVEL DE ALERTA
+  ========================================================== */
+
+  const obtenerNivel = (
+    level: string
+  ) => {
+    const nivelNormalizado =
+      level.toLowerCase();
+
+    if (
+      nivelNormalizado === "critica" ||
+      nivelNormalizado === "crítica"
+    ) {
       return {
         icon: "warning" as const,
         iconColor: "#DC2626",
         iconBackground: "#FEE2E2",
         textColor: "#DC2626",
-        indicatorWidth: "100%" as const,
+        indicatorWidth:
+          "100%" as const,
+      };
+    }
+
+    if (
+      nivelNormalizado === "alta" ||
+      nivelNormalizado === "alto"
+    ) {
+      return {
+        icon: "warning" as const,
+        iconColor: "#EA580C",
+        iconBackground: "#FFEDD5",
+        textColor: "#EA580C",
+        indicatorWidth:
+          "85%" as const,
+      };
+    }
+
+    if (
+      nivelNormalizado === "moderada" ||
+      nivelNormalizado === "moderado"
+    ) {
+      return {
+        icon: "alert-circle" as const,
+        iconColor: "#D97706",
+        iconBackground: "#FEF3C7",
+        textColor: "#D97706",
+        indicatorWidth:
+          "66%" as const,
       };
     }
 
     return {
-      icon: "alert-circle" as const,
-      iconColor: "#D97706",
-      iconBackground: "#FEF3C7",
-      textColor: "#D97706",
-      indicatorWidth: "66%" as const,
+      icon: "information-circle" as const,
+      iconColor: "#2563EB",
+      iconBackground: "#DBEAFE",
+      textColor: "#2563EB",
+      indicatorWidth:
+        "40%" as const,
     };
   };
 
+  /* ==========================================================
+     RENDER
+  ========================================================== */
+
   return (
-    <SafeAreaView
+    <View
       style={[
         styles.container,
         {
-          backgroundColor: colors.background,
+          backgroundColor:
+            colors.background,
         },
       ]}
     >
-      {/* ============================================================
+      {/* =====================================================
           ENCABEZADO
-      ============================================================ */}
-      <View style={styles.headerContainer}>
-        <View style={styles.headerTitleRow}>
-          {/* Icono principal de alertas */}
+      ===================================================== */}
+
+      <View
+        style={
+          styles.headerContainer
+        }
+      >
+        <View
+          style={
+            styles.headerTitleRow
+          }
+        >
           <View
             style={[
               styles.headerIcon,
               {
-                backgroundColor: colors.card,
+                backgroundColor:
+                  colors.card,
               },
             ]}
           >
@@ -88,12 +182,18 @@ export default function Alerts() {
             />
           </View>
 
-          {/* Título y descripción */}
-          <View style={styles.headerTextContainer}>
+          <View
+            style={
+              styles.headerTextContainer
+            }
+          >
             <Text
               style={[
                 styles.header,
-                { color: colors.text },
+                {
+                  color:
+                    colors.text,
+                },
               ]}
               numberOfLines={1}
               ellipsizeMode="tail"
@@ -104,51 +204,69 @@ export default function Alerts() {
             <Text
               style={[
                 styles.subheader,
-                { color: colors.textSecondary },
+                {
+                  color:
+                    colors.textSecondary,
+                },
               ]}
               numberOfLines={2}
               ellipsizeMode="tail"
             >
-              Información sanitaria relevante y recomendaciones.
+              Información sanitaria relevante
+              y recomendaciones.
             </Text>
           </View>
         </View>
       </View>
 
-      {/* ============================================================
+      {/* =====================================================
           LISTA DE ALERTAS
-      ============================================================ */}
+      ===================================================== */}
+
       <FlatList
-        data={alertsData}
-        keyExtractor={(item) => item.id}
-        showsVerticalScrollIndicator={true}
+        data={alertas}
+        keyExtractor={(item) =>
+          item.id
+        }
+        showsVerticalScrollIndicator={
+          true
+        }
         contentContainerStyle={[
           styles.listContent,
-          pantallaAncha && styles.listContentWide,
+          pantallaAncha &&
+            styles.listContentWide,
         ]}
         columnWrapperStyle={
           pantallaAncha
             ? styles.columnWrapperWide
             : undefined
         }
-        numColumns={pantallaAncha ? 2 : 1}
+        numColumns={
+          pantallaAncha ? 2 : 1
+        }
         renderItem={({ item }) => {
-          const nivel = obtenerNivel(item.level);
+          const nivel =
+            obtenerNivel(item.nivel);
 
           return (
             <View
               style={[
                 styles.card,
                 {
-                  backgroundColor: colors.card,
+                  backgroundColor:
+                    colors.card,
                 },
-                pantallaAncha && styles.cardWide,
+                pantallaAncha &&
+                  styles.cardWide,
               ]}
             >
-              {/* ==================================================
+              {/* =================================================
                   CABECERA DE ESTADO
-              ================================================== */}
-              <View style={styles.cardTop}>
+              ================================================= */}
+
+              <View
+                style={styles.cardTop}
+              >
                 <View
                   style={[
                     styles.alertIcon,
@@ -161,7 +279,9 @@ export default function Alerts() {
                   <Ionicons
                     name={nivel.icon}
                     size={25}
-                    color={nivel.iconColor}
+                    color={
+                      nivel.iconColor
+                    }
                   />
                 </View>
 
@@ -188,25 +308,34 @@ export default function Alerts() {
                     style={[
                       styles.level,
                       {
-                        color: nivel.textColor,
+                        color:
+                          nivel.textColor,
                       },
                     ]}
                   >
-                    {item.level}
+                    {item.nivel}
                   </Text>
                 </View>
               </View>
 
-              {/* ==================================================
+              {/* =================================================
                   INDICADOR DE NIVEL
-              ================================================== */}
-              <View style={styles.riskSection}>
-                <View style={styles.riskLabelRow}>
+              ================================================= */}
+
+              <View
+                style={styles.riskSection}
+              >
+                <View
+                  style={
+                    styles.riskLabelRow
+                  }
+                >
                   <Text
                     style={[
                       styles.riskLabel,
                       {
-                        color: colors.textSecondary,
+                        color:
+                          colors.textSecondary,
                       },
                     ]}
                   >
@@ -217,11 +346,12 @@ export default function Alerts() {
                     style={[
                       styles.riskValue,
                       {
-                        color: nivel.textColor,
+                        color:
+                          nivel.textColor,
                       },
                     ]}
                   >
-                    {item.level.toUpperCase()}
+                    {item.nivel.toUpperCase()}
                   </Text>
                 </View>
 
@@ -238,7 +368,8 @@ export default function Alerts() {
                     style={[
                       styles.riskProgress,
                       {
-                        width: nivel.indicatorWidth,
+                        width:
+                          nivel.indicatorWidth,
                         backgroundColor:
                           nivel.iconColor,
                       },
@@ -247,20 +378,85 @@ export default function Alerts() {
                 </View>
               </View>
 
-              {/* ==================================================
+              {/* =================================================
                   INFORMACIÓN PRINCIPAL
-              ================================================== */}
+              ================================================= */}
+
               <Text
                 style={[
                   styles.title,
-                  { color: colors.text },
+                  {
+                    color:
+                      colors.text,
+                  },
                 ]}
               >
-                {item.disease}
+                {item.titulo}
               </Text>
 
-              {/* Ubicación */}
-              <View style={styles.infoRow}>
+              {/* CATEGORÍA */}
+
+              {item.categoria ? (
+                <View
+                  style={styles.infoRow}
+                >
+                  <View
+                    style={[
+                      styles.infoIcon,
+                      {
+                        backgroundColor:
+                          colors.background,
+                      },
+                    ]}
+                  >
+                    <Ionicons
+                      name="pricetag-outline"
+                      size={17}
+                      color={
+                        colors.primary
+                      }
+                    />
+                  </View>
+
+                  <View
+                    style={
+                      styles.infoTextContainer
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.infoLabel,
+                        {
+                          color:
+                            colors.textSecondary,
+                        },
+                      ]}
+                    >
+                      CATEGORÍA
+                    </Text>
+
+                    <Text
+                      style={[
+                        styles.location,
+                        {
+                          color:
+                            colors.text,
+                        },
+                      ]}
+                    >
+                      {item.categoria}
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+
+              {/* =================================================
+                  UBICACIÓN
+              ================================================= */}
+
+              <View
+                style={styles.infoRow}
+              >
                 <View
                   style={[
                     styles.infoIcon,
@@ -273,11 +469,17 @@ export default function Alerts() {
                   <Ionicons
                     name="location-outline"
                     size={17}
-                    color={colors.primary}
+                    color={
+                      colors.primary
+                    }
                   />
                 </View>
 
-                <View style={styles.infoTextContainer}>
+                <View
+                  style={
+                    styles.infoTextContainer
+                  }
+                >
                   <Text
                     style={[
                       styles.infoLabel,
@@ -293,17 +495,21 @@ export default function Alerts() {
                   <Text
                     style={[
                       styles.location,
-                      { color: colors.text },
+                      {
+                        color:
+                          colors.text,
+                      },
                     ]}
                   >
-                    {item.location}
+                    {item.zona}
                   </Text>
                 </View>
               </View>
 
-              {/* ==================================================
+              {/* =================================================
                   RECOMENDACIÓN SANITARIA
-              ================================================== */}
+              ================================================= */}
+
               <View
                 style={[
                   styles.recommendationBox,
@@ -325,12 +531,16 @@ export default function Alerts() {
                   <Ionicons
                     name="shield-checkmark-outline"
                     size={20}
-                    color={colors.primary}
+                    color={
+                      colors.primary
+                    }
                   />
                 </View>
 
                 <View
-                  style={styles.recommendationContent}
+                  style={
+                    styles.recommendationContent
+                  }
                 >
                   <Text
                     style={[
@@ -348,20 +558,31 @@ export default function Alerts() {
                     style={[
                       styles.recommendation,
                       {
-                        color: colors.text,
+                        color:
+                          colors.text,
                       },
                     ]}
                   >
-                    {item.recommendation}
+                    {item.contenido ||
+                      item.descripcion}
                   </Text>
                 </View>
               </View>
 
-              {/* ==================================================
+              {/* =================================================
                   INDICADOR FINAL
-              ================================================== */}
-              <View style={styles.cardFooter}>
-                <View style={styles.liveIndicator}>
+              ================================================= */}
+
+              <View
+                style={
+                  styles.cardFooter
+                }
+              >
+                <View
+                  style={
+                    styles.liveIndicator
+                  }
+                >
                   <View
                     style={[
                       styles.liveDot,
@@ -388,24 +609,44 @@ export default function Alerts() {
                 <Ionicons
                   name="pulse-outline"
                   size={20}
-                  color={nivel.iconColor}
+                  color={
+                    nivel.iconColor
+                  }
                 />
               </View>
             </View>
           );
         }}
+
+        ListFooterComponent={
+          <BotonReportar
+            recursoId="alertas-epidemiologicas"
+            recursoNombre="Alertas Epidemiológicas"
+            motivos={MOTIVOS_ALERTAS}
+            textoBoton="Reportar un problema"
+            descripcionBoton="Ayúdanos a mejorar las alertas de esta pantalla"
+          />
+        }
+
         ListEmptyComponent={
           <Text
             style={[
               styles.empty,
-              { color: colors.textSecondary },
+              {
+                color:
+                  colors.textSecondary,
+              },
             ]}
           >
-            No hay alertas cercanas
+            {cargandoAlertas
+              ? "Cargando alertas..."
+              : errorAlertas
+              ? "No se pudieron cargar las alertas."
+              : "No hay alertas activas."}
           </Text>
         }
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -413,284 +654,263 @@ export default function Alerts() {
    ESTILOS
 ============================================================ */
 
-const styles = StyleSheet.create({
-  /* ==========================================================
-     ESTRUCTURA GENERAL
-  ========================================================== */
-  container: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 15,
-  },
-
-  /* ==========================================================
-     ENCABEZADO
-  ========================================================== */
-  headerContainer: {
-    marginBottom: 20,
-  },
-
-  headerTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  headerTextContainer: {
-    flex: 1,
-    minWidth: 0,
-  },
-
-  headerIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 17,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-
-  header: {
-    fontSize: 30,
-    fontWeight: "800",
-  },
-
-  subheader: {
-    fontSize: 14,
-    marginTop: 5,
-  },
-
-  /* ==========================================================
-     LISTA
-  ========================================================== */
-  listContent: {
-    paddingBottom: 35,
-  },
-
-  listContentWide: {
-    maxWidth: 1180,
-    width: "100%",
-    alignSelf: "center",
-  },
-
-  columnWrapperWide: {
-    gap: 16,
-  },
-
-  /* ==========================================================
-     TARJETA DE ALERTA
-  ========================================================== */
-  card: {
-    padding: 20,
-    borderRadius: 28,
-    marginBottom: 16,
-
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
-    shadowOffset: {
-      width: 0,
-      height: 6,
+const styles =
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      paddingHorizontal: 20,
+      paddingTop: 15,
     },
 
-    elevation: 4,
-  },
+    headerContainer: {
+      marginBottom: 20,
+    },
 
-  cardWide: {
-    flex: 1,
-  },
+    headerTitleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
 
-  /* ==========================================================
-     CABECERA DE ESTADO
-  ========================================================== */
-  cardTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 18,
-  },
+    headerTextContainer: {
+      flex: 1,
+      minWidth: 0,
+    },
 
-  alertIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+    headerIcon: {
+      width: 50,
+      height: 50,
+      borderRadius: 17,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 12,
+    },
 
-  levelBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-  },
+    header: {
+      fontSize: 30,
+      fontWeight: "800",
+    },
 
-  levelDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 999,
-    marginRight: 7,
-  },
+    subheader: {
+      fontSize: 14,
+      marginTop: 5,
+    },
 
-  level: {
-    fontWeight: "800",
-    fontSize: 12,
-  },
+    listContent: {
+      paddingBottom: 35,
+    },
 
-  /* ==========================================================
-     INDICADOR DE RIESGO
-  ========================================================== */
-  riskSection: {
-    marginBottom: 18,
-  },
+    listContentWide: {
+      maxWidth: 1180,
+      width: "100%",
+      alignSelf: "center",
+    },
 
-  riskLabelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 7,
-  },
+    columnWrapperWide: {
+      gap: 16,
+    },
 
-  riskLabel: {
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 1,
-  },
+    card: {
+      padding: 20,
+      borderRadius: 28,
+      marginBottom: 16,
 
-  riskValue: {
-    fontSize: 9,
-    fontWeight: "900",
-    letterSpacing: 0.8,
-  },
+      shadowColor: "#000",
+      shadowOpacity: 0.08,
+      shadowRadius: 14,
 
-  riskTrack: {
-    width: "100%",
-    height: 6,
-    borderRadius: 999,
-    overflow: "hidden",
-  },
+      shadowOffset: {
+        width: 0,
+        height: 6,
+      },
 
-  riskProgress: {
-    height: "100%",
-    borderRadius: 999,
-  },
+      elevation: 4,
+    },
 
-  /* ==========================================================
-     INFORMACIÓN PRINCIPAL
-  ========================================================== */
-  title: {
-    fontSize: 24,
-    fontWeight: "900",
-    marginBottom: 14,
-  },
+    cardWide: {
+      flex: 1,
+    },
 
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-  },
+    cardTop: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent:
+        "space-between",
+      marginBottom: 18,
+    },
 
-  infoIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 10,
-  },
+    alertIcon: {
+      width: 52,
+      height: 52,
+      borderRadius: 18,
+      alignItems: "center",
+      justifyContent: "center",
+    },
 
-  infoTextContainer: {
-    flex: 1,
-    minWidth: 0,
-  },
+    levelBadge: {
+      flexDirection: "row",
+      alignItems: "center",
 
-  infoLabel: {
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 0.8,
-    marginBottom: 2,
-  },
+      paddingHorizontal: 12,
+      paddingVertical: 8,
 
-  location: {
-    fontSize: 14,
-    fontWeight: "700",
-  },
+      borderRadius: 999,
+    },
 
-  /* ==========================================================
-     RECOMENDACIÓN
-  ========================================================== */
-  recommendationBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 14,
-    borderRadius: 18,
-  },
+    levelDot: {
+      width: 7,
+      height: 7,
+      borderRadius: 999,
+      marginRight: 7,
+    },
 
-  recommendationIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 13,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+    level: {
+      fontWeight: "800",
+      fontSize: 12,
+    },
 
-  recommendationContent: {
-    flex: 1,
-    minWidth: 0,
-    marginLeft: 10,
-  },
+    riskSection: {
+      marginBottom: 18,
+    },
 
-  recommendationLabel: {
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 0.8,
-    marginBottom: 3,
-  },
+    riskLabelRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent:
+        "space-between",
+      marginBottom: 7,
+    },
 
-  recommendation: {
-    fontSize: 13,
-    lineHeight: 20,
-    fontWeight: "600",
-  },
+    riskLabel: {
+      fontSize: 9,
+      fontWeight: "800",
+      letterSpacing: 1,
+    },
 
-  /* ==========================================================
-     PIE DE TARJETA
-  ========================================================== */
-  cardFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    riskValue: {
+      fontSize: 9,
+      fontWeight: "900",
+      letterSpacing: 0.8,
+    },
 
-    marginTop: 16,
-    paddingTop: 12,
+    riskTrack: {
+      width: "100%",
+      height: 6,
+      borderRadius: 999,
+      overflow: "hidden",
+    },
 
-    borderTopWidth: 1,
-    borderTopColor: "#E2E8F0",
-  },
+    riskProgress: {
+      height: "100%",
+      borderRadius: 999,
+    },
 
-  liveIndicator: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
+    title: {
+      fontSize: 24,
+      fontWeight: "900",
+      marginBottom: 14,
+    },
 
-  liveDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 999,
-    marginRight: 7,
-  },
+    infoRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 16,
+    },
 
-  liveText: {
-    fontSize: 9,
-    fontWeight: "900",
-    letterSpacing: 1,
-  },
+    infoIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 10,
+    },
 
-  /* ==========================================================
-     ESTADO VACÍO
-  ========================================================== */
-  empty: {
-    textAlign: "center",
-    marginTop: 40,
-  },
-});
+    infoTextContainer: {
+      flex: 1,
+      minWidth: 0,
+    },
+
+    infoLabel: {
+      fontSize: 9,
+      fontWeight: "800",
+      letterSpacing: 0.8,
+      marginBottom: 2,
+    },
+
+    location: {
+      fontSize: 14,
+      fontWeight: "700",
+    },
+
+    recommendationBox: {
+      flexDirection: "row",
+      alignItems: "center",
+
+      padding: 14,
+
+      borderRadius: 18,
+    },
+
+    recommendationIcon: {
+      width: 38,
+      height: 38,
+      borderRadius: 13,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    recommendationContent: {
+      flex: 1,
+      minWidth: 0,
+      marginLeft: 10,
+    },
+
+    recommendationLabel: {
+      fontSize: 9,
+      fontWeight: "800",
+      letterSpacing: 0.8,
+      marginBottom: 3,
+    },
+
+    recommendation: {
+      fontSize: 13,
+      lineHeight: 20,
+      fontWeight: "600",
+    },
+
+    cardFooter: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent:
+        "space-between",
+
+      marginTop: 16,
+      paddingTop: 12,
+
+      borderTopWidth: 1,
+      borderTopColor: "#E2E8F0",
+    },
+
+    liveIndicator: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+
+    liveDot: {
+      width: 7,
+      height: 7,
+      borderRadius: 999,
+      marginRight: 7,
+    },
+
+    liveText: {
+      fontSize: 9,
+      fontWeight: "900",
+      letterSpacing: 1,
+    },
+
+    empty: {
+      textAlign: "center",
+      marginTop: 40,
+    },
+  });
