@@ -846,7 +846,7 @@ if (!fuenteUrl) {
   return {
     estado: "ignorada",
     razon:
-      "no-se-pudo-obtener-url-oficial-despues-de-3-intentos",
+      "no-se-pudo-obtener-url-oficial",
     titulo,
   };
 }
