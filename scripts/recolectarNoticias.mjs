@@ -24,6 +24,7 @@ const parser = new Parser({
       "application/rss+xml, application/xml, text/xml;q=0.9,*/*;q=0.8",
   },
 });
+
 const decoder =
   new GoogleDecoder();
 
@@ -299,7 +300,9 @@ function construirFeedUrl(
   return `${GOOGLE_NEWS_RSS}?${parametros.toString()}`;
 }
 
-async function resolverUrlGoogleNews(url) {
+async function resolverUrlGoogleNews(
+  url
+) {
   if (!url) {
     return "";
   }
@@ -315,11 +318,11 @@ async function resolverUrlGoogleNews(url) {
     return urlNormalizada;
   }
 
-  // ==========================================================
-  // INTENTO 1: DECODIFICADOR google-news-url-decoder
-  // ==========================================================
-
-  for (let intento = 1; intento <= 2; intento++) {
+  for (
+    let intento = 1;
+    intento <= 2;
+    intento++
+  ) {
     try {
       console.log(
         `Resolviendo URL de Google News... intento ${intento}`
@@ -366,10 +369,6 @@ async function resolverUrlGoogleNews(url) {
         setTimeout(resolve, 1500)
     );
   }
-
-  // ==========================================================
-  // INTENTO 2: EXTRAER LA URL DIRECTAMENTE DEL PAYLOAD
-  // ==========================================================
 
   try {
     const parsed =
@@ -431,11 +430,10 @@ async function resolverUrlGoogleNews(url) {
               posibleUrl;
 
             limpia =
-              limpia
-                .replace(
-                  /[),.;]+$/,
-                  ""
-                );
+              limpia.replace(
+                /[),.;]+$/,
+                ""
+              );
 
             limpia =
               normalizarUrl(
@@ -469,6 +467,7 @@ async function resolverUrlGoogleNews(url) {
 
   return "";
 }
+
 async function buscarUrlOficialPorTitulo(
   fuente,
   titulo
@@ -482,26 +481,30 @@ async function buscarUrlOficialPorTitulo(
       `Buscando URL oficial por título...`
     );
 
-    const consulta = encodeURIComponent(
-      `"${titulo}" site:${fuente.dominio}`
-    );
+    const consulta =
+      encodeURIComponent(
+        `"${titulo}" site:${fuente.dominio}`
+      );
 
     const urlBusqueda =
       `https://www.google.com/search?q=${consulta}&num=5`;
 
-    const respuesta = await fetch(
-      urlBusqueda,
-      {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140 Safari/537.36",
-          Accept:
-            "text/html,application/xhtml+xml",
-        },
-        signal:
-          AbortSignal.timeout(20000),
-      }
-    );
+    const respuesta =
+      await fetch(
+        urlBusqueda,
+        {
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140 Safari/537.36",
+            Accept:
+              "text/html,application/xhtml+xml",
+          },
+          signal:
+            AbortSignal.timeout(
+              20000
+            ),
+        }
+      );
 
     if (!respuesta.ok) {
       console.log(
@@ -522,33 +525,38 @@ async function buscarUrlOficialPorTitulo(
     for (
       const posibleUrl of coincidencias
     ) {
-      let url = posibleUrl
-        .replace(
-          /\\u003d/g,
-          "="
-        )
-        .replace(
-          /\\u0026/g,
-          "&"
-        )
-        .replace(
-          /\\u003F/g,
-          "?"
-        )
-        .replace(
-          /\\u002F/g,
-          "/"
-        );
+      let url =
+        posibleUrl
+          .replace(
+            /\\u003d/g,
+            "="
+          )
+          .replace(
+            /\\u0026/g,
+            "&"
+          )
+          .replace(
+            /\\u003F/g,
+            "?"
+          )
+          .replace(
+            /\\u002F/g,
+            "/"
+          );
 
       try {
-        url = decodeURIComponent(
-          url
-        );
+        url =
+          decodeURIComponent(
+            url
+          );
       } catch {
         // Mantener URL original.
       }
 
-      url = normalizarUrl(url);
+      url =
+        normalizarUrl(
+          url
+        );
 
       if (
         esArticuloValido(
@@ -566,13 +574,15 @@ async function buscarUrlOficialPorTitulo(
   } catch (error) {
     console.log(
       `Error buscando URL por título: ${
-        error?.message || error
+        error?.message ||
+        error
       }`
     );
   }
 
   return "";
 }
+
 function obtenerImagen(item) {
   const enclosure =
     item?.enclosure?.url;
@@ -806,20 +816,33 @@ async function procesarItem(
         ""
     );
 
-let urlResuelta =
-  await resolverUrlGoogleNews(
-    urlGoogle
-  );
+  let urlResuelta = "";
 
-if (!urlResuelta) {
-  urlResuelta =
-    await buscarUrlOficialPorTitulo(
-      fuente,
-      titulo
+  try {
+    urlResuelta =
+      await resolverUrlGoogleNews(
+        urlGoogle
+      );
+  } catch (error) {
+    console.log(
+      `No se pudo resolver Google News: ${
+        error?.message || error
+      }`
     );
-}
+  }
+
+  // ==========================================================
+  // DETERMINAR URL FINAL
+  // ==========================================================
 
   let fuenteUrl = "";
+  let urlOficial = "";
+  let urlGoogleNews = "";
+  let urlPendienteResolver = false;
+
+  // ----------------------------------------------------------
+  // 1. URL oficial obtenida mediante decoder
+  // ----------------------------------------------------------
 
   if (
     esArticuloValido(
@@ -827,9 +850,13 @@ if (!urlResuelta) {
       urlResuelta
     )
   ) {
-    fuenteUrl =
-      urlResuelta;
+    fuenteUrl = urlResuelta;
+    urlOficial = urlResuelta;
   }
+
+  // ----------------------------------------------------------
+  // 2. URL oficial declarada por Google News
+  // ----------------------------------------------------------
 
   if (
     !fuenteUrl &&
@@ -840,16 +867,94 @@ if (!urlResuelta) {
   ) {
     fuenteUrl =
       urlFuenteDeclarada;
+
+    urlOficial =
+      urlFuenteDeclarada;
   }
 
-if (!fuenteUrl) {
-  return {
-    estado: "ignorada",
-    razon:
-      "no-se-pudo-obtener-url-oficial",
-    titulo,
-  };
-}
+  // ----------------------------------------------------------
+  // 3. FALLBACK
+  //
+  // Si Google News no pudo resolver la URL,
+  // NO descartamos la noticia.
+  // Guardamos el enlace de Google News.
+  // ----------------------------------------------------------
+
+  if (
+    !fuenteUrl &&
+    urlGoogle &&
+    urlGoogle.includes(
+      "news.google.com"
+    )
+  ) {
+    fuenteUrl =
+      urlGoogle;
+
+    urlGoogleNews =
+      urlGoogle;
+
+    urlPendienteResolver =
+      true;
+
+    console.log(
+      "URL oficial no resuelta. Se guardará el enlace de Google News como respaldo."
+    );
+  }
+
+  // ----------------------------------------------------------
+  // 4. FALLBACK ADICIONAL
+  //
+  // Intentar localizar la noticia por título
+  // directamente en el dominio de la fuente.
+  // ----------------------------------------------------------
+
+  if (
+    !fuenteUrl
+  ) {
+    const urlPorTitulo =
+      await buscarUrlOficialPorTitulo(
+        fuente,
+        titulo
+      );
+
+    if (
+      esArticuloValido(
+        fuente,
+        urlPorTitulo
+      )
+    ) {
+      fuenteUrl =
+        urlPorTitulo;
+
+      urlOficial =
+        urlPorTitulo;
+
+      urlPendienteResolver =
+        false;
+
+      console.log(
+        `URL oficial recuperada por título: ${urlPorTitulo}`
+      );
+    }
+  }
+
+  // ----------------------------------------------------------
+  // 5. Solo ignorar si realmente no existe ningún enlace
+  // ----------------------------------------------------------
+
+  if (!fuenteUrl) {
+    return {
+      estado: "ignorada",
+      razon:
+        "no-se-encontro-ningun-enlace",
+      titulo,
+    };
+  }
+
+  // ==========================================================
+  // DEDUPLICACIÓN
+  // ==========================================================
+
   const tituloNormalizado =
     normalizarTitulo(
       titulo
@@ -901,6 +1006,10 @@ if (!fuenteUrl) {
     };
   }
 
+  // ==========================================================
+  // CREAR NOTICIA
+  // ==========================================================
+
   const documentoId =
     huella.slice(
       0,
@@ -931,10 +1040,21 @@ if (!fuenteUrl) {
     fuenteId:
       fuente.id,
 
+    // Puede ser la URL oficial o,
+    // como respaldo, la URL de Google News.
     fuenteUrl,
 
-    urlRecoleccion:
-      urlGoogle,
+    // URL original de Google News.
+    urlGoogleNews:
+      urlGoogleNews || "",
+
+    // URL oficial cuando conseguimos resolverla.
+    urlOficial:
+      urlOficial || "",
+
+    // true cuando la URL oficial todavía
+    // no pudo resolverse.
+    urlPendienteResolver,
 
     fechaPublicacion:
       convertirFecha(
@@ -984,6 +1104,8 @@ if (!fuenteUrl) {
     estado: "nueva",
     titulo,
     fuenteUrl,
+    urlOficial,
+    urlPendienteResolver,
   };
 }
 
@@ -1076,6 +1198,14 @@ async function procesarFuente(
       console.log(
         `  URL: ${resultado.fuenteUrl}`
       );
+
+      if (
+        resultado.urlPendienteResolver
+      ) {
+        console.log(
+          "  AVISO: se guardó enlace de Google News como respaldo."
+        );
+      }
     } else if (
       resultado.estado ===
       "duplicada"
@@ -1199,7 +1329,7 @@ async function main() {
 main().catch(
   (error) => {
     console.error(
-      "ERROR FATAL DEL RECOLECTOR:",
+      "ERROR FATAL:",
       error
     );
 
