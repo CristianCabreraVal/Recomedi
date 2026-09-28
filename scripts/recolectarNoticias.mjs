@@ -469,6 +469,110 @@ async function resolverUrlGoogleNews(url) {
 
   return "";
 }
+async function buscarUrlOficialPorTitulo(
+  fuente,
+  titulo
+) {
+  if (!titulo) {
+    return "";
+  }
+
+  try {
+    console.log(
+      `Buscando URL oficial por título...`
+    );
+
+    const consulta = encodeURIComponent(
+      `"${titulo}" site:${fuente.dominio}`
+    );
+
+    const urlBusqueda =
+      `https://www.google.com/search?q=${consulta}&num=5`;
+
+    const respuesta = await fetch(
+      urlBusqueda,
+      {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140 Safari/537.36",
+          Accept:
+            "text/html,application/xhtml+xml",
+        },
+        signal:
+          AbortSignal.timeout(20000),
+      }
+    );
+
+    if (!respuesta.ok) {
+      console.log(
+        `Google devolvió HTTP ${respuesta.status}`
+      );
+
+      return "";
+    }
+
+    const html =
+      await respuesta.text();
+
+    const coincidencias =
+      html.match(
+        /https?:\/\/[^"'<> ]+/g
+      ) || [];
+
+    for (
+      const posibleUrl of coincidencias
+    ) {
+      let url = posibleUrl
+        .replace(
+          /\\u003d/g,
+          "="
+        )
+        .replace(
+          /\\u0026/g,
+          "&"
+        )
+        .replace(
+          /\\u003F/g,
+          "?"
+        )
+        .replace(
+          /\\u002F/g,
+          "/"
+        );
+
+      try {
+        url = decodeURIComponent(
+          url
+        );
+      } catch {
+        // Mantener URL original.
+      }
+
+      url = normalizarUrl(url);
+
+      if (
+        esArticuloValido(
+          fuente,
+          url
+        )
+      ) {
+        console.log(
+          `URL oficial encontrada por título: ${url}`
+        );
+
+        return url;
+      }
+    }
+  } catch (error) {
+    console.log(
+      `Error buscando URL por título: ${
+        error?.message || error
+      }`
+    );
+  }
+
+  return "";
+}
 function obtenerImagen(item) {
   const enclosure =
     item?.enclosure?.url;
@@ -702,10 +806,18 @@ async function procesarItem(
         ""
     );
 
-  const urlResuelta =
-    await resolverUrlGoogleNews(
-      urlGoogle
+let urlResuelta =
+  await resolverUrlGoogleNews(
+    urlGoogle
+  );
+
+if (!urlResuelta) {
+  urlResuelta =
+    await buscarUrlOficialPorTitulo(
+      fuente,
+      titulo
     );
+}
 
   let fuenteUrl = "";
 
