@@ -1,482 +1,349 @@
 import crypto from "node:crypto";
 import Parser from "rss-parser";
-
-import {
-    applicationDefault,
-    cert,
-    getApps,
-    initializeApp,
-} from "firebase-admin/app";
-
-import {
-    getFirestore,
-    Timestamp,
-} from "firebase-admin/firestore";
-
+import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
 import { FUENTES_NOTICIAS } from "./fuentesNoticias.mjs";
 
-/* ============================================================
-   CONFIGURACIÓN
-============================================================ */
+const COLECCION = "noticias";
+const MAX_ITEMS_POR_FUENTE = 15;
+const GOOGLE_NEWS_RSS = "https://news.google.com/rss/search";
 
+function obtenerCredencialesFirebase() {
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+
+  if (!raw) {
+    throw new Error(
+      "Falta la variable FIREBASE_SERVICE_ACCOUNT_JSON en el entorno del recolector."
+    );
+  }
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw new Error(
+      "FIREBASE_SERVICE_ACCOUNT_JSON no contiene un JSON válido."
+    );
+  }
+}
+
+function iniciarFirebase() {
+  if (getApps().length === 0) {
+    initializeApp({
+      credential: cert(obtenerCredencialesFirebase()),
+    });
+  }
+
+  return getFirestore();
+}
+
+const db = iniciarFirebase();
 const parser = new Parser({
-  timeout: 20000,
-
-  customFields: {
-    item: [
-      ["content:encoded", "contentEncoded"],
-      ["media:content", "mediaContent", { keepArray: true }],
-      ["media:thumbnail", "mediaThumbnail", { keepArray: true }],
-    ],
+  headers: {
+    "User-Agent": "Recomedi-NewsCollector/1.0",
+    Accept: "application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.8",
   },
+  timeout: 20000,
 });
 
-const LIMITE_POR_FUENTE = 15;
-
-/* ============================================================
-   FIREBASE
-============================================================ */
-
-function inicializarFirebase() {
-  if (getApps().length > 0) {
-    return;
-  }
-
-  /*
-   * GitHub Actions:
-   * FIREBASE_SERVICE_ACCOUNT_JSON
-   *
-   * Ejecución local:
-   * GOOGLE_APPLICATION_CREDENTIALS
-   */
-
-  const credencialJson =
-    process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-
-  if (credencialJson) {
-    try {
-      const serviceAccount =
-        JSON.parse(credencialJson);
-
-      initializeApp({
-        credential: cert(serviceAccount),
-      });
-
-      return;
-    } catch (error) {
-      throw new Error(
-        "FIREBASE_SERVICE_ACCOUNT_JSON no contiene un JSON válido."
-      );
-    }
-  }
-
-  initializeApp({
-    credential: applicationDefault(),
-  });
-}
-
-inicializarFirebase();
-
-const db = getFirestore();
-
-/* ============================================================
-   UTILIDADES
-============================================================ */
-
-function generarIdNoticia(fuenteId, item) {
-  const identificador =
-    item.guid ||
-    item.id ||
-    item.link ||
-    `${item.title || ""}|${item.pubDate || ""}`;
-
-  return crypto
-    .createHash("sha256")
-    .update(
-      `${fuenteId}|${identificador}`,
-      "utf8"
-    )
-    .digest("hex");
-}
-
-function limpiarTexto(texto = "") {
-  return texto
+function normalizarTexto(valor = "") {
+  return String(valor)
     .replace(/<[^>]*>/g, " ")
     .replace(/&nbsp;/gi, " ")
     .replace(/&amp;/gi, "&")
     .replace(/&quot;/gi, '"')
     .replace(/&#39;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
     .replace(/\s+/g, " ")
     .trim();
 }
 
-function obtenerResumen(item) {
-  const texto =
-    item.contentSnippet ||
-    item.summary ||
-    item.content ||
-    "";
-
-  return limpiarTexto(texto).slice(0, 600);
+function normalizarTitulo(titulo = "") {
+  return normalizarTexto(titulo)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-function obtenerImagen(item) {
-  if (
-    item.enclosure &&
-    typeof item.enclosure.url === "string"
-  ) {
-    return item.enclosure.url;
-  }
+function normalizarUrl(valor = "") {
+  if (!valor) return "";
 
-  if (
-    Array.isArray(item.mediaContent)
-  ) {
-    for (const elemento of item.mediaContent) {
-      const url =
-        elemento?.$?.url ||
-        elemento?.url;
+  try {
+    const url = new URL(valor);
+    const clavesIgnoradas = [
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_term",
+      "utm_content",
+      "gclid",
+      "fbclid",
+    ];
 
-      if (url) {
-        return url;
-      }
+    for (const clave of clavesIgnoradas) {
+      url.searchParams.delete(clave);
     }
+
+    url.hash = "";
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    return String(valor).trim();
   }
-
-  if (
-    Array.isArray(item.mediaThumbnail)
-  ) {
-    for (const elemento of item.mediaThumbnail) {
-      const url =
-        elemento?.$?.url ||
-        elemento?.url;
-
-      if (url) {
-        return url;
-      }
-    }
-  }
-
-  return "";
 }
 
-function obtenerFecha(item) {
-  const fecha =
-    item.isoDate ||
-    item.pubDate;
-
-  if (!fecha) {
-    return new Date();
+function obtenerHost(valor = "") {
+  try {
+    return new URL(valor).hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    return "";
   }
-
-  const fechaConvertida =
-    new Date(fecha);
-
-  if (
-    Number.isNaN(
-      fechaConvertida.getTime()
-    )
-  ) {
-    return new Date();
-  }
-
-  return fechaConvertida;
 }
 
-function obtenerUrl(item) {
-  return (
-    item.link ||
-    item.guid ||
-    ""
-  );
+function dominioPermitido(url, fuente) {
+  const host = obtenerHost(url);
+  if (!host) return false;
+
+  return fuente.dominiosPermitidos.some((dominio) => {
+    const base = dominio.toLowerCase().replace(/^www\./, "");
+    return host === base || host.endsWith(`.${base}`);
+  });
 }
 
-function clasificarCategoria(titulo, resumen) {
-  const texto =
-    `${titulo} ${resumen}`.toLowerCase();
+function determinarCategoria(titulo, resumen) {
+  const texto = `${titulo} ${resumen}`.toLowerCase();
 
   if (
-    texto.includes("vacun") ||
-    texto.includes("inmuniz")
-  ) {
-    return "prevencion";
-  }
-
-  if (
-    texto.includes("dengue") ||
-    texto.includes("sarampión") ||
-    texto.includes("sarampion") ||
-    texto.includes("fiebre amarilla") ||
-    texto.includes("virus") ||
-    texto.includes("enfermedad")
-  ) {
-    return "enfermedades";
-  }
-
-  if (
-    texto.includes("alerta") ||
-    texto.includes("brote") ||
-    texto.includes("emergencia") ||
-    texto.includes("riesgo")
+    /alerta|brote|epidem|riesgo|emergencia|notificacion|vigila/.test(texto)
   ) {
     return "alerta";
   }
 
-  if (
-    texto.includes("hospital") ||
-    texto.includes("médico") ||
-    texto.includes("medico") ||
-    texto.includes("salud")
-  ) {
-    return "servicios";
+  if (/vacun|prevencion|prevención|campana|campaña|promocion|promoción/.test(texto)) {
+    return "prevencion";
   }
 
-  return "salud-publica";
+  if (/hospital|servicio|atencion|atención|medicamento|salud/.test(texto)) {
+    return "salud";
+  }
+
+  return "general";
 }
 
-function esValida(item) {
-  const titulo =
-    typeof item.title === "string"
-      ? item.title.trim()
-      : "";
+function extraerImagen(item) {
+  if (item?.enclosure?.url) {
+    return item.enclosure.url;
+  }
 
-  const url =
-    obtenerUrl(item);
+  const html = item?.contentEncoded || item?.content || item?.description || "";
+  const match = html.match(/<img[^>]+src=["']([^"']+)["']/i);
 
-  return (
-    titulo.length >= 5 &&
-    url.length > 0
-  );
+  return match?.[1] || "";
 }
 
-/* ============================================================
-   RECOLECTAR UNA FUENTE
-============================================================ */
+function construirUrlFeed(consulta) {
+  const params = new URLSearchParams({
+    q: consulta,
+    hl: "es-419",
+    gl: "CO",
+    ceid: "CO:es-419",
+  });
+
+  return `${GOOGLE_NEWS_RSS}?${params.toString()}`;
+}
+
+async function resolverUrl(url) {
+  if (!url) return "";
+
+  try {
+    const respuesta = await fetch(url, {
+      redirect: "follow",
+      headers: {
+        "User-Agent": "Recomedi-NewsCollector/1.0",
+        Accept: "text/html,application/xhtml+xml",
+      },
+      signal: AbortSignal.timeout(10000),
+    });
+
+    return respuesta.url || url;
+  } catch {
+    return url;
+  }
+}
+
+function construirHuella({ fuenteId, titulo, url }) {
+  const base = `${fuenteId}|${normalizarUrl(url)}|${normalizarTitulo(titulo)}`;
+
+  return crypto.createHash("sha256").update(base).digest("hex");
+}
+
+async function cargarNoticiasExistentes() {
+  const snapshot = await db.collection(COLECCION).get();
+
+  const porHuella = new Set();
+  const porUrl = new Set();
+  const porFuenteTitulo = new Set();
+
+  for (const documento of snapshot.docs) {
+    const datos = documento.data();
+
+    if (datos.huella) {
+      porHuella.add(String(datos.huella));
+    }
+
+    if (datos.fuenteUrl) {
+      porUrl.add(normalizarUrl(datos.fuenteUrl));
+    }
+
+    if (datos.fuenteId && datos.titulo) {
+      porFuenteTitulo.add(
+        `${datos.fuenteId}|${normalizarTitulo(datos.titulo)}`
+      );
+    }
+  }
+
+  return { porHuella, porUrl, porFuenteTitulo };
+}
 
 async function recolectarFuente(fuente) {
-  console.log("");
-  console.log(
-    "======================================"
-  );
-  console.log(
-    `FUENTE: ${fuente.nombre}`
-  );
-  console.log(
-    "======================================"
-  );
+  const urlFeed = construirUrlFeed(fuente.consulta);
+  const feed = await parser.parseURL(urlFeed);
+  const items = Array.isArray(feed.items)
+    ? feed.items.slice(0, MAX_ITEMS_POR_FUENTE)
+    : [];
 
-  const rssUrl =
-    "https://news.google.com/rss/search?q=" +
-    encodeURIComponent(fuente.consulta) +
-    "&hl=es-419&gl=CO&ceid=CO%3Aes-419";
-
-  console.log(
-    "Consultando noticias..."
-  );
-
-  const feed =
-    await parser.parseURL(rssUrl);
-
-  console.log(
-    `Encontradas: ${feed.items.length}`
-  );
-
-  const items =
-    feed.items.slice(
-      0,
-      LIMITE_POR_FUENTE
-    );
-
-  let nuevas = 0;
-  let repetidas = 0;
-
-  for (const item of items) {
-    if (!esValida(item)) {
-      continue;
-    }
-
-    const id =
-      generarIdNoticia(
-        fuente.id,
-        item
-      );
-
-    const referencia =
-      db
-        .collection("noticias")
-        .doc(id);
-
-    const existente =
-      await referencia.get();
-
-    if (existente.exists) {
-      repetidas++;
-      continue;
-    }
-
-    const titulo =
-      item.title.trim();
-
-    const resumen =
-      obtenerResumen(item);
-
-    const documento = {
-      titulo,
-
-      resumen,
-
-      /*
-       * El contenido completo NO se publica
-       * automáticamente.
-       */
-      contenido: "",
-
-      imagenUrl:
-        obtenerImagen(item),
-
-      categoria:
-        clasificarCategoria(
-          titulo,
-          resumen
-        ),
-
-      fuente:
-        fuente.nombre,
-
-      fuenteId:
-        fuente.id,
-
-      fuenteUrl:
-        obtenerUrl(item),
-
-      fechaPublicacion:
-        Timestamp.fromDate(
-          obtenerFecha(item)
-        ),
-
-      fechaCaptura:
-        Timestamp.now(),
-
-      /*
-       * TODA noticia automática comienza
-       * como pendiente.
-       */
-      estado: "pendiente",
-
-      tipo: "externa",
-
-      creadoAutomaticamente: true,
-
-      revisado: false,
-
-      creadoPor:
-        "recolector-automatico",
-    };
-
-    await referencia.set(
-      documento
-    );
-
-    nuevas++;
-
-    console.log(
-      `✓ Nueva: ${titulo}`
-    );
-  }
-
-  console.log(
-    `Nuevas: ${nuevas}`
-  );
-
-  console.log(
-    `Repetidas: ${repetidas}`
-  );
-
-  return {
-    nuevas,
-    repetidas,
-  };
+  return items;
 }
 
-/* ============================================================
-   PROCESO PRINCIPAL
-============================================================ */
+async function guardarNoticia(fuente, item, existentes) {
+  const titulo = normalizarTexto(item.title);
+  if (!titulo) return { estado: "ignorada", razon: "sin-titulo" };
 
-async function recolectarNoticias() {
-  console.log("");
-  console.log(
-    "======================================"
-  );
-  console.log(
-    "RECOMEDI - RECOLECTOR DE NOTICIAS"
-  );
-  console.log(
-    "======================================"
+  const resumen = normalizarTexto(
+    item.contentSnippet || item.summary || item.description || item.content || ""
   );
 
-  let totalNuevas = 0;
-  let totalRepetidas = 0;
+  const enlaceFeed = normalizarUrl(item.link || item.guid || "");
+  const hostDeclarado = obtenerHost(item?.source?.url || "");
+
+  // La consulta está restringida a un dominio oficial, pero además verificamos
+  // el dominio que Google News declara para cada resultado.
+  if (!dominioPermitido(item?.source?.url || "", fuente)) {
+    return {
+      estado: "ignorada",
+      razon: `fuente-no-oficial:${hostDeclarado || "desconocida"}`,
+    };
+  }
+
+  const urlResuelta = await resolverUrl(enlaceFeed);
+  const fuenteUrl = dominioPermitido(urlResuelta, fuente)
+    ? normalizarUrl(urlResuelta)
+    : enlaceFeed;
+
+  const huella = construirHuella({
+    fuenteId: fuente.id,
+    titulo,
+    url: fuenteUrl,
+  });
+
+  const claveFuenteTitulo = `${fuente.id}|${normalizarTitulo(titulo)}`;
+
+  if (
+    existentes.porHuella.has(huella) ||
+    (fuenteUrl && existentes.porUrl.has(fuenteUrl)) ||
+    existentes.porFuenteTitulo.has(claveFuenteTitulo)
+  ) {
+    return { estado: "duplicada", titulo };
+  }
+
+  const documentoId = huella.slice(0, 40);
+
+  const datos = {
+    titulo,
+    resumen,
+    contenido: "",
+    imagenUrl: extraerImagen(item),
+    categoria: determinarCategoria(titulo, resumen),
+    fuente: fuente.nombre,
+    fuenteId: fuente.id,
+    fuenteUrl,
+    urlRecoleccion: enlaceFeed,
+    fechaPublicacion: item.isoDate || item.pubDate || null,
+    fechaCaptura: new Date().toISOString(),
+    estado: "pendiente",
+    tipo: "externa",
+    creadoAutomaticamente: true,
+    revisado: false,
+    creadoPor: "recolector-automatico",
+    huella,
+  };
+
+  await db.collection(COLECCION).doc(documentoId).set(datos, { merge: false });
+
+  existentes.porHuella.add(huella);
+  if (fuenteUrl) existentes.porUrl.add(fuenteUrl);
+  existentes.porFuenteTitulo.add(claveFuenteTitulo);
+
+  return { estado: "nueva", titulo };
+}
+
+async function main() {
+  console.log("========================================");
+  console.log("   RECOLECTOR AUTOMATICO DE NOTICIAS");
+  console.log("========================================");
+  console.log(`Fecha de ejecución: ${new Date().toISOString()}`);
+  console.log(`Colección destino: ${COLECCION}`);
+  console.log(`Fuentes configuradas: ${FUENTES_NOTICIAS.length}`);
+
+  const existentes = await cargarNoticiasExistentes();
+
+  let encontradas = 0;
+  let nuevas = 0;
+  let duplicadas = 0;
+  let ignoradas = 0;
 
   for (const fuente of FUENTES_NOTICIAS) {
+    console.log(`\n[${fuente.nombre}]`);
+    console.log(`Consulta: ${fuente.consulta}`);
+
     try {
-      const resultado =
-        await recolectarFuente(
-          fuente
-        );
+      const items = await recolectarFuente(fuente);
+      encontradas += items.length;
+      console.log(`Resultados encontrados: ${items.length}`);
 
-      totalNuevas +=
-        resultado.nuevas;
+      for (const item of items) {
+        const resultado = await guardarNoticia(fuente, item, existentes);
 
-      totalRepetidas +=
-        resultado.repetidas;
+        if (resultado.estado === "nueva") {
+          nuevas += 1;
+          console.log(`  + NUEVA: ${resultado.titulo}`);
+        } else if (resultado.estado === "duplicada") {
+          duplicadas += 1;
+          console.log(`  = DUPLICADA: ${resultado.titulo}`);
+        } else {
+          ignoradas += 1;
+          console.log(`  - IGNORADA: ${resultado.razon}`);
+        }
+      }
     } catch (error) {
-      console.error("");
-
-      console.error(
-        `✗ Error en ${fuente.nombre}`
-      );
-
-      console.error(
-        error?.message ||
-        error
-      );
+      console.error(`  ! ERROR EN FUENTE: ${error?.message || error}`);
     }
   }
 
-  console.log("");
-  console.log(
-    "======================================"
-  );
-  console.log(
-    "RESULTADO FINAL"
-  );
-  console.log(
-    "======================================"
-  );
-
-  console.log(
-    `Noticias nuevas: ${totalNuevas}`
-  );
-
-  console.log(
-    `Noticias repetidas: ${totalRepetidas}`
-  );
-
-  console.log(
-    "======================================"
-  );
-  console.log("");
+  console.log("\n========================================");
+  console.log("RESUMEN DE EJECUCION");
+  console.log("========================================");
+  console.log(`Resultados encontrados : ${encontradas}`);
+  console.log(`Noticias nuevas       : ${nuevas}`);
+  console.log(`Noticias duplicadas   : ${duplicadas}`);
+  console.log(`Noticias ignoradas    : ${ignoradas}`);
+  console.log(`Total procesado       : ${nuevas + duplicadas + ignoradas}`);
+  console.log("========================================");
 }
 
-recolectarNoticias()
-  .then(() => {
-    process.exit(0);
-  })
-  .catch((error) => {
-    console.error(
-      "ERROR GENERAL:"
-    );
-
-    console.error(error);
-
-    process.exit(1);
-  });
+main().catch((error) => {
+  console.error("ERROR FATAL DEL RECOLECTOR:", error);
+  process.exitCode = 1;
+});

@@ -10,22 +10,33 @@ on:
 jobs:
   recolectar:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     permissions:
       contents: read
 
     steps:
       - name: Descargar repositorio
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configurar Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: Instalar dependencias
         run: npm ci
+
+      - name: Verificar variables de entorno
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT_JSON" ]; then
+            echo "ERROR: no existe el secreto FIREBASE_SERVICE_ACCOUNT_JSON"
+            exit 1
+          fi
+          echo "Secreto FIREBASE_SERVICE_ACCOUNT_JSON detectado correctamente."
 
       - name: Recolectar noticias
         env:
