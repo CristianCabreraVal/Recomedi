@@ -2,25 +2,30 @@ export const FUENTES_NOTICIAS = [
   {
     id: "minsalud",
     nombre: "Ministerio de Salud y Protección Social",
-    dominiosPermitidos: ["minsalud.gov.co", "www2.minsalud.gov.co"],
-    consultas: [
-      'site:minsalud.gov.co/Comunicaciones/noticias/2026 (salud OR vacunacion OR vacunación OR alerta OR prevencion OR prevención OR emergencia OR hospital) when:14d',
-    ],
+    tipo: "sitemap",
+    sitemapUrl: "https://www.minsalud.gov.co/sitemap.xml",
+    rutaPermitida: "/Comunicaciones/noticias/2026/Paginas/",
+    dominio: "www.minsalud.gov.co",
+    limite: 20,
   },
+
   {
     id: "cundinamarca",
     nombre: "Secretaría de Salud de Cundinamarca",
-    dominiosPermitidos: ["cundinamarca.gov.co", "www.cundinamarca.gov.co"],
-    consultas: [
-      'site:cundinamarca.gov.co/dependencias/secsalud/noticias (salud OR vacunacion OR vacunación OR alerta OR prevencion OR prevención OR hospital OR medicamentos) when:14d',
-    ],
+    tipo: "listado",
+    listadoUrl:
+      "https://www.cundinamarca.gov.co/dependencias/secsalud",
+    dominio: "www.cundinamarca.gov.co",
+    limite: 10,
   },
+
   {
     id: "ins",
     nombre: "Instituto Nacional de Salud",
-    dominiosPermitidos: ["ins.gov.co", "www.ins.gov.co"],
-    consultas: [
-      'site:ins.gov.co/Comunicaciones/Paginas (salud OR vigilancia OR epidemiologia OR epidemiología OR alerta OR enfermedad OR brote) when:14d',
-    ],
+    tipo: "listado",
+    listadoUrl:
+      "https://www.ins.gov.co/Comunicaciones/Paginas/Historico.aspx",
+    dominio: "www.ins.gov.co",
+    limite: 15,
   },
 ];
