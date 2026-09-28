@@ -609,66 +609,68 @@ function obtenerImagen(item) {
       )
     : "";
 }
-function extraerMeta(html, propiedades) {
-  for (const propiedad of propiedades) {
-    const expresion1 = new RegExp(
-      `<meta[^>]+property=["']${propiedad}["'][^>]+content=["']([^"']+)["'][^>]*>`,
-      "i"
-    );
 
-    const expresion2 = new RegExp(
-      `<meta[^>]+name=["']${propiedad}["'][^>]+content=["']([^"']+)["'][^>]*>`,
-      "i"
-    );
+// ==========================================================
+// NUEVO: EXTRACCIÓN DE IMAGEN Y CONTENIDO DESDE LA PÁGINA
+// OFICIAL. Esta capa NO modifica la lógica de URLs.
+// ==========================================================
 
-    const expresion3 = new RegExp(
-      `<meta[^>]+content=["']([^"']+)["'][^>]+property=["']${propiedad}["'][^>]*>`,
-      "i"
-    );
+function extraerMeta(
+  html,
+  atributo,
+  valor
+) {
+  const patron1 = new RegExp(
+    `<meta[^>]+${atributo}=["']${valor}["'][^>]+content=["']([^"']+)["'][^>]*>`,
+    "i"
+  );
 
-    const expresion4 = new RegExp(
-      `<meta[^>]+content=["']([^"']+)["'][^>]+name=["']${propiedad}["'][^>]*>`,
-      "i"
-    );
+  const patron2 = new RegExp(
+    `<meta[^>]+content=["']([^"']+)["'][^>]+${atributo}=["']${valor}["'][^>]*>`,
+    "i"
+  );
 
-    const coincidencia =
-      html.match(expresion1) ||
-      html.match(expresion2) ||
-      html.match(expresion3) ||
-      html.match(expresion4);
+  const resultado =
+    html.match(patron1) ||
+    html.match(patron2);
 
-    if (coincidencia?.[1]) {
-      return coincidencia[1];
-    }
-  }
-
-  return "";
+  return resultado?.[1] || "";
 }
 
-function convertirUrlAbsoluta(valor, urlBase) {
+function convertirUrlAbsoluta(
+  valor,
+  urlBase
+) {
   if (!valor) {
     return "";
   }
 
   try {
     return normalizarUrl(
-      new URL(valor, urlBase).toString()
+      new URL(
+        valor,
+        urlBase
+      ).toString()
     );
   } catch {
     return "";
   }
 }
 
-function limpiarContenidoHtml(html = "") {
-  let contenido = String(html);
-
-  contenido = contenido
+function limpiarContenidoHtml(
+  html = ""
+) {
+  return String(html)
     .replace(
       /<script\b[^>]*>[\s\S]*?<\/script>/gi,
       " "
     )
     .replace(
       /<style\b[^>]*>[\s\S]*?<\/style>/gi,
+      " "
+    )
+    .replace(
+      /<noscript\b[^>]*>[\s\S]*?<\/noscript>/gi,
       " "
     )
     .replace(
@@ -686,11 +688,9 @@ function limpiarContenidoHtml(html = "") {
     .replace(
       /<aside\b[^>]*>[\s\S]*?<\/aside>/gi,
       " "
-    );
-
-  contenido = contenido
+    )
     .replace(
-      /<\/(p|div|section|article|h1|h2|h3|h4|li|blockquote)>/gi,
+      /<\/((p|div|section|article|h1|h2|h3|h4|h5|li|blockquote))>/gi,
       "\n"
     )
     .replace(
@@ -711,65 +711,47 @@ function limpiarContenidoHtml(html = "") {
     .replace(/&#39;/gi, "'")
     .replace(/&lt;/gi, "<")
     .replace(/&gt;/gi, ">")
+    .replace(/&#(\d+);/g, (_, codigo) =>
+      String.fromCharCode(
+        Number(codigo)
+      )
+    )
     .replace(/\r/g, "")
     .replace(/[ \t]+/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
     .replace(/\n[ \t]+/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
-
-  return contenido;
 }
 
-function extraerArticleBodyDesdeJsonLd(html) {
+function extraerArticleBodyDesdeJsonLd(
+  html
+) {
   const bloques =
     html.match(
       /<script[^>]+type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi
     ) || [];
 
   for (const bloque of bloques) {
-    const jsonTexto = bloque
-      .replace(
-        /<script[^>]*>/i,
-        ""
-      )
-      .replace(
-        /<\/script>\s*$/i,
-        ""
-      )
-      .trim();
+    const jsonTexto =
+      bloque
+        .replace(
+          /<script[^>]*>/i,
+          ""
+        )
+        .replace(
+          /<\/script>\s*$/i,
+          ""
+        )
+        .trim();
 
     try {
-      const datos = JSON.parse(
-        jsonTexto
-      );
+      const datos =
+        JSON.parse(jsonTexto);
 
       const revisar = (objeto) => {
         if (!objeto) {
           return "";
-        }
-
-        if (
-          typeof objeto === "object" &&
-          typeof objeto.articleBody === "string" &&
-          objeto.articleBody.trim()
-        ) {
-          return objeto.articleBody.trim();
-        }
-
-        if (
-          typeof objeto === "object" &&
-          Array.isArray(objeto["@graph"])
-        ) {
-          for (
-            const elemento of objeto["@graph"]
-          ) {
-            const resultado =
-              revisar(elemento);
-
-            if (resultado) {
-              return resultado;
-            }
-          }
         }
 
         if (Array.isArray(objeto)) {
@@ -783,6 +765,152 @@ function extraerArticleBodyDesdeJsonLd(html) {
               return resultado;
             }
           }
+
+          return "";
+        }
+
+        if (
+          typeof objeto !== "object"
+        ) {
+          return "";
+        }
+
+        if (
+          typeof objeto.articleBody ===
+            "string" &&
+          objeto.articleBody.trim()
+        ) {
+          return objeto.articleBody.trim();
+        }
+
+        if (
+          typeof objeto.image === "string" &&
+          !objeto.articleBody
+        ) {
+          // La imagen se maneja por separado.
+        }
+
+        if (
+          Array.isArray(
+            objeto["@graph"]
+          )
+        ) {
+          const resultado =
+            revisar(
+              objeto["@graph"]
+            );
+
+          if (resultado) {
+            return resultado;
+          }
+        }
+
+        return "";
+      };
+
+      const resultado =
+        revisar(datos);
+
+      if (
+        resultado &&
+        resultado.length >= 200
+      ) {
+        return resultado;
+      }
+    } catch {
+      // Ignorar JSON-LD inválido.
+    }
+  }
+
+  return "";
+}
+
+function extraerImagenDesdeJsonLd(
+  html,
+  urlBase
+) {
+  const bloques =
+    html.match(
+      /<script[^>]+type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi
+    ) || [];
+
+  for (const bloque of bloques) {
+    const jsonTexto =
+      bloque
+        .replace(
+          /<script[^>]*>/i,
+          ""
+        )
+        .replace(
+          /<\/script>\s*$/i,
+          ""
+        )
+        .trim();
+
+    try {
+      const datos =
+        JSON.parse(jsonTexto);
+
+      const revisar = (objeto) => {
+        if (!objeto) {
+          return "";
+        }
+
+        if (Array.isArray(objeto)) {
+          for (
+            const elemento of objeto
+          ) {
+            const resultado =
+              revisar(elemento);
+
+            if (resultado) {
+              return resultado;
+            }
+          }
+
+          return "";
+        }
+
+        if (
+          typeof objeto !== "object"
+        ) {
+          return "";
+        }
+
+        const imagen = objeto.image;
+
+        if (
+          typeof imagen === "string" &&
+          imagen
+        ) {
+          return convertirUrlAbsoluta(
+            imagen,
+            urlBase
+          );
+        }
+
+        if (
+          imagen &&
+          typeof imagen === "object"
+        ) {
+          if (
+            typeof imagen.url === "string"
+          ) {
+            return convertirUrlAbsoluta(
+              imagen.url,
+              urlBase
+            );
+          }
+        }
+
+        if (
+          Array.isArray(
+            objeto["@graph"]
+          )
+        ) {
+          return revisar(
+            objeto["@graph"]
+          );
         }
 
         return "";
@@ -806,19 +934,66 @@ function extraerImagenDesdePagina(
   html,
   urlBase
 ) {
+  const imagenJsonLd =
+    extraerImagenDesdeJsonLd(
+      html,
+      urlBase
+    );
+
+  if (imagenJsonLd) {
+    return imagenJsonLd;
+  }
+
   const imagenMeta =
     extraerMeta(
       html,
-      [
-        "og:image",
-        "twitter:image",
-        "twitter:image:src",
-      ]
+      "property",
+      "og:image"
     );
 
   if (imagenMeta) {
     return convertirUrlAbsoluta(
       imagenMeta,
+      urlBase
+    );
+  }
+
+  const imagenTwitter =
+    extraerMeta(
+      html,
+      "name",
+      "twitter:image"
+    );
+
+  if (imagenTwitter) {
+    return convertirUrlAbsoluta(
+      imagenTwitter,
+      urlBase
+    );
+  }
+
+  const imagenTwitterSrc =
+    extraerMeta(
+      html,
+      "name",
+      "twitter:image:src"
+    );
+
+  if (imagenTwitterSrc) {
+    return convertirUrlAbsoluta(
+      imagenTwitterSrc,
+      urlBase
+    );
+  }
+
+  const imagenLink =
+    html.match(
+      /<link[^>]+rel=["'][^"']*image_src[^"']*["'][^>]+href=["']([^"']+)["'][^>]*>/i
+    );
+
+  if (imagenLink?.[1]) {
+    return convertirUrlAbsoluta(
+      imagenLink[1],
       urlBase
     );
   }
@@ -831,21 +1006,26 @@ function extraerImagenDesdePagina(
   for (const etiqueta of imagenes) {
     const coincidencia =
       etiqueta.match(
-        /\b(?:src|data-src|data-lazy-src)=["']([^"']+)["']/i
+        /\b(?:src|data-src|data-lazy-src|data-original)=['"]([^'"]+)['"]/i
       );
 
     if (
-      coincidencia?.[1]
+      !coincidencia?.[1]
     ) {
-      const url =
-        convertirUrlAbsoluta(
-          coincidencia[1],
-          urlBase
-        );
+      continue;
+    }
 
-      if (url) {
-        return url;
-      }
+    const url =
+      convertirUrlAbsoluta(
+        coincidencia[1],
+        urlBase
+      );
+
+    if (
+      url &&
+      !url.startsWith("data:")
+    ) {
+      return url;
     }
   }
 
@@ -869,6 +1049,8 @@ function extraerContenidoDesdePagina(
   const patrones = [
     /<article\b[^>]*>([\s\S]*?)<\/article>/i,
     /<main\b[^>]*>([\s\S]*?)<\/main>/i,
+    /<div[^>]+class=["'][^"']*(?:article|article-content|news-content|news-detail|noticia|noticia-content|contenido|content|detalle)[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]+id=["'][^"']*(?:article|noticia|contenido|content|detalle)[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
   ];
 
   for (const patron of patrones) {
@@ -889,6 +1071,37 @@ function extraerContenidoDesdePagina(
         return contenido;
       }
     }
+  }
+
+  // Fallback adicional para portales institucionales:
+  // tomar los párrafos largos cuando no existe un contenedor
+  // claro para el artículo.
+  const parrafos =
+    html.match(
+      /<p\b[^>]*>[\s\S]*?<\/p>/gi
+    ) || [];
+
+  const textosParrafos =
+    parrafos
+      .map((parrafo) =>
+        limpiarContenidoHtml(
+          parrafo
+        )
+      )
+      .filter(
+        (texto) =>
+          texto.length >= 40
+      );
+
+  const contenidoParrafos =
+    textosParrafos.join(
+      "\n\n"
+    );
+
+  if (
+    contenidoParrafos.length >= 400
+  ) {
+    return contenidoParrafos;
   }
 
   return "";
@@ -917,16 +1130,16 @@ async function obtenerDatosDesdePaginaOficial(
           redirect: "follow",
           signal:
             AbortSignal.timeout(
-              20000
+              30000
             ),
         }
       );
 
-    if (!respuesta.ok) {
-      console.log(
-        `La página oficial devolvió HTTP ${respuesta.status}`
-      );
+    console.log(
+      `HTTP página oficial: ${respuesta.status}`
+    );
 
+    if (!respuesta.ok) {
       return {
         imagenUrl: "",
         contenido: "",
@@ -936,10 +1149,13 @@ async function obtenerDatosDesdePaginaOficial(
     const html =
       await respuesta.text();
 
+    const urlFinal =
+      respuesta.url || url;
+
     const imagenUrl =
       extraerImagenDesdePagina(
         html,
-        url
+        urlFinal
       );
 
     const contenido =
@@ -966,7 +1182,8 @@ async function obtenerDatosDesdePaginaOficial(
   } catch (error) {
     console.log(
       `Error obteniendo datos de la página oficial: ${
-        error?.message || error
+        error?.message ||
+        error
       }`
     );
 
@@ -976,6 +1193,7 @@ async function obtenerDatosDesdePaginaOficial(
     };
   }
 }
+
 function construirHuella(
   fuenteId,
   url,
@@ -1113,6 +1331,13 @@ async function cargarExistentes() {
     titulos,
   };
 }
+
+// ==========================================================
+// NUEVO: ENRIQUECER NOTICIAS YA EXISTENTES EN FIREBASE.
+// Usa urlOficial y, solo si es una URL oficial válida,
+// fuenteUrl como respaldo. NO modifica ninguna URL.
+// ==========================================================
+
 async function enriquecerNoticiasExistentes() {
   console.log(
     "\n=============================================="
@@ -1131,20 +1356,15 @@ async function enriquecerNoticiasExistentes() {
       .collection(COLECCION)
       .get();
 
+  let procesadas = 0;
   let actualizadas = 0;
+  let sinCambios = 0;
 
   for (
     const documento of snapshot.docs
   ) {
     const datos =
       documento.data();
-
-    const urlOficial =
-      datos.urlOficial || "";
-
-    if (!urlOficial) {
-      continue;
-    }
 
     if (
       datos.imagenUrl &&
@@ -1153,15 +1373,69 @@ async function enriquecerNoticiasExistentes() {
       continue;
     }
 
+    const fuente =
+      FUENTES_NOTICIAS.find(
+        (item) =>
+          item.id ===
+          datos.fuenteId
+      );
+
+    if (!fuente) {
+      console.log(
+        `\nNo se encontró configuración para fuenteId: ${datos.fuenteId || "desconocida"}`
+      );
+      continue;
+    }
+
+    let url = "";
+
+    if (
+      datos.urlOficial &&
+      esArticuloValido(
+        fuente,
+        datos.urlOficial
+      )
+    ) {
+      url =
+        datos.urlOficial;
+    } else if (
+      datos.fuenteUrl &&
+      esArticuloValido(
+        fuente,
+        datos.fuenteUrl
+      )
+    ) {
+      url =
+        datos.fuenteUrl;
+    }
+
+    // Nunca intentar extraer contenido de una URL de Google News.
+    if (!url) {
+      console.log(
+        `\nSin URL oficial válida para: ${
+          datos.titulo ||
+          documento.id
+        }`
+      );
+      continue;
+    }
+
+    procesadas++;
+
     console.log(
       `\nProcesando noticia: ${
-        datos.titulo || documento.id
+        datos.titulo ||
+        documento.id
       }`
+    );
+
+    console.log(
+      `URL oficial utilizada: ${url}`
     );
 
     const datosPagina =
       await obtenerDatosDesdePaginaOficial(
-        urlOficial
+        url
       );
 
     const cambios = {};
@@ -1183,7 +1457,8 @@ async function enriquecerNoticiasExistentes() {
     }
 
     if (
-      Object.keys(cambios).length > 0
+      Object.keys(cambios).length >
+      0
     ) {
       await documento.ref.update(
         cambios
@@ -1192,17 +1467,55 @@ async function enriquecerNoticiasExistentes() {
       actualizadas++;
 
       console.log(
-        "Noticia actualizada correctamente."
+        "Noticia actualizada correctamente en Firebase."
+      );
+
+      console.log(
+        `  imagenUrl: ${
+          cambios.imagenUrl
+            ? "SI"
+            : "NO"
+        }`
+      );
+
+      console.log(
+        `  contenido: ${
+          cambios.contenido
+            ? "SI"
+            : "NO"
+        }`
       );
     } else {
+      sinCambios++;
+
       console.log(
-        "No se encontraron nuevos datos."
+        "No se encontraron datos nuevos para actualizar."
       );
     }
   }
 
   console.log(
-    `\nNoticias enriquecidas: ${actualizadas}`
+    "\n=============================================="
+  );
+
+  console.log(
+    "RESUMEN DE ENRIQUECIMIENTO"
+  );
+
+  console.log(
+    "=============================================="
+  );
+
+  console.log(
+    `Noticias procesadas : ${procesadas}`
+  );
+
+  console.log(
+    `Noticias actualizadas : ${actualizadas}`
+  );
+
+  console.log(
+    `Noticias sin cambios : ${sinCambios}`
   );
 
   console.log(
@@ -1477,7 +1790,8 @@ async function procesarItem(
       0,
       40
     );
- // ==========================================================
+
+  // ==========================================================
   // OBTENER IMAGEN Y CONTENIDO DE LA PÁGINA OFICIAL
   // ==========================================================
 
@@ -1513,6 +1827,7 @@ async function procesarItem(
         datosPagina.contenido;
     }
   }
+
   const noticia = {
     titulo,
 
@@ -1520,9 +1835,9 @@ async function procesarItem(
       resumen ||
       "Noticia publicada por una fuente oficial.",
 
-      contenido,
+    contenido,
 
-      imagenUrl,
+    imagenUrl,
 
     categoria:
       determinarCategoria(
@@ -1754,7 +2069,9 @@ async function main() {
   const existentes =
     await cargarExistentes();
 
-      await enriquecerNoticiasExistentes();
+  // Enriquecer documentos antiguos que ya están en Firebase
+  // sin tocar su sistema actual de URLs ni su deduplicación.
+  await enriquecerNoticiasExistentes();
 
   console.log(
     `Noticias existentes en Firebase: ${existentes.urls.size}`
