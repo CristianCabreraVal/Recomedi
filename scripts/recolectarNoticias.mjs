@@ -763,9 +763,19 @@ async function procesarFuente(
       );
   }
 
+ console.log(
+  `Candidatos encontrados: ${candidatos.length}`
+);
+
+for (const candidato of candidatos) {
   console.log(
-    `Candidatos encontrados: ${candidatos.length}`
+    `CANDIDATO -> ${candidato.titulo || "SIN TITULO"}`
   );
+
+  console.log(
+    `URL -> ${candidato.url}`
+  );
+}
 
   let nuevas = 0;
   let duplicadas = 0;
