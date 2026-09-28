@@ -1,8 +1,7 @@
-import {View,Text,Switch,StyleSheet,TouchableOpacity,ScrollView} from "react-native";
-import { useState, useEffect } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useEffect, useState } from "react";
+import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
 
 import { signOut } from "firebase/auth";
 import { auth } from "../../services/firebase";
@@ -66,7 +65,7 @@ export default function Configuracion() {
   };
 
 return (
-  <SafeAreaView
+  <View
     style={[
       styles.container,
       {
@@ -313,7 +312,7 @@ return (
         </Text>
       </TouchableOpacity>
     </ScrollView>
-  </SafeAreaView>
+  </View>
 );
 }
 

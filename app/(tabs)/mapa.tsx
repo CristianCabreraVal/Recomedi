@@ -9,7 +9,6 @@ import {
 
 import { useEffect, useState } from "react";
 
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { WebView } from "react-native-webview";
 
@@ -267,7 +266,7 @@ export default function Mapa() {
   ========================================================== */
 
   return (
-    <SafeAreaView
+    <View
       style={[
         styles.container,
         {
@@ -1187,7 +1186,7 @@ export default function Mapa() {
 
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -61,9 +61,6 @@ import {
  * SafeAreaView evita que el contenido quede detrás de
  * elementos del sistema del dispositivo.
  */
-import {
-  SafeAreaView,
-} from "react-native-safe-area-context";
 
 
 /*
@@ -73,8 +70,7 @@ import {
  * En esta pantalla se utiliza para recuperar el perfil
  * guardado del usuario.
  */
-import AsyncStorage from
-  "@react-native-async-storage/async-storage";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 
 /*
@@ -90,9 +86,7 @@ import {
  * Servicio encargado de enviar la recomendación al
  * sistema de notificaciones.
  */
-import {
-  enviarNotificacionRecomendacion,
-} from "../../services/notificationService";
+
 
 
 /*
@@ -310,9 +304,7 @@ export default function Home() {
         /*
          * Envía la recomendación al servicio de notificaciones.
          */
-        await enviarNotificacionRecomendacion(
-          nuevaRecomendacion
-        );
+       
 
       } catch (error) {
 
@@ -460,7 +452,7 @@ export default function Home() {
      ========================================================== */
 
   return (
-    <SafeAreaView
+    <View
       style={[
         styles.container,
         {
@@ -1017,7 +1009,7 @@ export default function Home() {
                       },
                     ]}
                   >
-                    Cada 6-12 meses
+                    Cada 8-10 meses
                   </Text>
                 </View>
 
@@ -1511,7 +1503,7 @@ export default function Home() {
 
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

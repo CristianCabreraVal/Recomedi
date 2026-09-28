@@ -17,7 +17,6 @@ import { useFocusEffect } from "expo-router";
 // Librería de iconos vectoriales incluida en Expo
 import { Ionicons } from "@expo/vector-icons";
 // Componente para evitar que el contenido se solape con los bordes físicos del dispositivo (notch, barra de estado)
-import { SafeAreaView } from "react-native-safe-area-context";
 
 // Importación del hook personalizado para obtener los colores del tema actual (claro u oscuro)
 import { useTheme } from "../../hooks/useTheme";
@@ -271,7 +270,7 @@ export default function Actividad() {
      RENDERIZADO DE LA INTERFAZ DE USUARIO (JSX)
   ============================================================ */
   return (
-    <SafeAreaView
+    <View
       style={[
         styles.container,
         {
@@ -1060,7 +1059,7 @@ export default function Actividad() {
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

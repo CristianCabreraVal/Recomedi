@@ -1,12 +1,11 @@
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  useWindowDimensions,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import {
+  FlatList,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 
 import { useTheme } from "../../hooks/useTheme";
 
@@ -59,7 +58,7 @@ export default function Alerts() {
   };
 
   return (
-    <SafeAreaView
+    <View
       style={[
         styles.container,
         {
@@ -405,7 +404,7 @@ export default function Alerts() {
           </Text>
         }
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

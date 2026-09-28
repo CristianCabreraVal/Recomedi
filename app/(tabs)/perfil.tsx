@@ -1,12 +1,11 @@
-import {ActivityIndicator,useWindowDimensions,ScrollView,StyleSheet,Text,TouchableOpacity,View,} from "react-native";
-import {useFocusEffect,useRouter,} from "expo-router";
-import {useCallback,useState,} from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect, useRouter, } from "expo-router";
+import { useCallback, useState, } from "react";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View, } from "react-native";
 
-import {doc,getDoc,} from "firebase/firestore";
+import { doc, getDoc, } from "firebase/firestore";
 import { useTheme } from "../../hooks/useTheme";
 import { useUserRole } from "../../hooks/useUserRole";
-import {auth,db,} from "../../services/firebase";
+import { auth, db, } from "../../services/firebase";
 
 export default function Perfil() {
   const { colors } = useTheme();
@@ -86,7 +85,7 @@ const esMovil = width < 700;
 
 if (cargando) {
   return (
-    <SafeAreaView
+    <View
       style={[
         styles.container,
         {
@@ -113,7 +112,7 @@ if (cargando) {
           Cargando perfil...
         </Text>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -123,7 +122,7 @@ if (cargando) {
 
 if (!usuario) {
   return (
-    <SafeAreaView
+    <View
       style={[
         styles.container,
         {
@@ -174,7 +173,7 @@ if (!usuario) {
           </Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -199,7 +198,7 @@ const imc =
 ============================================================ */
 
 return (
-  <SafeAreaView
+  <View
     style={[
       styles.container,
       {
@@ -697,7 +696,7 @@ return (
       </TouchableOpacity>
 
     </ScrollView>
-  </SafeAreaView>
+  </View>
 );
 }
 

@@ -10,8 +10,6 @@ import {
 
 import { useEffect, useState } from "react";
 
-import { SafeAreaView } from "react-native-safe-area-context";
-
 import { Ionicons } from "@expo/vector-icons";
 
 import * as Location from "expo-location";
@@ -212,7 +210,7 @@ export default function MapaWeb() {
           ]}
         >
           <Ionicons
-            name="location-outline"
+            name="map"
             size={31}
             color={colors.primary}
           />
@@ -255,7 +253,7 @@ export default function MapaWeb() {
   ============================================================ */
 
   return (
-    <SafeAreaView
+    <View
       style={[
         styles.container,
         {
@@ -283,45 +281,81 @@ export default function MapaWeb() {
           >
             <View
               style={
-                styles.headerTextContainer
+                styles.headerMain
               }
             >
-              <Text
+              <View
                 style={[
-                  styles.eyebrow,
+                  styles.headerIconContainer,
                   {
-                    color:
-                      colors.primary,
+                    backgroundColor:
+                      colors.card,
+                    borderColor:
+                      colors.border,
                   },
                 ]}
               >
-                MAPA DE SALUD
-              </Text>
+                <Ionicons
+                  name="map"
+                  size={28}
+                  color={colors.primary}
+                />
+              </View>
 
-              <Text
-                style={[
-                  styles.header,
-                  {
-                    color:
-                      colors.text,
-                  },
-                ]}
+              <View
+                style={
+                  styles.headerTextContainer
+                }
               >
-                Centros médicos cercanos
-              </Text>
+                <View
+                  style={
+                    styles.eyebrowContainer
+                  }
+                >
+                  <Ionicons
+                    name="medical"
+                    size={13}
+                    color={colors.primary}
+                  />
 
-              <Text
-                style={[
-                  styles.subtitle,
-                  {
-                    color:
-                      colors.textSecondary,
-                  },
-                ]}
-              >
-                Encuentra hospitales, clínicas
-                y centros de salud cerca de ti.
-              </Text>
+                  <Text
+                    style={[
+                      styles.eyebrow,
+                      {
+                        color:
+                          colors.primary,
+                      },
+                    ]}
+                  >
+                    MAPA DE SALUD
+                  </Text>
+                </View>
+
+                <Text
+                  style={[
+                    styles.header,
+                    {
+                      color:
+                        colors.text,
+                    },
+                  ]}
+                >
+                  Centros médicos cercanos
+                </Text>
+
+                <Text
+                  style={[
+                    styles.subtitle,
+                    {
+                      color:
+                        colors.textSecondary,
+                    },
+                  ]}
+                >
+                  Encuentra hospitales, clínicas
+                  y centros de salud cerca de ti.
+                </Text>
+              </View>
             </View>
 
             <View
@@ -336,7 +370,7 @@ export default function MapaWeb() {
               ]}
             >
               <Ionicons
-                name="location-outline"
+                name="navigate"
                 size={16}
                 color={colors.primary}
               />
@@ -420,672 +454,952 @@ export default function MapaWeb() {
           )}
 
           {/* ==================================================
-              UBICACIÓN
+              PANEL PRINCIPAL DEL MAPA
           ================================================== */}
-<View style={styles.dashboardGrid}>
-
-  {/* ==================================================
-      COLUMNA IZQUIERDA
-  ================================================== */}
-
-  <View style={styles.leftColumn}>
-
-    {/* UBICACIÓN */}
-
-    {ubicacion && (
-      <View
-        style={[
-          styles.locationCard,
-          {
-            backgroundColor: colors.card,
-            borderColor: colors.border,
-          },
-        ]}
-      >
-        <View style={styles.locationHeader}>
-          <View
-            style={[
-              styles.locationIcon,
-              {
-                backgroundColor: colors.background,
-              },
-            ]}
-          >
-            <Ionicons
-              name="location"
-              size={22}
-              color={colors.primary}
-            />
-          </View>
-
-          <View style={styles.locationTextContainer}>
-            <Text
-              style={[
-                styles.locationTitle,
-                {
-                  color: colors.text,
-                },
-              ]}
-            >
-              Tu ubicación
-            </Text>
-
-            <Text
-              style={[
-                styles.locationSubtitle,
-                {
-                  color: colors.textSecondary,
-                },
-              ]}
-            >
-              Esta posición se utiliza para encontrar centros
-              médicos cercanos.
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.coordinatesContainer}>
-          <View
-            style={[
-              styles.coordinateBox,
-              {
-                backgroundColor: colors.background,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.coordinateLabel,
-                {
-                  color: colors.textSecondary,
-                },
-              ]}
-            >
-              LATITUD
-            </Text>
-
-            <Text
-              style={[
-                styles.coordinateValue,
-                {
-                  color: colors.text,
-                },
-              ]}
-            >
-              {ubicacion.latitude.toFixed(5)}
-            </Text>
-          </View>
 
           <View
-            style={[
-              styles.coordinateBox,
-              {
-                backgroundColor: colors.background,
-              },
-            ]}
+            style={
+              styles.dashboard
+            }
           >
-            <Text
-              style={[
-                styles.coordinateLabel,
-                {
-                  color: colors.textSecondary,
-                },
-              ]}
-            >
-              LONGITUD
-            </Text>
 
-            <Text
-              style={[
-                styles.coordinateValue,
-                {
-                  color: colors.text,
-                },
-              ]}
-            >
-              {ubicacion.longitude.toFixed(5)}
-            </Text>
-          </View>
-        </View>
+            {/* ==================================================
+                UBICACIÓN DEL USUARIO
+            ================================================== */}
 
-        <Pressable
-          onPress={abrirMapa}
-          style={({ pressed }) => [
-            styles.locationButton,
-            {
-              backgroundColor: colors.primary,
-              opacity: pressed ? 0.82 : 1,
-            },
-          ]}
-        >
-          <Ionicons
-            name="map-outline"
-            size={18}
-            color="#FFFFFF"
-          />
-
-          <Text style={styles.locationButtonText}>
-            Ver mi ubicación
-          </Text>
-
-          <Ionicons
-            name="open-outline"
-            size={16}
-            color="#FFFFFF"
-          />
-        </Pressable>
-      </View>
-    )}
-
-  </View>
-
-  {/* ==================================================
-      COLUMNA DERECHA
-  ================================================== */}
-
-  <View style={styles.rightColumn}>
-
-    {/* CABECERA DE RESULTADOS */}
-
-    <View style={styles.resultsHeader}>
-      <View style={styles.resultsHeaderText}>
-        <Text
-          style={[
-            styles.resultsTitle,
-            {
-              color: colors.text,
-            },
-          ]}
-        >
-          Centros encontrados
-        </Text>
-
-        <Text
-          style={[
-            styles.resultsSubtitle,
-            {
-              color: colors.textSecondary,
-            },
-          ]}
-        >
-          {lugares.length > 0
-            ? `${lugares.length} establecimientos encontrados cerca de ti`
-            : "No encontramos establecimientos registrados cerca de ti"}
-        </Text>
-      </View>
-
-      <View
-        style={[
-          styles.resultsCount,
-          {
-            backgroundColor: colors.card,
-            borderColor: colors.border,
-          },
-        ]}
-      >
-        <Text
-          style={[
-            styles.resultsCountNumber,
-            {
-              color: colors.primary,
-            },
-          ]}
-        >
-          {lugares.length}
-        </Text>
-
-        <Text
-          style={[
-            styles.resultsCountLabel,
-            {
-              color: colors.textSecondary,
-            },
-          ]}
-        >
-          lugares
-        </Text>
-      </View>
-    </View>
-
-    {/* SIN RESULTADOS */}
-
-    {lugares.length === 0 && (
-      <View
-        style={[
-          styles.emptyCard,
-          {
-            backgroundColor: colors.card,
-            borderColor: colors.border,
-          },
-        ]}
-      >
-        <View
-          style={[
-            styles.emptyIcon,
-            {
-              backgroundColor: colors.background,
-            },
-          ]}
-        >
-          <Ionicons
-            name="medical-outline"
-            size={32}
-            color={colors.textSecondary}
-          />
-        </View>
-
-        <Text
-          style={[
-            styles.emptyTitle,
-            {
-              color: colors.text,
-            },
-          ]}
-        >
-          No se encontraron centros médicos
-        </Text>
-
-        <Text
-          style={[
-            styles.emptyText,
-            {
-              color: colors.textSecondary,
-            },
-          ]}
-        >
-          No hay establecimientos médicos registrados cerca
-          de tu ubicación.
-        </Text>
-      </View>
-    )}
-
-    {/* LISTA DE CENTROS */}
-
-    <View style={styles.resultsGrid}>
-      {lugares.map((lugar, index) => (
-        <View
-          key={lugar.id || index}
-          style={[
-            styles.card,
-            {
-              backgroundColor: colors.card,
-              borderColor: colors.border,
-            },
-          ]}
-        >
-          {/* CABECERA */}
-
-          <View style={styles.cardHeader}>
-            <View
-              style={[
-                styles.cardIcon,
-                {
-                  backgroundColor: colors.background,
-                },
-              ]}
-            >
-              <Ionicons
-                name={obtenerIconoCentro(lugar)}
-                size={25}
-                color={colors.primary}
-              />
-            </View>
-
-            <View style={styles.cardHeaderText}>
-              <Text
+            {ubicacion && (
+              <View
                 style={[
-                  styles.cardType,
+                  styles.locationCard,
                   {
-                    color: colors.primary,
+                    backgroundColor:
+                      colors.card,
+                    borderColor:
+                      colors.border,
                   },
                 ]}
               >
-                {obtenerTipoCentro(lugar).toUpperCase()}
-              </Text>
 
-              <Text
-                style={[
-                  styles.cardTitle,
-                  {
-                    color: colors.text,
-                  },
-                ]}
-                numberOfLines={2}
-              >
-                {lugar.display_name ||
-                  lugar.tags?.name ||
-                  "Centro médico"}
-              </Text>
-            </View>
+                {/* CABECERA DE UBICACIÓN */}
+
+                <View
+                  style={
+                    styles.locationHeader
+                  }
+                >
+                  <View
+                    style={[
+                      styles.locationIcon,
+                      {
+                        backgroundColor:
+                          colors.background,
+                      },
+                    ]}
+                  >
+                    <Ionicons
+                      name="location"
+                      size={22}
+                      color={colors.primary}
+                    />
+                  </View>
+
+                  <View
+                    style={
+                      styles.locationTextContainer
+                    }
+                  >
+                    <View
+                      style={
+                        styles.locationTitleRow
+                      }
+                    >
+                      <Ionicons
+                        name="navigate-circle-outline"
+                        size={18}
+                        color={colors.primary}
+                      />
+
+                      <Text
+                        style={[
+                          styles.locationTitle,
+                          {
+                            color:
+                              colors.text,
+                          },
+                        ]}
+                      >
+                        Tu ubicación
+                      </Text>
+                    </View>
+
+                    <Text
+                      style={[
+                        styles.locationSubtitle,
+                        {
+                          color:
+                            colors.textSecondary,
+                        },
+                      ]}
+                    >
+                      Esta posición se utiliza para encontrar
+                      centros médicos cercanos.
+                    </Text>
+                  </View>
+                </View>
+
+                {/* COORDENADAS */}
+
+                <View
+                  style={
+                    styles.coordinatesContainer
+                  }
+                >
+                  <View
+                    style={[
+                      styles.coordinateBox,
+                      {
+                        backgroundColor:
+                          colors.background,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={
+                        styles.coordinateLabelRow
+                      }
+                    >
+                      <Ionicons
+                        name="arrow-up-outline"
+                        size={12}
+                        color={
+                          colors.textSecondary
+                        }
+                      />
+
+                      <Text
+                        style={[
+                          styles.coordinateLabel,
+                          {
+                            color:
+                              colors.textSecondary,
+                          },
+                        ]}
+                      >
+                        LATITUD
+                      </Text>
+                    </View>
+
+                    <Text
+                      style={[
+                        styles.coordinateValue,
+                        {
+                          color:
+                            colors.text,
+                        },
+                      ]}
+                    >
+                      {ubicacion.latitude.toFixed(5)}
+                    </Text>
+                  </View>
+
+                  <View
+                    style={[
+                      styles.coordinateBox,
+                      {
+                        backgroundColor:
+                          colors.background,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={
+                        styles.coordinateLabelRow
+                      }
+                    >
+                      <Ionicons
+                        name="arrow-forward-outline"
+                        size={12}
+                        color={
+                          colors.textSecondary
+                        }
+                      />
+
+                      <Text
+                        style={[
+                          styles.coordinateLabel,
+                          {
+                            color:
+                              colors.textSecondary,
+                          },
+                        ]}
+                      >
+                        LONGITUD
+                      </Text>
+                    </View>
+
+                    <Text
+                      style={[
+                        styles.coordinateValue,
+                        {
+                          color:
+                            colors.text,
+                        },
+                      ]}
+                    >
+                      {ubicacion.longitude.toFixed(5)}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* BOTÓN DEL MAPA */}
+
+                <Pressable
+                  onPress={abrirMapa}
+                  style={({ pressed }) => [
+                    styles.locationButton,
+                    {
+                      backgroundColor:
+                        colors.primary,
+                      opacity:
+                        pressed
+                          ? 0.82
+                          : 1,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="map-outline"
+                    size={18}
+                    color="#FFFFFF"
+                  />
+
+                  <Text
+                    style={
+                      styles.locationButtonText
+                    }
+                  >
+                    Ver mi ubicación
+                  </Text>
+
+                  <Ionicons
+                    name="open-outline"
+                    size={16}
+                    color="#FFFFFF"
+                  />
+                </Pressable>
+              </View>
+            )}
+
+            {/* ==================================================
+                RESULTADOS
+            ================================================== */}
 
             <View
-              style={[
-                styles.distanceBadge,
-                {
-                  backgroundColor: colors.background,
-                },
-              ]}
+              style={
+                styles.resultsSection
+              }
             >
-              <Ionicons
-                name="navigate-outline"
-                size={14}
-                color={colors.primary}
-              />
 
-              <Text
-                style={[
-                  styles.distanceText,
-                  {
-                    color: colors.primary,
-                  },
-                ]}
+              {/* CABECERA DE RESULTADOS */}
+
+              <View
+                style={
+                  styles.resultsHeader
+                }
               >
-                {formatearDistancia(lugar.distanciaKm)}
-              </Text>
+                <View
+                  style={
+                    styles.resultsHeaderMain
+                  }
+                >
+                  <View
+                    style={[
+                      styles.resultsHeaderIcon,
+                      {
+                        backgroundColor:
+                          colors.card,
+                        borderColor:
+                          colors.border,
+                      },
+                    ]}
+                  >
+                    <Ionicons
+                      name="medical-outline"
+                      size={21}
+                      color={colors.primary}
+                    />
+                  </View>
+
+                  <View
+                    style={
+                      styles.resultsHeaderText
+                    }
+                  >
+                    <View
+                      style={
+                        styles.resultsTitleRow
+                      }
+                    >
+                      <Text
+                        style={[
+                          styles.resultsTitle,
+                          {
+                            color:
+                              colors.text,
+                          },
+                        ]}
+                      >
+                        Centros encontrados
+                      </Text>
+
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={17}
+                        color={
+                          colors.primary
+                        }
+                      />
+                    </View>
+
+                    <Text
+                      style={[
+                        styles.resultsSubtitle,
+                        {
+                          color:
+                            colors.textSecondary,
+                        },
+                      ]}
+                    >
+                      {lugares.length > 0
+                        ? `${lugares.length} establecimientos encontrados cerca de ti`
+                        : "No encontramos establecimientos registrados cerca de ti"}
+                    </Text>
+                  </View>
+                </View>
+
+                <View
+                  style={[
+                    styles.resultsCount,
+                    {
+                      backgroundColor:
+                        colors.card,
+                      borderColor:
+                        colors.border,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="location-outline"
+                    size={13}
+                    color={
+                      colors.primary
+                    }
+                  />
+
+                  <Text
+                    style={[
+                      styles.resultsCountNumber,
+                      {
+                        color:
+                          colors.primary,
+                      },
+                    ]}
+                  >
+                    {lugares.length}
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.resultsCountLabel,
+                      {
+                        color:
+                          colors.textSecondary,
+                      },
+                    ]}
+                  >
+                    lugares
+                  </Text>
+                </View>
+              </View>
+
+              {/* ==================================================
+                  SIN RESULTADOS
+              ================================================== */}
+
+              {lugares.length === 0 && (
+                <View
+                  style={[
+                    styles.emptyCard,
+                    {
+                      backgroundColor:
+                        colors.card,
+                      borderColor:
+                        colors.border,
+                    },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.emptyIcon,
+                      {
+                        backgroundColor:
+                          colors.background,
+                      },
+                    ]}
+                  >
+                    <Ionicons
+                      name="medical-outline"
+                      size={32}
+                      color={
+                        colors.textSecondary
+                      }
+                    />
+                  </View>
+
+                  <Text
+                    style={[
+                      styles.emptyTitle,
+                      {
+                        color:
+                          colors.text,
+                      },
+                    ]}
+                  >
+                    No se encontraron centros médicos
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.emptyText,
+                      {
+                        color:
+                          colors.textSecondary,
+                      },
+                    ]}
+                  >
+                    No hay establecimientos médicos registrados cerca
+                    de tu ubicación.
+                  </Text>
+                </View>
+              )}
+
+              {/* ==================================================
+                  LISTA DE CENTROS
+
+                  Se conserva el diseño de las tarjetas.
+                  Únicamente se modifica su distribución y
+                  posicionamiento.
+              ================================================== */}
+
+              <View
+                style={
+                  styles.resultsGrid
+                }
+              >
+                {lugares.map(
+                  (
+                    lugar,
+                    index
+                  ) => (
+                    <View
+                      key={
+                        lugar.id ||
+                        index
+                      }
+                      style={[
+                        styles.card,
+                        {
+                          backgroundColor:
+                            colors.card,
+                          borderColor:
+                            colors.border,
+                        },
+                      ]}
+                    >
+
+                      {/* CABECERA */}
+
+                      <View
+                        style={
+                          styles.cardHeader
+                        }
+                      >
+                        <View
+                          style={[
+                            styles.cardIcon,
+                            {
+                              backgroundColor:
+                                colors.background,
+                            },
+                          ]}
+                        >
+                          <Ionicons
+                            name={obtenerIconoCentro(
+                              lugar
+                            )}
+                            size={25}
+                            color={
+                              colors.primary
+                            }
+                          />
+                        </View>
+
+                        <View
+                          style={
+                            styles.cardHeaderText
+                          }
+                        >
+                          <Text
+                            style={[
+                              styles.cardType,
+                              {
+                                color:
+                                  colors.primary,
+                              },
+                            ]}
+                          >
+                            {obtenerTipoCentro(
+                              lugar
+                            ).toUpperCase()}
+                          </Text>
+
+                          <Text
+                            style={[
+                              styles.cardTitle,
+                              {
+                                color:
+                                  colors.text,
+                              },
+                            ]}
+                            numberOfLines={2}
+                          >
+                            {lugar.display_name ||
+                              lugar.tags?.name ||
+                              "Centro médico"}
+                          </Text>
+                        </View>
+
+                        <View
+                          style={[
+                            styles.distanceBadge,
+                            {
+                              backgroundColor:
+                                colors.background,
+                            },
+                          ]}
+                        >
+                          <Ionicons
+                            name="navigate-outline"
+                            size={14}
+                            color={
+                              colors.primary
+                            }
+                          />
+
+                          <Text
+                            style={[
+                              styles.distanceText,
+                              {
+                                color:
+                                  colors.primary,
+                              },
+                            ]}
+                          >
+                            {formatearDistancia(
+                              lugar.distanciaKm
+                            )}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* INFORMACIÓN */}
+
+                      <View
+                        style={
+                          styles.infoContainer
+                        }
+                      >
+
+                        {obtenerDireccion(
+                          lugar
+                        ) !== "" && (
+                          <View
+                            style={
+                              styles.infoRow
+                            }
+                          >
+                            <View
+                              style={[
+                                styles.infoIcon,
+                                {
+                                  backgroundColor:
+                                    colors.background,
+                                },
+                              ]}
+                            >
+                              <Ionicons
+                                name="home-outline"
+                                size={16}
+                                color={
+                                  colors.primary
+                                }
+                              />
+                            </View>
+
+                            <View
+                              style={
+                                styles.infoContent
+                              }
+                            >
+                              <Text
+                                style={[
+                                  styles.infoLabel,
+                                  {
+                                    color:
+                                      colors.textSecondary,
+                                  },
+                                ]}
+                              >
+                                Dirección
+                              </Text>
+
+                              <Text
+                                style={[
+                                  styles.infoValue,
+                                  {
+                                    color:
+                                      colors.text,
+                                  },
+                                ]}
+                              >
+                                {obtenerDireccion(
+                                  lugar
+                                )}
+                              </Text>
+                            </View>
+                          </View>
+                        )}
+
+                        {lugar.tags?.opening_hours && (
+                          <View
+                            style={
+                              styles.infoRow
+                            }
+                          >
+                            <View
+                              style={[
+                                styles.infoIcon,
+                                {
+                                  backgroundColor:
+                                    colors.background,
+                                },
+                              ]}
+                            >
+                              <Ionicons
+                                name="time-outline"
+                                size={16}
+                                color={
+                                  colors.primary
+                                }
+                              />
+                            </View>
+
+                            <View
+                              style={
+                                styles.infoContent
+                              }
+                            >
+                              <Text
+                                style={[
+                                  styles.infoLabel,
+                                  {
+                                    color:
+                                      colors.textSecondary,
+                                  },
+                                ]}
+                              >
+                                Horario
+                              </Text>
+
+                              <Text
+                                style={[
+                                  styles.infoValue,
+                                  {
+                                    color:
+                                      colors.text,
+                                  },
+                                ]}
+                              >
+                                {formatearHorario(
+                                  lugar.tags.opening_hours
+                                )}
+                              </Text>
+                            </View>
+                          </View>
+                        )}
+
+                        {lugar.tags?.speciality && (
+                          <View
+                            style={
+                              styles.infoRow
+                            }
+                          >
+                            <View
+                              style={[
+                                styles.infoIcon,
+                                {
+                                  backgroundColor:
+                                    colors.background,
+                                },
+                              ]}
+                            >
+                              <Ionicons
+                                name="medkit-outline"
+                                size={16}
+                                color={
+                                  colors.primary
+                                }
+                              />
+                            </View>
+
+                            <View
+                              style={
+                                styles.infoContent
+                              }
+                            >
+                              <Text
+                                style={[
+                                  styles.infoLabel,
+                                  {
+                                    color:
+                                      colors.textSecondary,
+                                  },
+                                ]}
+                              >
+                                Especialidad
+                              </Text>
+
+                              <Text
+                                style={[
+                                  styles.infoValue,
+                                  {
+                                    color:
+                                      colors.text,
+                                  },
+                                ]}
+                              >
+                                {formatearEspecialidad(
+                                  lugar.tags.speciality
+                                )}
+                              </Text>
+                            </View>
+                          </View>
+                        )}
+
+                        {lugar.tags?.phone && (
+                          <View
+                            style={
+                              styles.infoRow
+                            }
+                          >
+                            <View
+                              style={[
+                                styles.infoIcon,
+                                {
+                                  backgroundColor:
+                                    colors.background,
+                                },
+                              ]}
+                            >
+                              <Ionicons
+                                name="call-outline"
+                                size={16}
+                                color={
+                                  colors.primary
+                                }
+                              />
+                            </View>
+
+                            <View
+                              style={
+                                styles.infoContent
+                              }
+                            >
+                              <Text
+                                style={[
+                                  styles.infoLabel,
+                                  {
+                                    color:
+                                      colors.textSecondary,
+                                  },
+                                ]}
+                              >
+                                Teléfono
+                              </Text>
+
+                              <Text
+                                style={[
+                                  styles.infoValue,
+                                  {
+                                    color:
+                                      colors.text,
+                                  },
+                                ]}
+                              >
+                                {lugar.tags.phone}
+                              </Text>
+                            </View>
+                          </View>
+                        )}
+
+                        {lugar.tags?.website && (
+                          <View
+                            style={
+                              styles.infoRow
+                            }
+                          >
+                            <View
+                              style={[
+                                styles.infoIcon,
+                                {
+                                  backgroundColor:
+                                    colors.background,
+                                },
+                              ]}
+                            >
+                              <Ionicons
+                                name="globe-outline"
+                                size={16}
+                                color={
+                                  colors.primary
+                                }
+                              />
+                            </View>
+
+                            <View
+                              style={
+                                styles.infoContent
+                              }
+                            >
+                              <Text
+                                style={[
+                                  styles.infoLabel,
+                                  {
+                                    color:
+                                      colors.textSecondary,
+                                  },
+                                ]}
+                              >
+                                Sitio web
+                              </Text>
+
+                              <Text
+                                style={[
+                                  styles.infoValue,
+                                  {
+                                    color:
+                                      colors.text,
+                                  },
+                                ]}
+                                numberOfLines={1}
+                              >
+                                {lugar.tags.website}
+                              </Text>
+                            </View>
+                          </View>
+                        )}
+
+                      </View>
+
+                      {/* BOTÓN */}
+
+                      <Pressable
+                        onPress={() =>
+                          abrirLugar(
+                            lugar
+                          )
+                        }
+                        style={({ pressed }) => [
+                          styles.placeButton,
+                          {
+                            borderColor:
+                              colors.primary,
+                            backgroundColor:
+                              pressed
+                                ? colors.background
+                                : "transparent",
+                          },
+                        ]}
+                      >
+                        <Ionicons
+                          name="map-outline"
+                          size={17}
+                          color={
+                            colors.primary
+                          }
+                        />
+
+                        <Text
+                          style={[
+                            styles.placeButtonText,
+                            {
+                              color:
+                                colors.primary,
+                            },
+                          ]}
+                        >
+                          Ver ubicación
+                        </Text>
+
+                        <Ionicons
+                          name="open-outline"
+                          size={16}
+                          color={
+                            colors.primary
+                          }
+                        />
+                      </Pressable>
+
+                      {/* FUENTE */}
+
+                      <View
+                        style={[
+                          styles.cardFooter,
+                          {
+                            borderTopColor:
+                              colors.border,
+                          },
+                        ]}
+                      >
+                        <Ionicons
+                          name="information-circle-outline"
+                          size={14}
+                          color={
+                            colors.textSecondary
+                          }
+                        />
+
+                        <Text
+                          style={[
+                            styles.footerText,
+                            {
+                              color:
+                                colors.textSecondary,
+                            },
+                          ]}
+                        >
+                          Información registrada en OpenStreetMap
+                        </Text>
+                      </View>
+                    </View>
+                  )
+                )}
+              </View>
             </View>
           </View>
-
-          {/* INFORMACIÓN */}
-
-          <View style={styles.infoContainer}>
-
-            {obtenerDireccion(lugar) !== "" && (
-              <View style={styles.infoRow}>
-                <View
-                  style={[
-                    styles.infoIcon,
-                    {
-                      backgroundColor: colors.background,
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name="home-outline"
-                    size={16}
-                    color={colors.primary}
-                  />
-                </View>
-
-                <View style={styles.infoContent}>
-                  <Text
-                    style={[
-                      styles.infoLabel,
-                      {
-                        color: colors.textSecondary,
-                      },
-                    ]}
-                  >
-                    Dirección
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.infoValue,
-                      {
-                        color: colors.text,
-                      },
-                    ]}
-                  >
-                    {obtenerDireccion(lugar)}
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            {lugar.tags?.opening_hours && (
-              <View style={styles.infoRow}>
-                <View
-                  style={[
-                    styles.infoIcon,
-                    {
-                      backgroundColor: colors.background,
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name="time-outline"
-                    size={16}
-                    color={colors.primary}
-                  />
-                </View>
-
-                <View style={styles.infoContent}>
-                  <Text
-                    style={[
-                      styles.infoLabel,
-                      {
-                        color: colors.textSecondary,
-                      },
-                    ]}
-                  >
-                    Horario
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.infoValue,
-                      {
-                        color: colors.text,
-                      },
-                    ]}
-                  >
-                    {formatearHorario(
-                      lugar.tags.opening_hours
-                    )}
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            {lugar.tags?.speciality && (
-              <View style={styles.infoRow}>
-                <View
-                  style={[
-                    styles.infoIcon,
-                    {
-                      backgroundColor: colors.background,
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name="medkit-outline"
-                    size={16}
-                    color={colors.primary}
-                  />
-                </View>
-
-                <View style={styles.infoContent}>
-                  <Text
-                    style={[
-                      styles.infoLabel,
-                      {
-                        color: colors.textSecondary,
-                      },
-                    ]}
-                  >
-                    Especialidad
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.infoValue,
-                      {
-                        color: colors.text,
-                      },
-                    ]}
-                  >
-                    {formatearEspecialidad(
-                      lugar.tags.speciality
-                    )}
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            {lugar.tags?.phone && (
-              <View style={styles.infoRow}>
-                <View
-                  style={[
-                    styles.infoIcon,
-                    {
-                      backgroundColor: colors.background,
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name="call-outline"
-                    size={16}
-                    color={colors.primary}
-                  />
-                </View>
-
-                <View style={styles.infoContent}>
-                  <Text
-                    style={[
-                      styles.infoLabel,
-                      {
-                        color: colors.textSecondary,
-                      },
-                    ]}
-                  >
-                    Teléfono
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.infoValue,
-                      {
-                        color: colors.text,
-                      },
-                    ]}
-                  >
-                    {lugar.tags.phone}
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            {lugar.tags?.website && (
-              <View style={styles.infoRow}>
-                <View
-                  style={[
-                    styles.infoIcon,
-                    {
-                      backgroundColor: colors.background,
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name="globe-outline"
-                    size={16}
-                    color={colors.primary}
-                  />
-                </View>
-
-                <View style={styles.infoContent}>
-                  <Text
-                    style={[
-                      styles.infoLabel,
-                      {
-                        color: colors.textSecondary,
-                      },
-                    ]}
-                  >
-                    Sitio web
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.infoValue,
-                      {
-                        color: colors.text,
-                      },
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {lugar.tags.website}
-                  </Text>
-                </View>
-              </View>
-            )}
-
-          </View>
-
-          {/* BOTÓN */}
-
-          <Pressable
-            onPress={() => abrirLugar(lugar)}
-            style={({ pressed }) => [
-              styles.placeButton,
-              {
-                borderColor: colors.primary,
-                backgroundColor: pressed
-                  ? colors.background
-                  : "transparent",
-              },
-            ]}
-          >
-            <Ionicons
-              name="map-outline"
-              size={17}
-              color={colors.primary}
-            />
-
-            <Text
-              style={[
-                styles.placeButtonText,
-                {
-                  color: colors.primary,
-                },
-              ]}
-            >
-              Ver ubicación
-            </Text>
-
-            <Ionicons
-              name="open-outline"
-              size={16}
-              color={colors.primary}
-            />
-          </Pressable>
-
-          {/* FUENTE */}
-
-          <View
-            style={[
-              styles.cardFooter,
-              {
-                borderTopColor: colors.border,
-              },
-            ]}
-          >
-            <Ionicons
-              name="information-circle-outline"
-              size={14}
-              color={colors.textSecondary}
-            />
-
-            <Text
-              style={[
-                styles.footerText,
-                {
-                  color: colors.textSecondary,
-                },
-              ]}
-            >
-              Información registrada en OpenStreetMap
-            </Text>
-          </View>
-        </View>
-      ))}
-    </View>
-
-  </View>
-
-</View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -1387,18 +1701,43 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     justifyContent: "space-between",
     marginBottom: 22,
+    gap: 18,
+  },
+
+  headerMain: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    minWidth: 0,
+  },
+
+  headerIconContainer: {
+    width: 58,
+    height: 58,
+    borderRadius: 17,
+    borderWidth: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 13,
   },
 
   headerTextContainer: {
     flex: 1,
     paddingRight: 15,
+    minWidth: 0,
+  },
+
+  eyebrowContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginBottom: 5,
   },
 
   eyebrow: {
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 1.3,
-    marginBottom: 5,
   },
 
   header: {
@@ -1466,6 +1805,29 @@ const styles = StyleSheet.create({
   },
 
   /* ==========================================================
+     DASHBOARD
+
+     CAMBIO PRINCIPAL:
+
+     Antes:
+       ubicación | resultados
+
+     Ahora:
+       ubicación
+       ↓
+       resultados
+       ↓
+       tarjetas
+
+     Esto hace que la vista sea mucho más natural para una
+     pantalla dedicada al mapa.
+  ========================================================== */
+
+  dashboard: {
+    width: "100%",
+  },
+
+  /* ==========================================================
      UBICACIÓN
   ========================================================== */
 
@@ -1504,6 +1866,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
+  locationTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+
   locationTitle: {
     fontSize: 16,
     fontWeight: "800",
@@ -1530,11 +1898,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
+  coordinateLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginBottom: 3,
+  },
+
   coordinateLabel: {
     fontSize: 9,
     fontWeight: "800",
     letterSpacing: 0.8,
-    marginBottom: 3,
   },
 
   coordinateValue: {
@@ -1563,16 +1937,45 @@ const styles = StyleSheet.create({
      RESULTADOS
   ========================================================== */
 
+  resultsSection: {
+    width: "100%",
+  },
+
   resultsHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 14,
+    gap: 15,
+  },
+
+  resultsHeaderMain: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    minWidth: 0,
+  },
+
+  resultsHeaderIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 13,
+    borderWidth: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
   },
 
   resultsHeaderText: {
     flex: 1,
     paddingRight: 12,
+    minWidth: 0,
+  },
+
+  resultsTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
   },
 
   resultsTitle: {
@@ -1587,7 +1990,7 @@ const styles = StyleSheet.create({
   },
 
   resultsCount: {
-    minWidth: 72,
+    minWidth: 82,
     paddingHorizontal: 9,
     paddingVertical: 7,
     borderRadius: 12,
@@ -1597,6 +2000,7 @@ const styles = StyleSheet.create({
   },
 
   resultsCountNumber: {
+    marginTop: 2,
     fontSize: 17,
     fontWeight: "800",
   },
@@ -1607,59 +2011,57 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  resultsList: {
+  /* ==========================================================
+     DISTRIBUCIÓN DE TARJETAS
+
+     IMPORTANTE:
+
+     Aquí no cambiamos el diseño interno de la tarjeta.
+
+     Solamente modificamos cómo se posicionan dentro de la
+     pantalla.
+
+     Con el ancho disponible:
+     - pueden entrar varias tarjetas por fila;
+     - se ajustan automáticamente;
+     - todas permanecen debajo de la sección de ubicación.
+  ========================================================== */
+
+  resultsGrid: {
     width: "100%",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "flex-start",
+    gap: 12,
   },
-
-  dashboardGrid: {
-  flexDirection: "row",
-  flexWrap: "wrap",
-  alignItems: "flex-start",
-  gap: 16,
-},
-
-leftColumn: {
-  flexGrow: 1,
-  flexBasis: 330,
-  minWidth: 300,
-},
-
-rightColumn: {
-  flexGrow: 2,
-  flexBasis: 600,
-  minWidth: 500,
-},
-
-resultsGrid: {
-  flexDirection: "row",
-  flexWrap: "wrap",
-  gap: 12,
-},
 
   /* ==========================================================
      TARJETA
+
+     SE CONSERVA EL DISEÑO ORIGINAL.
+     SOLO SE UTILIZA DENTRO DE resultsGrid.
   ========================================================== */
 
   card: {
-  flexGrow: 1,
-  flexBasis: 300,
-  minWidth: 280,
+    flexGrow: 1,
+    flexBasis: 300,
+    minWidth: 280,
 
-  padding: 15,
-  borderRadius: 18,
-  marginBottom: 12,
-  borderWidth: 1,
+    padding: 15,
+    borderRadius: 18,
+    marginBottom: 12,
+    borderWidth: 1,
 
-  shadowColor: "#000",
-  shadowOpacity: 0.05,
-  shadowRadius: 7,
-  shadowOffset: {
-    width: 0,
-    height: 3,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 7,
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+
+    elevation: 2,
   },
-
-  elevation: 2,
-},
 
   cardHeader: {
     flexDirection: "row",
@@ -1800,6 +2202,7 @@ resultsGrid: {
     borderRadius: 19,
     borderWidth: 1,
     alignItems: "center",
+    marginBottom: 12,
   },
 
   emptyIcon: {

@@ -1,10 +1,10 @@
 import { useRouter } from "expo-router";
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
@@ -162,7 +162,7 @@ export default function AdminPanel() {
           description="Administrar noticias de Recomedi"
           colors={colors}
           onPress={() =>
-            console.log("Noticias")
+            router.push("/admin/noticias")
           }
         />
 
@@ -176,18 +176,7 @@ export default function AdminPanel() {
           }
         />
 
-        <AdminOption
-          icon="medical"
-          title="Centros médicos"
-          description="Gestionar información de centros"
-          colors={colors}
-          onPress={() =>
-            console.log(
-              "Centros médicos"
-            )
-          }
-        />
-
+        
         <AdminOption
           icon="flag"
           title="Reportes"
@@ -198,15 +187,6 @@ export default function AdminPanel() {
           }
         />
 
-        <AdminOption
-          icon="stats-chart"
-          title="Estadísticas"
-          description="Consultar estadísticas de la aplicación"
-          colors={colors}
-          onPress={() =>
-            console.log("Estadísticas")
-          }
-        />
 
         <TouchableOpacity
           onPress={cerrarSesion}
