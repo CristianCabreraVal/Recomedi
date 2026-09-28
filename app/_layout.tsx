@@ -1,6 +1,5 @@
-import {Stack,useRouter,useSegments,} from "expo-router";
+import { Stack, useRouter, useSegments, } from "expo-router";
 import { useEffect, useState } from "react";
-import {ActivityIndicator,View,} from "react-native";
 
 import {
   onAuthStateChanged,

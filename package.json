@@ -8,7 +8,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "noticias:recolectar": "node scripts/recolectarNoticias.mjs"
   },
   "dependencies": {
     "@expo/metro-runtime": "~57.0.16",
@@ -23,10 +24,10 @@
     "expo-font": "~57.0.4",
     "expo-haptics": "~57.0.3",
     "expo-image": "~57.0.5",
-    "expo-linking": "~57.0.10",
-    "expo-location": "~57.0.19",
-    "expo-notifications": "~57.0.20",
-    "expo-router": "~57.0.22",
+    "expo-linking": "~57.0.11",
+    "expo-location": "~57.0.20",
+    "expo-notifications": "~57.0.21",
+    "expo-router": "~57.0.23",
     "expo-splash-screen": "~57.0.9",
     "expo-status-bar": "~57.0.1",
     "expo-symbols": "~57.0.3",
@@ -46,7 +47,8 @@
     "react-native-vector-icons": "^10.3.0",
     "react-native-web": "^0.21.2",
     "react-native-webview": "13.16.1",
-    "react-native-worklets": "0.10.1"
+    "react-native-worklets": "0.10.1",
+    "rss-parser": "^3.13.0"
   },
   "devDependencies": {
     "@types/react": "~19.2.4",
