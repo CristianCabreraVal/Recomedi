@@ -1,13 +1,54 @@
 import { useFocusEffect, useRouter, } from "expo-router";
 import { useCallback, useState, } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View, } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View, } from "react-native";
 
 import { doc, getDoc, } from "firebase/firestore";
 import { useTheme } from "../../hooks/useTheme";
 import { useUserRole } from "../../hooks/useUserRole";
 import { auth, db, } from "../../services/firebase";
 
+import {
+  probarNotificacion,
+} from "../../services/notificationService.android";
+
+import {
+  registrarTokenFCMEnFirestore,
+} from "../../services/notificationTokenService";
+
 export default function Perfil() {
+
+  const registrarDispositivoFCM = async () => {
+  try {
+    const token =
+      await registrarTokenFCMEnFirestore();
+
+    if (!token) {
+      Alert.alert(
+        "Error",
+        "No se pudo registrar el dispositivo para recibir notificaciones."
+      );
+
+      return;
+    }
+
+    Alert.alert(
+      "Notificaciones activadas",
+      "Este dispositivo quedó registrado correctamente para recibir notificaciones."
+    );
+  } catch (error) {
+    console.error(
+      "Error registrando dispositivo:",
+      error
+    );
+
+    Alert.alert(
+      "Error",
+      "No se pudo registrar el dispositivo."
+    );
+  }
+};
+
+
   const { colors } = useTheme();
 
   const { width } = useWindowDimensions();
@@ -694,6 +735,50 @@ return (
           ✎  Editar Perfil
         </Text>
       </TouchableOpacity>
+
+      <Pressable
+  onPress={registrarDispositivoFCM}
+  style={{
+    backgroundColor: "#2563EB",
+    padding: 15,
+    borderRadius: 12,
+    marginTop: 15,
+    alignItems: "center",
+  }}
+>
+  <Text
+    style={{
+      color: "#FFFFFF",
+      fontSize: 16,
+      fontWeight: "bold",
+    }}
+  >
+    📱 Registrar dispositivo para notificaciones
+  </Text>
+</Pressable>
+
+      <Pressable
+  onPress={async () => {
+    await probarNotificacion();
+  }}
+  style={{
+    backgroundColor: "#4CAF50",
+    padding: 15,
+    borderRadius: 12,
+    marginTop: 15,
+    alignItems: "center",
+  }}
+>
+  <Text
+    style={{
+      color: "#FFFFFF",
+      fontSize: 16,
+      fontWeight: "bold",
+    }}
+  >
+    🔔 Probar notificación
+  </Text>
+</Pressable>
 
     </ScrollView>
   </View>
