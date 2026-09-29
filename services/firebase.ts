@@ -1,8 +1,10 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
 import type { Auth } from "firebase/auth";
-import {getAuth,initializeAuth,inMemoryPersistence,} from "firebase/auth";
+import { getAuth, initializeAuth, inMemoryPersistence, } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { Platform } from "react-native";
+
+
 
 const firebaseConfig = {
   apiKey: "AIzaSyC7jxu5mV-VbIKzj9CeZFCw54dI_LK_IVE",
@@ -50,3 +52,4 @@ if (Platform.OS === "web") {
 const db = getFirestore(app);
 
 export { app, auth, db };
+

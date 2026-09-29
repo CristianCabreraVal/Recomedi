@@ -1,16 +1,55 @@
 import { useFocusEffect, useRouter, } from "expo-router";
 import { useCallback, useState, } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View, } from "react-native";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
 
 import { doc, getDoc, } from "firebase/firestore";
 import { useTheme } from "../../hooks/useTheme";
 import { useUserRole } from "../../hooks/useUserRole";
-import {auth,db,} from "../../services/firebase";
+import { auth, db, } from "../../services/firebase";
+
 import BotonReportar from "../../components/BotonReportar";
+
+
 import {
-  MOTIVOS_GENERALES,
-} from "../../services/reportesService";
+  registrarTokenFCMEnFirestore,
+} from "../../services/notificationTokenService";
+
+import { MOTIVOS_GENERALES } from "@/services/reportesService";
+
 export default function Perfil() {
+
+  const registrarDispositivoFCM = async () => {
+  try {
+    const token =
+      await registrarTokenFCMEnFirestore();
+
+    if (!token) {
+      Alert.alert(
+        "Error",
+        "No se pudo registrar el dispositivo para recibir notificaciones."
+      );
+
+      return;
+    }
+
+    Alert.alert(
+      "Notificaciones activadas",
+      "Este dispositivo quedó registrado correctamente para recibir notificaciones."
+    );
+  } catch (error) {
+    console.error(
+      "Error registrando dispositivo:",
+      error
+    );
+
+    Alert.alert(
+      "Error",
+      "No se pudo registrar el dispositivo."
+    );
+  }
+};
+
+
   const { colors } = useTheme();
 
   const { width } = useWindowDimensions();
@@ -704,6 +743,8 @@ return (
         textoBoton="Reportar un problema"
         descripcionBoton="Reporta un problema con tus datos o estadísticas"
       />
+
+    
 
     </ScrollView>
   </View>

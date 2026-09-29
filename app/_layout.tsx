@@ -36,6 +36,8 @@ import {
   ThemeProvider,
 } from "../hooks/useTheme";
 
+import { iniciarEscuchaNotificaciones } from "../services/notificationService";
+
 /*
  * Mantiene visible el Splash Screen mientras
  * Firebase determina el estado de autenticación.
@@ -53,21 +55,207 @@ export default function RootLayout() {
   const segments =
     useSegments();
 
+  /* ============================================================
+     ESCUCHA DE NOTIFICACIONES
+  ============================================================ */
+
+  useEffect(() => {
+    let limpiarListener:
+      | (() => void)
+      | undefined;
+
+    const iniciar = async () => {
+      limpiarListener =
+        await iniciarEscuchaNotificaciones(
+          (tipo, data) => {
+            console.log(
+              "================================="
+            );
+
+            console.log(
+              "Navegación de notificación"
+            );
+
+            console.log(
+              "Tipo:",
+              tipo
+            );
+
+            console.log(
+              "Datos:",
+              data
+            );
+
+            console.log(
+              "================================="
+            );
+
+            /*
+             * IMPORTANTE:
+             *
+             * Si no hay sesión, NO navegamos.
+             *
+             * notificationService.ts ya guardó
+             * la notificación como pendiente.
+             *
+             * Después del login, login.tsx se encargará
+             * de consumirla y llevar al usuario a la
+             * sección correspondiente.
+             */
+            if (!auth.currentUser) {
+              console.log(
+                "No hay sesión. Se esperará al login."
+              );
+
+              return;
+            }
+
+            /* ==================================================
+               NOTICIA
+            ================================================== */
+
+            if (
+              tipo === "noticia"
+            ) {
+              console.log(
+                "Abriendo sección de noticias."
+              );
+
+              router.push(
+                "/(tabs)/noticias"
+              );
+
+              return;
+            }
+
+            /* ==================================================
+               ALERTA
+               
+               La pantalla existente para las alertas
+               está en epidemia.tsx
+            ================================================== */
+
+            if (
+              tipo === "alerta"
+            ) {
+              console.log(
+                "Abriendo sección de alertas."
+              );
+
+              router.push(
+                "/(tabs)/epidemia"
+              );
+
+              return;
+            }
+
+            /* ==================================================
+               ACTIVIDAD
+            ================================================== */
+
+            if (
+              tipo === "actividad"
+            ) {
+              console.log(
+                "Abriendo sección de actividad."
+              );
+
+              router.push(
+                "/(tabs)/actividad"
+              );
+
+              return;
+            }
+
+            /* ==================================================
+               HIDRATACIÓN
+            ================================================== */
+
+            if (
+              tipo === "hidratacion"
+            ) {
+              console.log(
+                "Recordatorio de hidratación recibido."
+              );
+
+              router.push(
+                "/(tabs)"
+              );
+
+              return;
+            }
+
+            /* ==================================================
+               CUIDADO PERSONAL
+            ================================================== */
+
+            if (
+              tipo === "cuidado"
+            ) {
+              console.log(
+                "Recordatorio de cuidado personal recibido."
+              );
+
+              router.push(
+                "/(tabs)"
+              );
+
+              return;
+            }
+
+            /* ==================================================
+               CHEQUEO
+            ================================================== */
+
+            if (
+              tipo === "chequeo"
+            ) {
+              console.log(
+                "Recordatorio de chequeo recibido."
+              );
+
+              router.push(
+                "/(tabs)"
+              );
+
+              return;
+            }
+
+            /* ==================================================
+               TIPO DESCONOCIDO
+            ================================================== */
+
+            console.log(
+              "Tipo de notificación desconocido."
+            );
+
+            router.push(
+              "/(tabs)"
+            );
+          }
+        );
+    };
+
+    void iniciar();
+
+    return () => {
+      if (limpiarListener) {
+        limpiarListener();
+      }
+    };
+  }, [router]);
+
   /*
    * Usuario actualmente autenticado.
    */
   const [usuario, setUsuario] =
-    useState(
-      auth.currentUser
-    );
+    useState(auth.currentUser);
 
   /*
    * Rol obtenido desde Firestore.
    */
   const [rol, setRol] =
-    useState<Rol>(
-      "usuario"
-    );
+    useState<Rol>("usuario");
 
   /*
    * Indica si el correo necesita verificación.
@@ -85,7 +273,8 @@ export default function RootLayout() {
     useState(true);
 
   /*
-   * Indica que ya se determinó la ruta correcta.
+   * Indica que ya se realizó la redirección
+   * correspondiente.
    */
   const [rutaLista, setRutaLista] =
     useState(false);
@@ -101,23 +290,20 @@ export default function RootLayout() {
         async (user) => {
           /*
            * Cada vez que cambia la autenticación,
-           * volvemos a bloquear las redirecciones
-           * hasta terminar de comprobar el usuario.
+           * volvemos a bloquear las redirecciones.
            */
           setCargando(true);
           setRutaLista(false);
 
           setUsuario(user);
 
-          /* ==================================================
+          /* ====================================================
              NO HAY USUARIO
-          ================================================== */
+          ==================================================== */
 
           if (!user) {
             setRol("usuario");
-            setEmailNoVerificado(
-              false
-            );
+            setEmailNoVerificado(false);
 
             setCargando(false);
 
@@ -126,21 +312,17 @@ export default function RootLayout() {
 
           try {
             /*
-             * Actualizar datos de Firebase Auth.
+             * Actualizamos los datos del usuario
+             * desde Firebase.
              */
             await reload(user);
 
-            /* ================================================
+            /* ==================================================
                CORREO NO VERIFICADO
-            ================================================ */
+            ================================================== */
 
-            if (
-              !user.emailVerified
-            ) {
-              setEmailNoVerificado(
-                true
-              );
-
+            if (!user.emailVerified) {
+              setEmailNoVerificado(true);
               setRol("usuario");
 
               setCargando(false);
@@ -148,17 +330,15 @@ export default function RootLayout() {
               return;
             }
 
-            /* ================================================
+            /* ==================================================
                CORREO VERIFICADO
-            ================================================ */
+            ================================================== */
 
-            setEmailNoVerificado(
-              false
-            );
+            setEmailNoVerificado(false);
 
-            /* ================================================
+            /* ==================================================
                OBTENER ROL DESDE FIRESTORE
-            ================================================ */
+            ================================================== */
 
             const rolFirestore =
               await obtenerRolUsuario(
@@ -174,22 +354,16 @@ export default function RootLayout() {
              * Solo aceptamos roles conocidos.
              */
             if (
-              rolFirestore ===
-                "admin" ||
-              rolFirestore ===
-                "moderador" ||
-              rolFirestore ===
-                "usuario"
+              rolFirestore === "admin" ||
+              rolFirestore === "moderador" ||
+              rolFirestore === "usuario"
             ) {
               setRol(
                 rolFirestore
               );
             } else {
-              setRol(
-                "usuario"
-              );
+              setRol("usuario");
             }
-
           } catch (error) {
             console.error(
               "Error obteniendo datos del usuario:",
@@ -197,21 +371,14 @@ export default function RootLayout() {
             );
 
             /*
-             * En caso de error no damos
-             * privilegios administrativos.
+             * En caso de error nunca otorgamos
+             * permisos administrativos.
              */
-            setRol(
-              "usuario"
-            );
+            setRol("usuario");
 
-            setEmailNoVerificado(
-              false
-            );
-
+            setEmailNoVerificado(false);
           } finally {
-            setCargando(
-              false
-            );
+            setCargando(false);
           }
         }
       );
@@ -233,9 +400,7 @@ export default function RootLayout() {
     }
 
     /*
-     * ========================================================
-       RUTAS ACTUALES
-    ========================================================
+     * Determinamos la sección actual.
      */
 
     const enAuth =
@@ -268,12 +433,7 @@ export default function RootLayout() {
         return;
       }
 
-      /*
-       * Ya estamos dentro de auth.
-       */
-      setRutaLista(
-        true
-      );
+      setRutaLista(true);
 
       return;
     }
@@ -286,8 +446,8 @@ export default function RootLayout() {
       emailNoVerificado
     ) {
       /*
-       * Todo usuario con correo no verificado
-       * debe estar en verificar.
+       * Todo usuario no verificado permanece
+       * en la pantalla de verificación.
        */
       if (!enVerificar) {
         router.replace(
@@ -297,9 +457,7 @@ export default function RootLayout() {
         return;
       }
 
-      setRutaLista(
-        true
-      );
+      setRutaLista(true);
 
       return;
     }
@@ -312,9 +470,7 @@ export default function RootLayout() {
       /*
        * ADMIN
        */
-      if (
-        rol === "admin"
-      ) {
+      if (rol === "admin") {
         router.replace(
           "/admin"
         );
@@ -325,9 +481,7 @@ export default function RootLayout() {
       /*
        * MODERADOR
        */
-      if (
-        rol === "moderador"
-      ) {
+      if (rol === "moderador") {
         router.replace(
           "/moderador"
         );
@@ -354,11 +508,30 @@ export default function RootLayout() {
       !enAdmin
     ) {
       /*
-       * El admin debe permanecer
-       * dentro de /admin.
+       * El admin debe permanecer dentro
+       * de su área administrativa.
        */
       router.replace(
         "/admin"
+      );
+
+      return;
+    }
+
+    /* ==========================================================
+       MODERADOR
+    ========================================================== */
+
+    if (
+      rol === "moderador" &&
+      !enModerador
+    ) {
+      /*
+       * El moderador debe permanecer dentro
+       * de su área de moderación.
+       */
+      router.replace(
+        "/moderador"
       );
 
       return;
@@ -402,17 +575,17 @@ export default function RootLayout() {
       return;
     }
 
-    /* ========================================================
+    /* ==========================================================
        NO MODERADOR EN /moderador
-    ======================================================== */
+    ========================================================== */
 
     if (
       enModerador &&
       rol !== "moderador"
     ) {
       /*
-       * Usuario o admin
-       * no pueden entrar a /moderador.
+       * Usuario o admin no pueden acceder
+       * al panel de moderación.
        */
       router.replace(
         "/"
@@ -422,13 +595,10 @@ export default function RootLayout() {
     }
 
     /* ========================================================
-       RUTA CORRECTA
+       NO MODERADOR EN /moderador
     ======================================================== */
 
-    setRutaLista(
-      true
-    );
-
+    setRutaLista(true);
   }, [
     usuario,
     rol,
@@ -453,9 +623,8 @@ export default function RootLayout() {
       !cargando &&
       rutaLista
     ) {
-      SplashScreen.hideAsync().catch(
-        () => {}
-      );
+      SplashScreen.hideAsync()
+        .catch(() => {});
     }
   }, [
     cargando,
@@ -476,9 +645,7 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <View
-        style={
-          styles.container
-        }
+        style={styles.container}
       >
         <Stack
           screenOptions={{
@@ -489,14 +656,10 @@ export default function RootLayout() {
 
         {mostrarCarga && (
           <View
-            style={
-              styles.loadingOverlay
-            }
+            style={styles.loadingOverlay}
           >
             <View
-              style={
-                styles.loadingContent
-              }
+              style={styles.loadingContent}
             >
               <Image
                 source={require(
@@ -517,17 +680,13 @@ export default function RootLayout() {
               />
 
               <Text
-                style={
-                  styles.loadingTitle
-                }
+                style={styles.loadingTitle}
               >
                 Cargando...
               </Text>
 
               <Text
-                style={
-                  styles.loadingSubtitle
-                }
+                style={styles.loadingSubtitle}
               >
                 Preparando tu espacio
               </Text>
@@ -557,12 +716,10 @@ const styles =
 
       justifyContent:
         "center",
-
       alignItems:
         "center",
 
       zIndex: 9999,
-
       elevation: 9999,
     },
 
@@ -571,7 +728,6 @@ const styles =
 
       alignItems:
         "center",
-
       justifyContent:
         "center",
 
@@ -591,12 +747,9 @@ const styles =
 
     loadingTitle: {
       fontSize: 20,
+      fontWeight: "800",
 
-      fontWeight:
-        "800",
-
-      color:
-        "#2563EB",
+      color: "#2563EB",
 
       marginBottom: 5,
     },
@@ -604,10 +757,8 @@ const styles =
     loadingSubtitle: {
       fontSize: 14,
 
-      color:
-        "#64748B",
+      color: "#64748B",
 
-      textAlign:
-        "center",
+      textAlign: "center",
     },
   });

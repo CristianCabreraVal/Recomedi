@@ -16,19 +16,17 @@
 
    MEJORAS:
 
-   - Utiliza varias instancias de Overpass.
-   - Si una instancia está saturada, prueba otra.
+   - Usa varias instancias de Overpass.
+   - Usa una instancia alternativa primero.
+   - Si una instancia falla, prueba la siguiente.
    - Comprueba que la respuesta realmente sea JSON.
-   - Tiene timeout del lado de la aplicación.
-   - Evita que un error temporal de Overpass rompa
-     inmediatamente la búsqueda.
+   - Tiene timeout real de 15 segundos.
+   - Evita que Android quede cargando indefinidamente.
 ============================================================ */
 
 
 /* ============================================================
    TIPO CENTRO MÉDICO
-
-   Define la estructura que reciben mapa.tsx y mapa.web.tsx.
 ============================================================ */
 
 export type CentroMedico = {
@@ -60,57 +58,49 @@ export type CentroMedico = {
 /* ============================================================
    INSTANCIAS DE OVERPASS
 
-   Se utilizan varias instancias para evitar depender de un
-   único servidor.
+   Private.coffee actualmente aparece como una instancia
+   pública global de Overpass.
 
-   IMPORTANTE:
-
-   maps.mail.ru no se utiliza aquí porque su servicio indica
-   que no dispone del encabezado CORS necesario para
-   aplicaciones web.
-
-   Estas instancias tienen cobertura global.
+   overpass-api.de queda como respaldo.
 ============================================================ */
 
 const OVERPASS_URLS = [
-  "https://overpass-api.de/api/interpreter",
-
   "https://overpass.private.coffee/api/interpreter",
+
+  "https://overpass-api.de/api/interpreter",
 ];
 
 
 /* ============================================================
    CONFIGURACIÓN
-
-   RADIO:
-   5000 metros = 5 kilómetros.
-
-   TIMEOUT:
-   Tiempo máximo que nuestra aplicación esperará a una
-   instancia antes de pasar a la siguiente.
-
-   No aumentamos innecesariamente el timeout de Overpass.
-   Overpass utiliza el timeout también para decidir si
-   acepta una consulta. Un valor demasiado alto puede hacer
-   que una consulta sea rechazada antes de ejecutarse.
 ============================================================ */
 
 const RADIO_BUSQUEDA =
   5000;
 
+
+/*
+ * Tiempo máximo que esperamos una respuesta HTTP.
+ *
+ * 15 segundos es suficiente para una consulta local
+ * relativamente pequeña y evita dejar Android esperando
+ * indefinidamente.
+ */
 const TIMEOUT_CLIENTE =
-  3000000000000;
+  15000;
+
+
+/*
+ * Timeout solicitado a Overpass.
+ *
+ * Debe ser coherente con el timeout del cliente.
+ */
+const TIMEOUT_OVERPASS =
+  15;
 
 
 /* ============================================================
    BUSCAR CENTROS MÉDICOS
-
-   Recibe:
-   - lat: latitud del usuario.
-   - lon: longitud del usuario.
-
-   Devuelve:
-   - Una lista de hasta 20 centros médicos cercanos.
 ============================================================ */
 
 export async function buscarCentrosMedicos(
@@ -120,8 +110,6 @@ export async function buscarCentrosMedicos(
 
   /* ----------------------------------------------------------
      VALIDAR COORDENADAS
-
-     Evita enviar consultas inválidas a Overpass.
   ---------------------------------------------------------- */
 
   if (
@@ -137,20 +125,27 @@ export async function buscarCentrosMedicos(
   /* ----------------------------------------------------------
      CONSULTA OVERPASS
 
-     Buscamos establecimientos médicos dentro de 5 km.
+     Buscamos:
 
-     "nwr" permite consultar:
-     - nodes
-     - ways
-     - relations
+     amenity:
+     - hospital
+     - clinic
+     - doctors
+     - health_post
 
-     "out center tags" solicita:
-     - etiquetas
-     - centro geométrico para ways y relations
+     healthcare:
+     - hospital
+     - clinic
+     - doctor
+     - centre
+     - health_post
+
+     Radio:
+     5 km.
   ---------------------------------------------------------- */
 
   const consulta = `
-[out:json][timeout:25];
+[out:json][timeout:${TIMEOUT_OVERPASS}];
 
 (
   nwr[
@@ -166,14 +161,12 @@ out center tags;
 `;
 
 
-  /* ========================================================
+  /* ==========================================================
      INTENTAR DIFERENTES INSTANCIAS
 
-     Se prueban de forma SECUENCIAL.
-
-     No se hacen las peticiones simultáneamente para evitar
-     generar varias consultas al mismo tiempo desde la misma IP.
-  ======================================================== */
+     Se hacen de forma secuencial para evitar consultas
+     simultáneas.
+  ========================================================== */
 
   let ultimoError: unknown =
     null;
@@ -193,8 +186,6 @@ out center tags;
 
       /* ======================================================
          ABORT CONTROLLER
-
-         Permite cancelar la petición si tarda demasiado.
       ====================================================== */
 
       const controller =
@@ -231,11 +222,18 @@ out center tags;
 
                 "Accept":
                   "application/json",
+
+                /*
+                 * Identifica la aplicación que realiza
+                 * la consulta.
+                 */
+                "User-Agent":
+                  "Recomedi/1.0 (aplicacion de salud)",
               },
 
               /*
-               * Overpass espera la consulta dentro del
-               * parámetro "data".
+               * Overpass espera la consulta dentro
+               * del parámetro data.
                */
               body:
                 "data=" +
@@ -257,12 +255,10 @@ out center tags;
 
 
       /* ======================================================
-         LEER RESPUESTA
+         LEER RESPUESTA COMO TEXTO
 
-         La leemos como texto primero.
-
-         Esto es importante porque Overpass puede devolver
-         HTML/XML cuando ocurre un error.
+         Esto permite detectar HTML de error como el 406
+         que estás viendo actualmente.
       ====================================================== */
 
       const contenido =
@@ -271,9 +267,6 @@ out center tags;
 
       /* ======================================================
          COMPROBAR ESTADO HTTP
-
-         Si es 504, 429, 400, 500, etc., probamos la
-         siguiente instancia.
       ====================================================== */
 
       if (!respuesta.ok) {
@@ -284,15 +277,11 @@ out center tags;
         );
 
 
-        /*
-         * Mostramos solamente una parte del contenido para
-         * no llenar completamente la consola.
-         */
         console.warn(
           "Respuesta de Overpass:",
           contenido.slice(
             0,
-            1000
+            500
           )
         );
 
@@ -303,6 +292,9 @@ out center tags;
           );
 
 
+        /*
+         * Probamos la siguiente instancia.
+         */
         continue;
       }
 
@@ -333,12 +325,7 @@ out center tags;
 
 
       /* ======================================================
-         DETECTAR ERRORES DE OVERPASS
-
-         Algunas respuestas de error pueden devolver HTTP
-         200 pero contener mensajes de error en el contenido.
-
-         Por eso también comprobamos el texto.
+         DETECTAR POSIBLES ERRORES DE OVERPASS
       ====================================================== */
 
       const contenidoMinusculas =
@@ -374,7 +361,7 @@ out center tags;
           "Respuesta:",
           contenido.slice(
             0,
-            1000
+            500
           )
         );
 
@@ -417,7 +404,7 @@ out center tags;
           "Contenido recibido:",
           contenido.slice(
             0,
-            1000
+            500
           )
         );
 
@@ -432,9 +419,6 @@ out center tags;
 
       /* ======================================================
          VALIDAR ESTRUCTURA
-
-         Si la respuesta no tiene elements, consideramos que
-         no existen resultados válidos.
       ====================================================== */
 
       if (
@@ -461,17 +445,17 @@ out center tags;
 
 
       /* ======================================================
-         SI LLEGAMOS AQUÍ:
-
-         La consulta fue correcta.
-
-         Continuamos normalmente con el procesamiento que ya
-         tenía Recomedi.
+         CONSULTA EXITOSA
       ====================================================== */
 
       console.log(
         "Consulta Overpass exitosa:",
         overpassUrl
+      );
+
+      console.log(
+        "Elementos recibidos:",
+        json.elements.length
       );
 
 
@@ -485,11 +469,6 @@ out center tags;
 
       /* ======================================================
          PROCESAR CADA ELEMENTO
-
-         Overpass puede devolver:
-         - node
-         - way
-         - relation
       ====================================================== */
 
       for (
@@ -497,7 +476,7 @@ out center tags;
       ) {
 
         /* ----------------------------------------------------
-           Las etiquetas pueden no existir.
+           ETIQUETAS
         ---------------------------------------------------- */
 
         const tags =
@@ -506,7 +485,7 @@ out center tags;
 
 
         /* ----------------------------------------------------
-           VARIABLES PARA LAS COORDENADAS
+           COORDENADAS
         ---------------------------------------------------- */
 
         let latitud:
@@ -517,11 +496,7 @@ out center tags;
 
 
         /* ====================================================
-           ELEMENTO TIPO NODE
-
-           Los nodes tienen directamente:
-           elemento.lat
-           elemento.lon
+           NODE
         ==================================================== */
 
         if (
@@ -538,10 +513,10 @@ out center tags;
 
 
         /* ====================================================
-           ELEMENTO TIPO WAY / RELATION
+           WAY / RELATION
 
-           Debido a "out center tags", Overpass entrega las
-           coordenadas centrales dentro de "elemento.center".
+           "out center tags" proporciona las coordenadas
+           centrales.
         ==================================================== */
 
         else if (
@@ -559,8 +534,7 @@ out center tags;
 
 
         /* ----------------------------------------------------
-           Si no conseguimos coordenadas, no podemos mostrar
-           el establecimiento en el mapa.
+           Sin coordenadas no podemos colocar el marcador.
         ---------------------------------------------------- */
 
         if (
@@ -585,36 +559,19 @@ out center tags;
 
 
         /* ====================================================
-           CREAR OBJETO DEL CENTRO MÉDICO
+           CREAR CENTRO MÉDICO
         ==================================================== */
 
         resultados.push({
 
-          /* --------------------------------------------------
-             ID ÚNICO
-          -------------------------------------------------- */
-
           id:
             `${elemento.type}-${elemento.id}`,
-
-          /* --------------------------------------------------
-             COORDENADAS
-          -------------------------------------------------- */
 
           lat:
             latitud,
 
           lon:
             longitud,
-
-          /* --------------------------------------------------
-             NOMBRE
-
-             Primero buscamos:
-             1. name
-             2. official_name
-             3. nombre generado por tipo
-          -------------------------------------------------- */
 
           display_name:
             tags.name ||
@@ -623,15 +580,7 @@ out center tags;
               tags
             ),
 
-          /* --------------------------------------------------
-             DISTANCIA
-          -------------------------------------------------- */
-
           distanciaKm,
-
-          /* --------------------------------------------------
-             INFORMACIÓN ADICIONAL
-          -------------------------------------------------- */
 
           tags: {
 
@@ -677,9 +626,6 @@ out center tags;
 
       /* ======================================================
          ELIMINAR DUPLICADOS
-
-         Un establecimiento puede aparecer tanto en amenity
-         como en healthcare.
       ====================================================== */
 
       const unicos =
@@ -696,9 +642,7 @@ out center tags;
 
 
       /* ======================================================
-         ORDENAR RESULTADOS
-
-         El establecimiento más cercano aparece primero.
+         ORDENAR POR DISTANCIA
       ====================================================== */
 
       unicos.sort(
@@ -709,9 +653,7 @@ out center tags;
 
 
       /* ======================================================
-         LIMITAR RESULTADOS
-
-         Devolvemos solamente los primeros 20.
+         DEVOLVER MÁXIMO 20
       ====================================================== */
 
       return unicos.slice(
@@ -724,11 +666,9 @@ out center tags;
     ) {
 
       /* ======================================================
-         ERROR DE UNA INSTANCIA
+         ERROR DE ESTA INSTANCIA
 
-         No detenemos inmediatamente todo el proceso.
-
-         Guardamos el error y probamos la siguiente instancia.
+         Guardamos el error y probamos otra instancia.
       ====================================================== */
 
       ultimoError =
@@ -775,12 +715,6 @@ out center tags;
 
 /* ============================================================
    CALCULAR DISTANCIA
-
-   Utiliza la fórmula de Haversine para calcular la distancia
-   aproximada entre dos coordenadas geográficas.
-
-   Resultado:
-   kilómetros.
 ============================================================ */
 
 function calcularDistanciaKm(
@@ -790,17 +724,9 @@ function calcularDistanciaKm(
   lon2: number
 ): number {
 
-  /* ----------------------------------------------------------
-     Radio aproximado de la Tierra en kilómetros.
-  ---------------------------------------------------------- */
-
   const radioTierra =
     6371;
 
-
-  /* ----------------------------------------------------------
-     Diferencias entre coordenadas convertidas a radianes.
-  ---------------------------------------------------------- */
 
   const diferenciaLat =
     gradosARadianes(
@@ -812,10 +738,6 @@ function calcularDistanciaKm(
       lon2 - lon1
     );
 
-
-  /* ----------------------------------------------------------
-     Parte principal de la fórmula de Haversine.
-  ---------------------------------------------------------- */
 
   const a =
     Math.sin(
@@ -857,8 +779,6 @@ function calcularDistanciaKm(
 
 /* ============================================================
    GRADOS → RADIANES
-
-   JavaScript utiliza radianes en las funciones trigonométricas.
 ============================================================ */
 
 function gradosARadianes(
@@ -873,12 +793,7 @@ function gradosARadianes(
 
 
 /* ============================================================
-   NOMBRE SEGÚN EL TIPO
-
-   Algunos establecimientos de OpenStreetMap no tienen un
-   nombre definido.
-
-   En ese caso generamos un nombre utilizando sus etiquetas.
+   OBTENER NOMBRE SEGÚN TIPO
 ============================================================ */
 
 function obtenerNombrePorTipo(

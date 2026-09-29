@@ -12,13 +12,133 @@ import {
 } from "firebase-admin/auth";
 
 import {
+  FieldValue,
   getFirestore,
 } from "firebase-admin/firestore";
+
+
 
 initializeApp();
 
 const auth = getAuth();
 const db = getFirestore();
+
+
+
+export const registrarTokenFCM = onCall(
+  async (request) => {
+
+    /* ========================================================
+       COMPROBAR AUTENTICACIÓN
+    ======================================================== */
+
+    if (!request.auth) {
+      throw new HttpsError(
+        "unauthenticated",
+        "Debes iniciar sesión para registrar el dispositivo."
+      );
+    }
+
+
+    /* ========================================================
+       DATOS RECIBIDOS
+    ======================================================== */
+
+    const data =
+      request.data as {
+        token?: unknown;
+        platform?: unknown;
+      };
+
+
+    /* ========================================================
+       VALIDAR TOKEN
+    ======================================================== */
+
+    if (
+      typeof data.token !== "string" ||
+      !data.token.trim()
+    ) {
+      throw new HttpsError(
+        "invalid-argument",
+        "El token FCM no es válido."
+      );
+    }
+
+
+    /* ========================================================
+       VALIDAR PLATAFORMA
+    ======================================================== */
+
+    if (
+      data.platform !== "android"
+    ) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Esta función solamente permite dispositivos Android."
+      );
+    }
+
+
+    /* ========================================================
+       UID DEL USUARIO
+    ======================================================== */
+
+    const uid =
+      request.auth.uid;
+
+    const token =
+      data.token.trim();
+
+
+    /* ========================================================
+       DOCUMENTO DEL TOKEN
+    ======================================================== */
+
+    const tokenId =
+      encodeURIComponent(token);
+
+    const referencia =
+      db
+        .collection("notificationTokens")
+        .doc(tokenId);
+
+
+    /* ========================================================
+       GUARDAR TOKEN
+    ======================================================== */
+
+    await referencia.set(
+      {
+        uid,
+
+        token,
+
+        platform: "android",
+
+        enabled: true,
+
+        updatedAt:
+          FieldValue.serverTimestamp(),
+
+        createdAt:
+          FieldValue.serverTimestamp(),
+      },
+      {
+        merge: true,
+      }
+    );
+
+
+    /* ========================================================
+       RESPUESTA
+    ======================================================== */
+
+    return {
+      ok: true,
+    };
+  }
+);
 
 /* ============================================================
    VERIFICAR ADMIN
