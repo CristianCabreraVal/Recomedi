@@ -172,9 +172,9 @@ export default function AdminPanel() {
           description="Gestionar alertas y epidemias"
           colors={colors}
           onPress={() =>
-            console.log("Alertas")
-          }
-        />
+    router.push("/admin/alertas")
+  }
+/>
 
         
         <AdminOption
@@ -183,7 +183,7 @@ export default function AdminPanel() {
           description="Revisar reportes enviados por usuarios"
           colors={colors}
           onPress={() =>
-            console.log("Reportes")
+            router.push("/admin/reportes")
           }
         />
 

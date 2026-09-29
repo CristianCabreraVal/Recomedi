@@ -1,21 +1,27 @@
-import { Stack, useRouter, useSegments, } from "expo-router";
+import {Stack,useRouter,useSegments,} from "expo-router";
 import { useEffect, useState } from "react";
+import {ActivityIndicator,View,} from "react-native";
 
 import {
   onAuthStateChanged,
   reload,
 } from "firebase/auth";
 
+import * as SplashScreen from "expo-splash-screen";
+
 import { auth } from "../services/firebase";
 import { obtenerRolUsuario } from "../services/rolService";
 
-import {
-  ActivityIndicator,
-  StyleSheet,
-  View,
-} from "react-native";
-
 import { ThemeProvider } from "../hooks/useTheme";
+
+/*
+ * Mantiene la pantalla inicial de Expo visible
+ * mientras Firebase determina si existe una sesión.
+ *
+ * Esto evita que al abrir la aplicación aparezca
+ * momentáneamente Perfil antes de saber quién inició sesión.
+ */
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 type Rol =
   | "usuario"
@@ -38,8 +44,14 @@ export default function RootLayout() {
   const [cargando, setCargando] =
     useState(true);
 
+  /*
+   * Indica que ya llegamos a la ruta correcta.
+   */
+  const [rutaLista, setRutaLista] =
+    useState(false);
+
   /* ============================================================
-     AUTENTICACIÓN + VERIFICACIÓN DE CORREO + ROL
+     AUTENTICACIÓN + VERIFICACIÓN + ROL
   ============================================================ */
 
   useEffect(() => {
@@ -47,24 +59,40 @@ export default function RootLayout() {
       auth,
       async (user) => {
         try {
+          /*
+       * ======================================================
+       * IMPORTANTE
+       *
+       * Cuando Firebase detecta un nuevo inicio de sesión,
+       * bloqueamos temporalmente las redirecciones.
+       *
+       * Así RootLayout no intenta mandar al usuario a "/"
+       * mientras todavía estamos consultando su rol.
+       * ======================================================
+       */
+      setCargando(true);
+      setRutaLista(false);
+
           setUsuario(user);
 
           /*
-           * No hay usuario autenticado
+           * ======================================================
+           * NO HAY USUARIO
+           * ======================================================
            */
           if (!user) {
             setRol("usuario");
             setEmailNoVerificado(false);
+
             setCargando(false);
+
             return;
           }
 
           /*
-           * Actualizar información de Firebase Authentication.
-           *
-           * Esto permite obtener el estado actual de
-           * emailVerified después de que el usuario haya
-           * verificado su correo.
+           * ======================================================
+           * ACTUALIZAR ESTADO DE FIREBASE AUTH
+           * ======================================================
            */
           await reload(user);
 
@@ -76,31 +104,42 @@ export default function RootLayout() {
           if (!user.emailVerified) {
             setEmailNoVerificado(true);
             setRol("usuario");
+
             setCargando(false);
+
             return;
           }
 
           /*
-           * El correo sí está verificado
+           * ======================================================
+           * CORREO VERIFICADO
+           * ======================================================
            */
           setEmailNoVerificado(false);
 
           /*
            * ======================================================
            * OBTENER ROL DESDE FIRESTORE
-           *
-           * usuarios/{uid}.rol
            * ======================================================
            */
           const rolFirestore =
-            await obtenerRolUsuario(user.uid);
+            await obtenerRolUsuario(
+              user.uid
+            );
+
+          console.log(
+            "ROL FIRESTORE:",
+            rolFirestore
+          );
 
           if (
             rolFirestore === "admin" ||
             rolFirestore === "moderador" ||
             rolFirestore === "usuario"
           ) {
-            setRol(rolFirestore);
+            setRol(
+              rolFirestore
+            );
           } else {
             setRol("usuario");
           }
@@ -110,6 +149,10 @@ export default function RootLayout() {
             error
           );
 
+          /*
+           * Ante cualquier error:
+           * no damos privilegios administrativos.
+           */
           setRol("usuario");
           setEmailNoVerificado(false);
         } finally {
@@ -130,10 +173,6 @@ export default function RootLayout() {
       return;
     }
 
-    /*
-     * Evitamos redirecciones cuando todavía
-     * no tenemos una ruta montada.
-     */
     if (!segments) {
       return;
     }
@@ -155,8 +194,17 @@ export default function RootLayout() {
      */
     if (!usuario) {
       if (!enAuth) {
-        router.replace("/auth/login");
+        router.replace(
+          "/auth/login"
+        );
+
+        return;
       }
+
+      /*
+       * Login ya es la ruta correcta.
+       */
+      setRutaLista(true);
 
       return;
     }
@@ -164,34 +212,36 @@ export default function RootLayout() {
     /*
      * ==========================================================
      * CORREO NO VERIFICADO
-     *
-     * Puede permanecer únicamente en:
-     *
-     * /auth/verificar
      * ==========================================================
      */
     if (emailNoVerificado) {
       if (!enVerificar) {
-        router.replace("/auth/verificar");
+        router.replace(
+          "/auth/verificar"
+        );
+
+        return;
       }
+
+      setRutaLista(true);
 
       return;
     }
 
     /*
      * ==========================================================
-     * USUARIO AUTENTICADO DENTRO DE /auth
+     * USUARIO AUTENTICADO EN /auth
      * ==========================================================
      */
     if (enAuth) {
-      /*
-       * Si ya está verificado y entra a /auth,
-       * enviamos al lugar correspondiente.
-       */
       if (rol === "admin") {
-        router.replace("/admin");
+        router.replace(
+          "/admin"
+        );
       } else {
-        router.replace("/");
+        router.replace(
+          "/"
+        );
       }
 
       return;
@@ -206,22 +256,36 @@ export default function RootLayout() {
       rol === "admin" &&
       !enAdmin
     ) {
-      router.replace("/admin");
+      router.replace(
+        "/admin"
+      );
+
       return;
     }
 
     /*
      * ==========================================================
-     * NO ADMIN INTENTANDO ENTRAR A /admin
+     * NO ADMIN EN /admin
      * ==========================================================
      */
     if (
       enAdmin &&
       rol !== "admin"
     ) {
-      router.replace("/");
+      router.replace(
+        "/"
+      );
+
       return;
     }
+
+    /*
+     * ==========================================================
+     * RUTA CORRECTA
+     * ==========================================================
+     */
+    setRutaLista(true);
+
   }, [
     usuario,
     rol,
@@ -232,25 +296,101 @@ export default function RootLayout() {
   ]);
 
   /* ============================================================
-     NAVEGACIÓN
-
-     El Stack se monta siempre.
-     Mientras se comprueba autenticación/rol/verificación,
-     mostramos la capa de carga.
+     OCULTAR SPLASH INICIAL
   ============================================================ */
+
+  useEffect(() => {
+    /*
+     * Solo ocultamos la pantalla inicial cuando:
+     *
+     * 1. Firebase terminó de comprobar la sesión.
+     * 2. Ya sabemos cuál es la ruta correcta.
+     */
+    if (
+      !cargando &&
+      rutaLista
+    ) {
+      SplashScreen.hideAsync().catch(
+        () => {}
+      );
+    }
+  }, [
+    cargando,
+    rutaLista,
+  ]);
+
+  /*
+   * ============================================================
+   * PANTALLA DE CARGA INTERNA
+   *
+   * IMPORTANTE:
+   *
+   * "usuario &&" evita mostrarla antes del Login.
+   *
+   * Por eso:
+   *
+   * Sin sesión → Login
+   *
+   * Con sesión → Cargando → Admin/Inicio
+   * ============================================================
+   */
+
+  const mostrarCarga =
+    usuario !== null &&
+    (cargando || !rutaLista);
 
   return (
     <ThemeProvider>
-      <View style={styles.container}>
+      <View
+        style={styles.container}
+      >
         <Stack
           screenOptions={{
             headerShown: false,
           }}
         />
 
-        {cargando && (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" />
+        {mostrarCarga && (
+          <View
+            style={styles.loadingOverlay}
+          >
+            <View
+              style={
+                styles.loadingContent
+              }
+            >
+              <Image
+                source={require(
+                  "../assets/images/icon.png"
+                )}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+
+              <ActivityIndicator
+                size="large"
+                color="#2563EB"
+                style={
+                  styles.spinner
+                }
+              />
+
+              <Text
+                style={
+                  styles.loadingTitle
+                }
+              >
+                Cargando...
+              </Text>
+
+              <Text
+                style={
+                  styles.loadingSubtitle
+                }
+              >
+                Preparando tu espacio
+              </Text>
+            </View>
           </View>
         )}
       </View>
@@ -258,15 +398,69 @@ export default function RootLayout() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+const styles =
+  StyleSheet.create({
+    container: {
+      flex: 1,
+    },
 
-  loadingOverlay: {
-    ...StyleSheet.absoluteFill,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#ffffff",
-  },
-});
+    loadingOverlay: {
+      ...StyleSheet.absoluteFill,
+
+      backgroundColor:
+        "#FFFFFF",
+
+      justifyContent:
+        "center",
+
+      alignItems:
+        "center",
+
+      zIndex: 9999,
+
+      elevation: 9999,
+    },
+
+    loadingContent: {
+      width: "100%",
+
+      alignItems:
+        "center",
+
+      justifyContent:
+        "center",
+
+      paddingHorizontal: 30,
+    },
+
+    logo: {
+      width: 280,
+      height: 110,
+
+      marginBottom: 20,
+    },
+
+    spinner: {
+      marginBottom: 14,
+    },
+
+    loadingTitle: {
+      fontSize: 20,
+      fontWeight: "800",
+
+      color:
+        "#2563EB",
+
+      marginBottom: 5,
+    },
+
+    loadingSubtitle: {
+      fontSize: 14,
+
+      color:
+        "#64748B",
+
+      textAlign:
+        "center",
+    },
+  });

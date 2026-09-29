@@ -5,8 +5,11 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, useW
 import { doc, getDoc, } from "firebase/firestore";
 import { useTheme } from "../../hooks/useTheme";
 import { useUserRole } from "../../hooks/useUserRole";
-import { auth, db, } from "../../services/firebase";
+import {auth,db,} from "../../services/firebase";
 
+import {
+  MOTIVOS_GENERALES,
+} from "../../services/reportesService";
 export default function Perfil() {
   const { colors } = useTheme();
 
@@ -694,6 +697,13 @@ return (
           ✎  Editar Perfil
         </Text>
       </TouchableOpacity>
+      <BotonReportar
+  recursoId="perfil"
+  recursoNombre="Mi perfil"
+  motivos={MOTIVOS_GENERALES}
+  textoBoton="Reportar un problema"
+  descripcionBoton="Reporta un problema con tu perfil"
+/>
 
     </ScrollView>
   </View>
