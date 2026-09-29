@@ -262,6 +262,6 @@ match /notificationTokens/{userId} {
   allow delete: if estaAutenticado()
     && userId == request.auth.uid;
 }
-
+    }
   }
 }

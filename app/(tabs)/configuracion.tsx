@@ -7,6 +7,11 @@ import { signOut } from "firebase/auth";
 import { auth } from "../../services/firebase";
 
 import { useTheme } from "../../hooks/useTheme";
+import BotonReportar from "../../components/BotonReportar";
+
+import {
+  MOTIVOS_GENERALES,
+} from "../../services/reportesService";
 
 export default function Configuracion() {
   const [notificaciones, setNotificaciones] = useState(false);
@@ -311,6 +316,13 @@ return (
           Cerrar sesión
         </Text>
       </TouchableOpacity>
+      <BotonReportar
+  recursoId="configuracion"
+  recursoNombre="Configuración de Recomedi"
+  motivos={MOTIVOS_GENERALES}
+  textoBoton="Reportar un problema"
+  descripcionBoton="Ayúdanos a detectar problemas de la aplicación"
+/>
     </ScrollView>
   </View>
 );
