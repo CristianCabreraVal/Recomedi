@@ -1,0 +1,2384 @@
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import {
+  ActivityIndicator,
+  Alert,
+  Modal,
+  Platform,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+
+import {
+  useRouter,
+} from "expo-router";
+
+import {
+  SafeAreaView,
+} from "react-native-safe-area-context";
+
+import {
+  actualizarEstadoUsuario,
+  actualizarRolUsuario,
+  eliminarUsuarioDeFirestore,
+  obtenerUsuarios,
+  RolUsuario,
+  UsuarioAdmin,
+} from "../../services/adminService";
+
+import {
+  auth,
+} from "../../services/firebase";
+
+import {
+  useUserRole,
+} from "../../hooks/useUserRole";
+
+type FiltroRol =
+  | "todos"
+  | "usuario"
+  | "moderador"
+  | "admin";
+
+type FiltroEstado =
+  | "todos"
+  | "activos"
+  | "inactivos";
+
+export default function UsuariosModerador() {
+  const router =
+    useRouter();
+
+  const {
+    esAdmin,
+    esModerador,
+    cargandoRol,
+  } = useUserRole();
+
+  const [
+    usuarios,
+    setUsuarios,
+  ] = useState<UsuarioAdmin[]>(
+    []
+  );
+
+  const [
+    cargando,
+    setCargando,
+  ] = useState(true);
+
+  const [
+    refrescando,
+    setRefrescando,
+  ] = useState(false);
+
+  const uidActual =
+    auth.currentUser?.uid;
+
+  const [
+    busqueda,
+    setBusqueda,
+  ] = useState("");
+
+  const [
+    filtroRol,
+    setFiltroRol,
+  ] = useState<FiltroRol>(
+    "todos"
+  );
+
+  const [
+    filtroEstado,
+    setFiltroEstado,
+  ] =
+    useState<FiltroEstado>(
+      "todos"
+    );
+
+  const [
+    usuarioSeleccionado,
+    setUsuarioSeleccionado,
+  ] =
+    useState<UsuarioAdmin | null>(
+      null
+    );
+
+  const [
+    modalRol,
+    setModalRol,
+  ] = useState(false);
+
+  const [
+    guardando,
+    setGuardando,
+  ] = useState(false);
+
+  /* ==========================================================
+     CARGAR USUARIOS
+  ========================================================== */
+
+  const cargarUsuarios =
+    useCallback(async () => {
+      try {
+        const resultado =
+          await obtenerUsuarios();
+
+        setUsuarios(
+          resultado
+        );
+      } catch (error) {
+        console.error(
+          "Error cargando usuarios:",
+          error
+        );
+
+        if (
+          Platform.OS === "web"
+        ) {
+          window.alert(
+            "No fue posible cargar los usuarios."
+          );
+        } else {
+          Alert.alert(
+            "Error",
+            "No fue posible cargar los usuarios."
+          );
+        }
+      } finally {
+        setCargando(
+          false
+        );
+
+        setRefrescando(
+          false
+        );
+      }
+    }, []);
+
+  useEffect(() => {
+    cargarUsuarios();
+  }, [
+    cargarUsuarios,
+  ]);
+
+  const actualizar =
+    async () => {
+      setRefrescando(
+        true
+      );
+
+      await cargarUsuarios();
+    };
+
+  /* ==========================================================
+     FILTRAR USUARIOS
+  ========================================================== */
+
+  const usuariosFiltrados =
+    useMemo(() => {
+      const texto =
+        busqueda
+          .trim()
+          .toLowerCase();
+
+      return usuarios.filter(
+        (usuario) => {
+          const nombreCompleto =
+            `${usuario.nombre} ${usuario.apellido}`
+              .toLowerCase();
+
+          const coincideBusqueda =
+            !texto ||
+            nombreCompleto.includes(
+              texto
+            ) ||
+            usuario.email
+              .toLowerCase()
+              .includes(texto) ||
+            usuario.uid
+              .toLowerCase()
+              .includes(texto) ||
+            usuario.telefono
+              .toLowerCase()
+              .includes(texto);
+
+          const coincideRol =
+            filtroRol ===
+              "todos" ||
+            usuario.rol ===
+              filtroRol;
+
+          const coincideEstado =
+            filtroEstado ===
+              "todos" ||
+            (
+              filtroEstado ===
+                "activos" &&
+              usuario.activo
+            ) ||
+            (
+              filtroEstado ===
+                "inactivos" &&
+              !usuario.activo
+            );
+
+          return (
+            coincideBusqueda &&
+            coincideRol &&
+            coincideEstado
+          );
+        }
+      );
+    }, [
+      usuarios,
+      busqueda,
+      filtroRol,
+      filtroEstado,
+    ]);
+
+  /* ==========================================================
+     CAMBIAR ESTADO
+     
+     ADMIN Y MODERADOR PUEDEN HACERLO.
+  ========================================================== */
+
+  const cambiarEstado =
+    async (
+      usuario: UsuarioAdmin
+    ) => {
+      const nuevoEstado =
+        !usuario.activo;
+
+      const actualizarEstado =
+        async () => {
+          try {
+            setGuardando(
+              true
+            );
+
+            await actualizarEstadoUsuario(
+              usuario.uid,
+              nuevoEstado
+            );
+
+            setUsuarios(
+              (actuales) =>
+                actuales.map(
+                  (item) =>
+                    item.uid ===
+                    usuario.uid
+                      ? {
+                          ...item,
+                          activo:
+                            nuevoEstado,
+                        }
+                      : item
+                )
+            );
+
+            console.log(
+              `Usuario ${usuario.uid}: activo = ${nuevoEstado}`
+            );
+          } catch (
+            error
+          ) {
+            console.error(
+              "Error actualizando estado del usuario:",
+              error
+            );
+
+            if (
+              Platform.OS ===
+              "web"
+            ) {
+              window.alert(
+                "No fue posible actualizar el estado del usuario."
+              );
+            } else {
+              Alert.alert(
+                "Error",
+                "No fue posible actualizar el estado del usuario."
+              );
+            }
+          } finally {
+            setGuardando(
+              false
+            );
+          }
+        };
+
+      /*
+       * WEB
+       */
+      if (
+        Platform.OS ===
+        "web"
+      ) {
+        const confirmar =
+          window.confirm(
+            nuevoEstado
+              ? `¿Quieres activar a ${
+                  usuario.nombre ||
+                  "este usuario"
+                }?`
+              : `¿Quieres desactivar a ${
+                  usuario.nombre ||
+                  "este usuario"
+                }?`
+          );
+
+        if (
+          confirmar
+        ) {
+          await actualizarEstado();
+        }
+
+        return;
+      }
+
+      /*
+       * ANDROID / IOS
+       */
+      Alert.alert(
+        nuevoEstado
+          ? "Activar usuario"
+          : "Desactivar usuario",
+
+        nuevoEstado
+          ? `¿Quieres activar a ${
+              usuario.nombre ||
+              "este usuario"
+            }?`
+          : `¿Quieres desactivar a ${
+              usuario.nombre ||
+              "este usuario"
+            }?`,
+
+        [
+          {
+            text: "Cancelar",
+            style: "cancel",
+          },
+
+          {
+            text:
+              nuevoEstado
+                ? "Activar"
+                : "Desactivar",
+
+            style:
+              nuevoEstado
+                ? "default"
+                : "destructive",
+
+            onPress:
+              actualizarEstado,
+          },
+        ]
+      );
+    };
+
+  /* ==========================================================
+     ELIMINAR USUARIO
+
+     SOLO ADMIN
+  ========================================================== */
+
+  const eliminarUsuario =
+    async (
+      usuario: UsuarioAdmin
+    ) => {
+      /*
+       * Protección adicional.
+       */
+      if (!esAdmin) {
+        return;
+      }
+
+      if (!usuario.uid) {
+        return;
+      }
+
+      const eliminar =
+        async () => {
+          try {
+            setGuardando(
+              true
+            );
+
+            await eliminarUsuarioDeFirestore(
+              usuario.uid
+            );
+
+            setUsuarios(
+              (actuales) =>
+                actuales.filter(
+                  (item) =>
+                    item.uid !==
+                    usuario.uid
+                )
+            );
+
+            if (
+              usuarioSeleccionado?.uid ===
+              usuario.uid
+            ) {
+              setUsuarioSeleccionado(
+                null
+              );
+
+              setModalRol(
+                false
+              );
+            }
+
+            if (
+              Platform.OS ===
+              "web"
+            ) {
+              window.alert(
+                "El usuario y sus datos fueron eliminados de Firestore."
+              );
+            } else {
+              Alert.alert(
+                "Usuario eliminado",
+                "El usuario y sus datos fueron eliminados de Firestore."
+              );
+            }
+          } catch (
+            error
+          ) {
+            console.error(
+              "Error eliminando usuario:",
+              error
+            );
+
+            if (
+              Platform.OS ===
+              "web"
+            ) {
+              window.alert(
+                "No fue posible eliminar el usuario."
+              );
+            } else {
+              Alert.alert(
+                "Error",
+                "No fue posible eliminar el usuario."
+              );
+            }
+          } finally {
+            setGuardando(
+              false
+            );
+          }
+        };
+
+      /*
+       * WEB
+       */
+      if (
+        Platform.OS ===
+        "web"
+      ) {
+        const confirmar =
+          window.confirm(
+            `¿Eliminar definitivamente a ${
+              nombreUsuario(usuario)
+            }?\n\nSe eliminará su perfil y toda su actividad almacenada en Firestore.`
+          );
+
+        if (
+          confirmar
+        ) {
+          await eliminar();
+        }
+
+        return;
+      }
+
+      /*
+       * ANDROID / IOS
+       */
+      Alert.alert(
+        "Eliminar usuario",
+
+        `¿Eliminar definitivamente a ${
+          nombreUsuario(usuario)
+        }?\n\nTambién se eliminará su actividad almacenada.`,
+
+        [
+          {
+            text: "Cancelar",
+            style: "cancel",
+          },
+
+          {
+            text: "Eliminar",
+            style: "destructive",
+            onPress:
+              eliminar,
+          },
+        ]
+      );
+    };
+
+  /* ==========================================================
+     CAMBIAR ROL
+
+     SOLO ADMIN
+  ========================================================== */
+
+  const seleccionarRol =
+    async (
+      rol: RolUsuario
+    ) => {
+      /*
+       * Un moderador nunca puede
+       * entrar en esta función.
+       */
+      if (!esAdmin) {
+        return;
+      }
+
+      if (
+        !usuarioSeleccionado
+      ) {
+        return;
+      }
+
+      if (
+        usuarioSeleccionado.uid ===
+        uidActual
+      ) {
+        Alert.alert(
+          "Acción no permitida",
+          "No puedes cambiar tu propio rol de administrador desde este panel."
+        );
+
+        return;
+      }
+
+      try {
+        setGuardando(
+          true
+        );
+
+        await actualizarRolUsuario(
+          usuarioSeleccionado.uid,
+          rol
+        );
+
+        setUsuarios(
+          (actuales) =>
+            actuales.map(
+              (item) =>
+                item.uid ===
+                usuarioSeleccionado.uid
+                  ? {
+                      ...item,
+                      rol,
+                    }
+                  : item
+            )
+        );
+
+        setModalRol(
+          false
+        );
+
+        setUsuarioSeleccionado(
+          null
+        );
+
+        Alert.alert(
+          "Rol actualizado",
+          `El perfil ahora tiene el rol "${rol}".`
+        );
+      } catch (
+        error
+      ) {
+        console.error(
+          "Error actualizando rol:",
+          error
+        );
+
+        Alert.alert(
+          "Error",
+          "No fue posible actualizar el rol."
+        );
+      } finally {
+        setGuardando(
+          false
+        );
+      }
+    };
+
+  /* ==========================================================
+     ABRIR SELECTOR DE ROL
+
+     SOLO ADMIN
+  ========================================================== */
+
+  const abrirSelectorRol =
+    (
+      usuario: UsuarioAdmin
+    ) => {
+      if (!esAdmin) {
+        return;
+      }
+
+      setUsuarioSeleccionado(
+        usuario
+      );
+
+      setModalRol(
+        true
+      );
+    };
+
+  /* ==========================================================
+     DATOS VISUALES
+  ========================================================== */
+
+  const nombreUsuario =
+    (
+      usuario: UsuarioAdmin
+    ) => {
+      const nombre =
+        `${usuario.nombre} ${usuario.apellido}`
+          .trim();
+
+      return (
+        nombre ||
+        "Usuario sin nombre"
+      );
+    };
+
+  const inicialesUsuario =
+    (
+      usuario: UsuarioAdmin
+    ) => {
+      const nombre =
+        usuario.nombre?.trim();
+
+      const apellido =
+        usuario.apellido?.trim();
+
+      const inicial1 =
+        nombre
+          ? nombre
+              .charAt(
+                0
+              )
+              .toUpperCase()
+          : "";
+
+      const inicial2 =
+        apellido
+          ? apellido
+              .charAt(
+                0
+              )
+              .toUpperCase()
+          : "";
+
+      return (
+        inicial1 +
+          inicial2 ||
+        usuario.email
+          ?.charAt(0)
+          .toUpperCase() ||
+        "U"
+      );
+    };
+
+  const textoRol =
+    (
+      rol: RolUsuario
+    ) => {
+      if (
+        rol ===
+        "admin"
+      ) {
+        return "Administrador";
+      }
+
+      if (
+        rol ===
+        "moderador"
+      ) {
+        return "Moderador";
+      }
+
+      return "Usuario";
+    };
+
+  const colorRol =
+    (
+      rol: RolUsuario
+    ) => {
+      if (
+        rol ===
+        "admin"
+      ) {
+        return "#7c3aed";
+      }
+
+      if (
+        rol ===
+        "moderador"
+      ) {
+        return "#2563eb";
+      }
+
+      return "#64748b";
+    };
+
+  /* ==========================================================
+     CARGANDO
+  ========================================================== */
+
+  if (
+    cargando ||
+    cargandoRol
+  ) {
+    return (
+      <SafeAreaView
+        style={
+          styles.loadingContainer
+        }
+      >
+        <ActivityIndicator
+          size="large"
+        />
+
+        <Text
+          style={
+            styles.loadingText
+          }
+        >
+          Cargando usuarios...
+        </Text>
+      </SafeAreaView>
+    );
+  }
+
+  /* ==========================================================
+     INTERFAZ
+  ========================================================== */
+
+  return (
+    <SafeAreaView
+      style={
+        styles.safeArea
+      }
+    >
+      <View
+        style={
+          styles.container
+        }
+      >
+
+        {/* ====================================================
+            ENCABEZADO
+        ==================================================== */}
+
+        <View
+          style={
+            styles.header
+          }
+        >
+          <Pressable
+            style={
+              styles.backButton
+            }
+            onPress={() =>
+              router.back()
+            }
+          >
+            <Text
+              style={
+                styles.backButtonText
+              }
+            >
+              ‹
+            </Text>
+          </Pressable>
+
+          <View
+            style={
+              styles.headerTitleContainer
+            }
+          >
+            <Text
+              style={
+                styles.title
+              }
+            >
+              Usuarios
+            </Text>
+
+            <Text
+              style={
+                styles.subtitle
+              }
+            >
+              {esAdmin
+                ? "Administración de usuarios de Recomedi"
+                : "Moderación de usuarios de Recomedi"}
+            </Text>
+
+            <View
+              style={
+                styles.roleHeaderBadge
+              }
+            >
+              <Text
+                style={
+                  styles.roleHeaderBadgeText
+                }
+              >
+                {esAdmin
+                  ? "Administrador"
+                  : esModerador
+                  ? "Moderador"
+                  : "Gestión de usuarios"}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <ScrollView
+          style={
+            styles.scroll
+          }
+          contentContainerStyle={
+            styles.content
+          }
+          refreshControl={
+            <RefreshControl
+              refreshing={
+                refrescando
+              }
+              onRefresh={
+                actualizar
+              }
+            />
+          }
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={
+            false
+          }
+        >
+
+          {/* ==================================================
+              RESUMEN
+          ================================================== */}
+
+          <View
+            style={
+              styles.summaryCard
+            }
+          >
+            <View>
+              <Text
+                style={
+                  styles.summaryTitle
+                }
+              >
+                Usuarios registrados
+              </Text>
+
+              <Text
+                style={
+                  styles.summaryNumber
+                }
+              >
+                {
+                  usuarios.length
+                }
+              </Text>
+            </View>
+
+            <View
+              style={
+                styles.summaryStats
+              }
+            >
+              <View
+                style={
+                  styles.summaryItem
+                }
+              >
+                <Text
+                  style={
+                    styles.summaryItemNumber
+                  }
+                >
+                  {
+                    usuarios.filter(
+                      (u) =>
+                        u.activo
+                    ).length
+                  }
+                </Text>
+
+                <Text
+                  style={
+                    styles.summaryItemLabel
+                  }
+                >
+                  Activos
+                </Text>
+              </View>
+
+              <View
+                style={
+                  styles.summaryDivider
+                }
+              />
+
+              <View
+                style={
+                  styles.summaryItem
+                }
+              >
+                <Text
+                  style={
+                    styles.summaryItemNumber
+                  }
+                >
+                  {
+                    usuarios.filter(
+                      (u) =>
+                        !u.activo
+                    ).length
+                  }
+                </Text>
+
+                <Text
+                  style={
+                    styles.summaryItemLabel
+                  }
+                >
+                  Inactivos
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* ==================================================
+              BUSCADOR
+          ================================================== */}
+
+          <TextInput
+            value={
+              busqueda
+            }
+            onChangeText={
+              setBusqueda
+            }
+            placeholder="Buscar por nombre, correo, teléfono o UID..."
+            placeholderTextColor="#94a3b8"
+            style={
+              styles.searchInput
+            }
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+
+          {/* ==================================================
+              FILTRO POR ROL
+          ================================================== */}
+
+          <Text
+            style={
+              styles.sectionTitle
+            }
+          >
+            Filtrar por rol
+          </Text>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={
+              false
+            }
+            contentContainerStyle={
+              styles.filterRow
+            }
+          >
+            {(
+              [
+                [
+                  "todos",
+                  "Todos",
+                ],
+                [
+                  "usuario",
+                  "Usuarios",
+                ],
+                [
+                  "moderador",
+                  "Moderadores",
+                ],
+                [
+                  "admin",
+                  "Administradores",
+                ],
+              ] as [
+                FiltroRol,
+                string
+              ][]
+            ).map(
+              ([
+                valor,
+                texto,
+              ]) => (
+                <Pressable
+                  key={
+                    valor
+                  }
+                  style={[
+                    styles.filterButton,
+                    filtroRol ===
+                      valor &&
+                      styles.filterButtonActive,
+                  ]}
+                  onPress={() =>
+                    setFiltroRol(
+                      valor
+                    )
+                  }
+                >
+                  <Text
+                    style={[
+                      styles.filterButtonText,
+                      filtroRol ===
+                        valor &&
+                        styles.filterButtonTextActive,
+                    ]}
+                  >
+                    {texto}
+                  </Text>
+                </Pressable>
+              )
+            )}
+          </ScrollView>
+
+          {/* ==================================================
+              FILTRO POR ESTADO
+          ================================================== */}
+
+          <Text
+            style={
+              styles.sectionTitle
+            }
+          >
+            Filtrar por estado
+          </Text>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={
+              false
+            }
+            contentContainerStyle={
+              styles.filterRow
+            }
+          >
+            {(
+              [
+                [
+                  "todos",
+                  "Todos",
+                ],
+                [
+                  "activos",
+                  "Activos",
+                ],
+                [
+                  "inactivos",
+                  "Inactivos",
+                ],
+              ] as [
+                FiltroEstado,
+                string
+              ][]
+            ).map(
+              ([
+                valor,
+                texto,
+              ]) => (
+                <Pressable
+                  key={
+                    valor
+                  }
+                  style={[
+                    styles.filterButton,
+                    filtroEstado ===
+                      valor &&
+                      styles.filterButtonActive,
+                  ]}
+                  onPress={() =>
+                    setFiltroEstado(
+                      valor
+                    )
+                  }
+                >
+                  <Text
+                    style={[
+                      styles.filterButtonText,
+                      filtroEstado ===
+                        valor &&
+                        styles.filterButtonTextActive,
+                    ]}
+                  >
+                    {texto}
+                  </Text>
+                </Pressable>
+              )
+            )}
+          </ScrollView>
+
+          {/* ==================================================
+              RESULTADOS
+          ================================================== */}
+
+          <View
+            style={
+              styles.resultsHeader
+            }
+          >
+            <Text
+              style={
+                styles.resultsTitle
+              }
+            >
+              Resultados
+            </Text>
+
+            <Text
+              style={
+                styles.resultsCount
+              }
+            >
+              {
+                usuariosFiltrados.length
+              }
+            </Text>
+          </View>
+
+          {usuariosFiltrados.length ===
+          0 ? (
+            <View
+              style={
+                styles.emptyCard
+              }
+            >
+              <Text
+                style={
+                  styles.emptyIcon
+                }
+              >
+                🔎
+              </Text>
+
+              <Text
+                style={
+                  styles.emptyTitle
+                }
+              >
+                No se encontraron usuarios
+              </Text>
+
+              <Text
+                style={
+                  styles.emptyText
+                }
+              >
+                Prueba con otro término de búsqueda o cambia los filtros.
+              </Text>
+            </View>
+          ) : (
+            usuariosFiltrados.map(
+              (
+                usuario
+              ) => (
+                <View
+                  key={
+                    usuario.uid
+                  }
+                  style={
+                    styles.userCard
+                  }
+                >
+
+                  {/* ========================================
+                      DATOS DEL USUARIO
+                  ======================================== */}
+
+                  <View
+                    style={
+                      styles.userTop
+                    }
+                  >
+                    <View
+                      style={
+                        styles.avatar
+                      }
+                    >
+                      <Text
+                        style={
+                          styles.avatarText
+                        }
+                      >
+                        {
+                          inicialesUsuario(
+                            usuario
+                          )
+                        }
+                      </Text>
+                    </View>
+
+                    <View
+                      style={
+                        styles.userMain
+                      }
+                    >
+                      <Text
+                        style={
+                          styles.userName
+                        }
+                      >
+                        {
+                          nombreUsuario(
+                            usuario
+                          )
+                        }
+                      </Text>
+
+                      <Text
+                        style={
+                          styles.userEmail
+                        }
+                      >
+                        {
+                          usuario.email ||
+                          "Sin correo registrado"
+                        }
+                      </Text>
+
+                      <View
+                        style={
+                          styles.badgeRow
+                        }
+                      >
+                        <View
+                          style={[
+                            styles.roleBadge,
+                            {
+                              backgroundColor:
+                                `${colorRol(
+                                  usuario.rol
+                                )}18`,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.roleBadgeText,
+                              {
+                                color:
+                                  colorRol(
+                                    usuario.rol
+                                  ),
+                              },
+                            ]}
+                          >
+                            {
+                              textoRol(
+                                usuario.rol
+                              )
+                            }
+                          </Text>
+                        </View>
+
+                        <View
+                          style={[
+                            styles.statusBadge,
+                            {
+                              backgroundColor:
+                                usuario.activo
+                                  ? "#dcfce7"
+                                  : "#fee2e2",
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.statusBadgeText,
+                              {
+                                color:
+                                  usuario.activo
+                                    ? "#166534"
+                                    : "#991b1b",
+                              },
+                            ]}
+                          >
+                            {
+                              usuario.activo
+                                ? "Activo"
+                                : "Inactivo"
+                            }
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* ========================================
+                      DETALLES
+                  ======================================== */}
+
+                  <View
+                    style={
+                      styles.detailsBox
+                    }
+                  >
+                    <View
+                      style={
+                        styles.detailRow
+                      }
+                    >
+                      <Text
+                        style={
+                          styles.detailLabel
+                        }
+                      >
+                        UID
+                      </Text>
+
+                      <Text
+                        style={
+                          styles.detailValue
+                        }
+                        numberOfLines={
+                          1
+                        }
+                      >
+                        {
+                          usuario.uid
+                        }
+                      </Text>
+                    </View>
+
+                    {usuario.telefono ? (
+                      <View
+                        style={
+                          styles.detailRow
+                        }
+                      >
+                        <Text
+                          style={
+                            styles.detailLabel
+                          }
+                        >
+                          Teléfono
+                        </Text>
+
+                        <Text
+                          style={
+                            styles.detailValue
+                          }
+                        >
+                          {
+                            usuario.telefono
+                          }
+                        </Text>
+                      </View>
+                    ) : null}
+
+                    <View
+                      style={
+                        styles.detailRow
+                      }
+                    >
+                      <Text
+                        style={
+                          styles.detailLabel
+                        }
+                      >
+                        Correo verificado
+                      </Text>
+
+                      <Text
+                        style={
+                          styles.detailValue
+                        }
+                      >
+                        {
+                          usuario.emailVerificado
+                            ? "Sí"
+                            : "No"
+                        }
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* ========================================
+                      ACCIONES
+                  ======================================== */}
+
+                  <View
+                    style={
+                      styles.actionsRow
+                    }
+                  >
+
+                    {/* ====================================
+                        CAMBIAR ROL
+                        SOLO ADMIN
+                    ==================================== */}
+
+                    {esAdmin && (
+                      <Pressable
+                        style={
+                          styles.secondaryButton
+                        }
+                        onPress={() =>
+                          abrirSelectorRol(
+                            usuario
+                          )
+                        }
+                        disabled={
+                          guardando
+                        }
+                      >
+                        <Text
+                          style={
+                            styles.secondaryButtonText
+                          }
+                        >
+                          Cambiar rol
+                        </Text>
+                      </Pressable>
+                    )}
+
+                    {/* ====================================
+                        ACTIVAR / DESACTIVAR
+                        ADMIN + MODERADOR
+                    ==================================== */}
+
+                    <Pressable
+                      style={[
+                        styles.statusButton,
+
+                        usuario.activo
+                          ? styles.deactivateButton
+                          : styles.activateButton,
+
+                        !esAdmin &&
+                          !esModerador &&
+                          styles.fullWidthButton,
+                      ]}
+                      onPress={() =>
+                        cambiarEstado(
+                          usuario
+                        )
+                      }
+                      disabled={
+                        guardando
+                      }
+                    >
+                      <Text
+                        style={[
+                          styles.statusButtonText,
+
+                          usuario.activo
+                            ? styles.deactivateText
+                            : styles.activateText,
+                        ]}
+                      >
+                        {
+                          usuario.activo
+                            ? "Desactivar"
+                            : "Activar"
+                        }
+                      </Text>
+                    </Pressable>
+
+                    {/* ====================================
+                        ELIMINAR
+                        SOLO ADMIN
+                    ==================================== */}
+
+                    {esAdmin && (
+                      <Pressable
+                        style={
+                          styles.deleteButton
+                        }
+                        onPress={() =>
+                          eliminarUsuario(
+                            usuario
+                          )
+                        }
+                        disabled={
+                          guardando
+                        }
+                      >
+                        <Text
+                          style={
+                            styles.deleteButtonText
+                          }
+                        >
+                          Eliminar
+                        </Text>
+                      </Pressable>
+                    )}
+                  </View>
+                </View>
+              )
+            )
+          )}
+        </ScrollView>
+
+        {/* ====================================================
+            MODAL DE ROLES
+            SOLO EXISTE PARA ADMIN
+        ==================================================== */}
+
+        <Modal
+          visible={
+            modalRol &&
+            esAdmin
+          }
+          transparent
+          animationType="fade"
+          onRequestClose={() => {
+            setModalRol(
+              false
+            );
+
+            setUsuarioSeleccionado(
+              null
+            );
+          }}
+        >
+          <View
+            style={
+              styles.modalOverlay
+            }
+          >
+            <View
+              style={
+                styles.modalCard
+              }
+            >
+              <Text
+                style={
+                  styles.modalTitle
+                }
+              >
+                Cambiar rol
+              </Text>
+
+              <Text
+                style={
+                  styles.modalSubtitle
+                }
+              >
+                {usuarioSeleccionado
+                  ? nombreUsuario(
+                      usuarioSeleccionado
+                    )
+                  : ""}
+              </Text>
+
+              {(
+                [
+                  [
+                    "usuario",
+                    "Usuario",
+                  ],
+                  [
+                    "moderador",
+                    "Moderador",
+                  ],
+                ] as [
+                  RolUsuario,
+                  string
+                ][]
+              ).map(
+                ([
+                  rol,
+                  texto,
+                ]) => (
+                  <Pressable
+                    key={
+                      rol
+                    }
+                    style={[
+                      styles.roleOption,
+                      usuarioSeleccionado?.rol ===
+                        rol &&
+                        styles.roleOptionActive,
+                    ]}
+                    onPress={() =>
+                      seleccionarRol(
+                        rol
+                      )
+                    }
+                    disabled={
+                      guardando
+                    }
+                  >
+                    <View>
+                      <Text
+                        style={
+                          styles.roleOptionTitle
+                        }
+                      >
+                        {
+                          texto
+                        }
+                      </Text>
+
+                      <Text
+                        style={
+                          styles.roleOptionDescription
+                        }
+                      >
+                        {rol ===
+                        "admin"
+                          ? "Acceso administrativo"
+                          : rol ===
+                            "moderador"
+                          ? "Gestión de contenido"
+                          : "Acceso normal"}
+                      </Text>
+                    </View>
+
+                    {usuarioSeleccionado?.rol ===
+                    rol ? (
+                      <Text
+                        style={
+                          styles.checkText
+                        }
+                      >
+                        ✓
+                      </Text>
+                    ) : null}
+                  </Pressable>
+                )
+              )}
+
+              <Pressable
+                style={
+                  styles.cancelButton
+                }
+                onPress={() => {
+                  setModalRol(
+                    false
+                  );
+
+                  setUsuarioSeleccionado(
+                    null
+                  );
+                }}
+              >
+                <Text
+                  style={
+                    styles.cancelButtonText
+                  }
+                >
+                  Cancelar
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+/* ==============================================================
+   ESTILOS
+============================================================== */
+
+const styles =
+  StyleSheet.create({
+
+    safeArea: {
+      flex: 1,
+    },
+
+    container: {
+      flex: 1,
+    },
+
+    loadingContainer: {
+      flex: 1,
+      justifyContent:
+        "center",
+      alignItems:
+        "center",
+      padding: 24,
+    },
+
+    loadingText: {
+      marginTop: 12,
+      fontSize: 15,
+    },
+
+    /* ==========================================================
+       ENCABEZADO
+    ========================================================== */
+
+    header: {
+      position:
+        "relative",
+      alignItems:
+        "center",
+      justifyContent:
+        "center",
+
+      paddingHorizontal:
+        55,
+
+      paddingTop: 10,
+      paddingBottom: 18,
+    },
+
+    backButton: {
+      position:
+        "absolute",
+
+      left: 18,
+      top: 10,
+
+      width: 44,
+      height: 44,
+
+      borderRadius: 14,
+
+      alignItems:
+        "center",
+
+      justifyContent:
+        "center",
+
+      backgroundColor:
+        "#eef2ff",
+    },
+
+    backButtonText: {
+      fontSize: 32,
+      lineHeight: 34,
+      color:
+        "#3730a3",
+    },
+
+    headerTitleContainer: {
+      alignItems:
+        "center",
+      justifyContent:
+        "center",
+      width:
+        "100%",
+    },
+
+    title: {
+      fontSize: 27,
+      fontWeight:
+        "800",
+      textAlign:
+        "center",
+    },
+
+    subtitle: {
+      marginTop: 4,
+      fontSize: 13,
+      opacity:
+        0.65,
+      textAlign:
+        "center",
+    },
+
+    roleHeaderBadge: {
+      marginTop: 9,
+      paddingHorizontal:
+        11,
+      paddingVertical:
+        5,
+      borderRadius:
+        999,
+      backgroundColor:
+        "#eef2ff",
+    },
+
+    roleHeaderBadgeText: {
+      fontSize: 11,
+      fontWeight:
+        "800",
+      color:
+        "#4338ca",
+    },
+
+    scroll: {
+      flex: 1,
+    },
+
+    content: {
+      paddingHorizontal:
+        18,
+      paddingBottom:
+        40,
+    },
+
+    /* ==========================================================
+       RESUMEN
+    ========================================================== */
+
+    summaryCard: {
+      padding: 18,
+      borderRadius: 20,
+      backgroundColor:
+        "#eef2ff",
+      marginBottom: 16,
+    },
+
+    summaryTitle: {
+      fontSize: 13,
+      fontWeight:
+        "600",
+      opacity:
+        0.7,
+    },
+
+    summaryNumber: {
+      marginTop: 4,
+      fontSize: 34,
+      fontWeight:
+        "800",
+    },
+
+    summaryStats: {
+      flexDirection:
+        "row",
+      alignItems:
+        "center",
+      marginTop: 14,
+    },
+
+    summaryItem: {
+      flex: 1,
+      alignItems:
+        "center",
+    },
+
+    summaryItemNumber: {
+      fontSize: 19,
+      fontWeight:
+        "800",
+    },
+
+    summaryItemLabel: {
+      marginTop: 3,
+      fontSize: 12,
+      opacity:
+        0.65,
+    },
+
+    summaryDivider: {
+      width: 1,
+      height: 32,
+      backgroundColor:
+        "#c7d2fe",
+    },
+
+    /* ==========================================================
+       BUSCADOR
+    ========================================================== */
+
+    searchInput: {
+      minHeight: 50,
+      borderRadius: 15,
+      paddingHorizontal:
+        16,
+      fontSize: 14,
+      backgroundColor:
+        "#f8fafc",
+      borderWidth: 1,
+      borderColor:
+        "#e2e8f0",
+    },
+
+    sectionTitle: {
+      marginTop: 18,
+      marginBottom: 9,
+      fontSize: 14,
+      fontWeight:
+        "700",
+    },
+
+    /* ==========================================================
+       FILTROS
+    ========================================================== */
+
+    filterRow: {
+      gap: 8,
+    },
+
+    filterButton: {
+      paddingHorizontal:
+        14,
+      paddingVertical:
+        9,
+      borderRadius:
+        999,
+      backgroundColor:
+        "#f1f5f9",
+      borderWidth: 1,
+      borderColor:
+        "#e2e8f0",
+    },
+
+    filterButtonActive: {
+      backgroundColor:
+        "#111827",
+      borderColor:
+        "#111827",
+    },
+
+    filterButtonText: {
+      fontSize: 13,
+      fontWeight:
+        "600",
+      color:
+        "#475569",
+    },
+
+    filterButtonTextActive: {
+      color:
+        "#ffffff",
+    },
+
+    /* ==========================================================
+       RESULTADOS
+    ========================================================== */
+
+    resultsHeader: {
+      flexDirection:
+        "row",
+      alignItems:
+        "center",
+      justifyContent:
+        "space-between",
+      marginTop: 22,
+      marginBottom: 11,
+    },
+
+    resultsTitle: {
+      fontSize: 18,
+      fontWeight:
+        "800",
+    },
+
+    resultsCount: {
+      minWidth: 32,
+      paddingHorizontal:
+        9,
+      paddingVertical:
+        5,
+      textAlign:
+        "center",
+      borderRadius:
+        999,
+      backgroundColor:
+        "#e2e8f0",
+      fontSize: 12,
+      fontWeight:
+        "800",
+    },
+
+    /* ==========================================================
+       TARJETA DE USUARIO
+    ========================================================== */
+
+    userCard: {
+      marginBottom: 14,
+      borderRadius: 20,
+      padding: 16,
+      backgroundColor:
+        "#ffffff",
+      borderWidth: 1,
+      borderColor:
+        "#e2e8f0",
+    },
+
+    userTop: {
+      flexDirection:
+        "row",
+    },
+
+    avatar: {
+      width: 50,
+      height: 50,
+      borderRadius: 18,
+      alignItems:
+        "center",
+      justifyContent:
+        "center",
+      backgroundColor:
+        "#e0e7ff",
+    },
+
+    avatarText: {
+      fontSize: 17,
+      fontWeight:
+        "800",
+      color:
+        "#4338ca",
+    },
+
+    userMain: {
+      flex: 1,
+      marginLeft: 12,
+    },
+
+    userName: {
+      fontSize: 16,
+      fontWeight:
+        "800",
+    },
+
+    userEmail: {
+      marginTop: 3,
+      fontSize: 13,
+      opacity:
+        0.65,
+    },
+
+    badgeRow: {
+      flexDirection:
+        "row",
+      flexWrap:
+        "wrap",
+      gap: 7,
+      marginTop: 9,
+    },
+
+    roleBadge: {
+      paddingHorizontal:
+        9,
+      paddingVertical:
+        5,
+      borderRadius:
+        999,
+    },
+
+    roleBadgeText: {
+      fontSize: 11,
+      fontWeight:
+        "800",
+    },
+
+    statusBadge: {
+      paddingHorizontal:
+        9,
+      paddingVertical:
+        5,
+      borderRadius:
+        999,
+    },
+
+    statusBadgeText: {
+      fontSize: 11,
+      fontWeight:
+        "800",
+    },
+
+    /* ==========================================================
+       DETALLES
+    ========================================================== */
+
+    detailsBox: {
+      marginTop: 14,
+      padding: 12,
+      borderRadius: 14,
+      backgroundColor:
+        "#f8fafc",
+    },
+
+    detailRow: {
+      flexDirection:
+        "row",
+      justifyContent:
+        "space-between",
+      alignItems:
+        "center",
+      marginVertical: 3,
+      gap: 10,
+    },
+
+    detailLabel: {
+      fontSize: 11,
+      fontWeight:
+        "700",
+      opacity:
+        0.55,
+    },
+
+    detailValue: {
+      flex: 1,
+      textAlign:
+        "right",
+      fontSize: 11,
+      fontWeight:
+        "600",
+    },
+
+    /* ==========================================================
+       ACCIONES
+    ========================================================== */
+
+    actionsRow: {
+      flexDirection:
+        "row",
+      gap: 9,
+      marginTop: 14,
+    },
+
+    secondaryButton: {
+      flex: 1,
+      minHeight: 44,
+      alignItems:
+        "center",
+      justifyContent:
+        "center",
+      borderRadius: 13,
+      borderWidth: 1,
+      borderColor:
+        "#cbd5e1",
+      backgroundColor:
+        "#ffffff",
+    },
+
+    secondaryButtonText: {
+      fontSize: 13,
+      fontWeight:
+        "700",
+    },
+
+    statusButton: {
+      flex: 1,
+      minHeight: 44,
+      alignItems:
+        "center",
+      justifyContent:
+        "center",
+      borderRadius: 13,
+    },
+
+    fullWidthButton: {
+      flex: 1,
+    },
+
+    deactivateButton: {
+      backgroundColor:
+        "#fff7ed",
+    },
+
+    activateButton: {
+      backgroundColor:
+        "#ecfdf5",
+    },
+
+    statusButtonText: {
+      fontSize: 13,
+      fontWeight:
+        "700",
+    },
+
+    deactivateText: {
+      color:
+        "#c2410c",
+    },
+
+    activateText: {
+      color:
+        "#047857",
+    },
+
+    deleteButton: {
+      flex: 1,
+      minHeight: 44,
+      alignItems:
+        "center",
+      justifyContent:
+        "center",
+      borderRadius: 13,
+      backgroundColor:
+        "#fee2e2",
+    },
+
+    deleteButtonText: {
+      fontSize: 13,
+      fontWeight:
+        "700",
+      color:
+        "#b91c1c",
+    },
+
+    /* ==========================================================
+       VACÍO
+    ========================================================== */
+
+    emptyCard: {
+      alignItems:
+        "center",
+      paddingHorizontal:
+        24,
+      paddingVertical:
+        40,
+      borderRadius: 20,
+      backgroundColor:
+        "#f8fafc",
+      borderWidth: 1,
+      borderColor:
+        "#e2e8f0",
+    },
+
+    emptyIcon: {
+      fontSize: 30,
+    },
+
+    emptyTitle: {
+      marginTop: 10,
+      fontSize: 16,
+      fontWeight:
+        "800",
+    },
+
+    emptyText: {
+      marginTop: 6,
+      textAlign:
+        "center",
+      fontSize: 13,
+      opacity:
+        0.65,
+    },
+
+    /* ==========================================================
+       MODAL DE ROLES
+    ========================================================== */
+
+    modalOverlay: {
+      flex: 1,
+      justifyContent:
+        "center",
+      alignItems:
+        "center",
+      padding: 22,
+      backgroundColor:
+        "rgba(15, 23, 42, 0.55)",
+    },
+
+    modalCard: {
+      width: "100%",
+      maxWidth: 460,
+      padding: 20,
+      borderRadius: 22,
+      backgroundColor:
+        "#ffffff",
+    },
+
+    modalTitle: {
+      fontSize: 21,
+      fontWeight:
+        "800",
+    },
+
+    modalSubtitle: {
+      marginTop: 4,
+      marginBottom: 15,
+      fontSize: 13,
+      opacity:
+        0.6,
+    },
+
+    roleOption: {
+      flexDirection:
+        "row",
+      alignItems:
+        "center",
+      justifyContent:
+        "space-between",
+      padding: 14,
+      marginBottom: 8,
+      borderRadius: 14,
+      backgroundColor:
+        "#f8fafc",
+      borderWidth: 1,
+      borderColor:
+        "#e2e8f0",
+    },
+
+    roleOptionActive: {
+      borderColor:
+        "#6366f1",
+      backgroundColor:
+        "#eef2ff",
+    },
+
+    roleOptionTitle: {
+      fontSize: 14,
+      fontWeight:
+        "800",
+    },
+
+    roleOptionDescription: {
+      marginTop: 3,
+      fontSize: 12,
+      opacity:
+        0.6,
+    },
+
+    checkText: {
+      fontSize: 20,
+      fontWeight:
+        "800",
+      color:
+        "#4f46e5",
+    },
+
+    cancelButton: {
+      minHeight: 45,
+      marginTop: 5,
+      alignItems:
+        "center",
+      justifyContent:
+        "center",
+      borderRadius: 13,
+      backgroundColor:
+        "#e2e8f0",
+    },
+
+    cancelButtonText: {
+      fontSize: 13,
+      fontWeight:
+        "800",
+    },
+  });

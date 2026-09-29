@@ -3,6 +3,10 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    /* ============================================================
+       FUNCIONES GENERALES
+    ============================================================ */
+
     function estaAutenticado() {
       return request.auth != null;
     }
@@ -17,10 +21,29 @@ service cloud.firestore {
         ).data.rol == "admin";
     }
 
+    function esModerador() {
+      return estaAutenticado()
+        && exists(
+          /databases/$(database)/documents/usuarios/$(request.auth.uid)
+        )
+        && get(
+          /databases/$(database)/documents/usuarios/$(request.auth.uid)
+        ).data.rol == "moderador";
+    }
+
+    function puedeRevisarReportes() {
+      return esAdmin() || esModerador();
+    }
+
+
+    /* ============================================================
+       USUARIOS
+    ============================================================ */
+
     match /usuarios/{userId} {
 
-      // ADMIN puede consultar usuarios
-      allow get, list: if esAdmin();
+      // ADMIN Y MODERADOR pueden consultar/listar usuarios
+      allow get, list: if esAdmin() || esModerador();
 
       // Cada usuario puede consultar su propio perfil
       allow get: if estaAutenticado()
@@ -30,15 +53,25 @@ service cloud.firestore {
       allow create: if estaAutenticado()
         && request.auth.uid == userId;
 
-      // ADMIN puede actualizar usuarios
+      // ADMIN puede actualizar usuarios y cambiar roles
       allow update: if esAdmin()
         && (
           userId != request.auth.uid
           || request.resource.data.rol == "admin"
         );
 
+      // MODERADOR solo puede activar/desactivar usuarios.
+      // No puede cambiar rol ni otros datos.
+      allow update: if esModerador()
+        && userId != request.auth.uid
+        && request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly([
+            "activo"
+          ]);
+
       // Usuario puede actualizar su propio perfil,
-      // pero no puede cambiar rol ni estado
+      // pero no puede cambiar rol ni estado.
       allow update: if estaAutenticado()
         && request.auth.uid == userId
         && request.resource.data.rol == resource.data.rol
@@ -49,106 +82,180 @@ service cloud.firestore {
         && userId != request.auth.uid;
 
 
-      // ACTIVIDAD
-match /actividad/{actividadId} {
+      /* ==========================================================
+         ACTIVIDAD
+      ========================================================== */
 
-  // El usuario puede leer su propia actividad
-  // y el administrador puede leer la actividad de otros usuarios
-  allow read: if estaAutenticado()
-    && (
-      request.auth.uid == userId
-      || esAdmin()
-    );
+      match /actividad/{actividadId} {
 
-  // Solo el propio usuario puede crear o modificar su actividad
-  allow create, update: if estaAutenticado()
-    && request.auth.uid == userId;
+        // Usuario puede leer su propia actividad.
+        // Admin puede leer actividad de otros usuarios.
+        allow read: if estaAutenticado()
+          && (
+            request.auth.uid == userId
+            || esAdmin()
+          );
 
-  // El usuario puede eliminar su propia actividad
-  // y el administrador puede eliminar la de otros usuarios
-  allow delete: if estaAutenticado()
-    && (
-      request.auth.uid == userId
-      || (esAdmin() && userId != request.auth.uid)
-    );
-}
+        // Solo el propio usuario puede crear/modificar su actividad
+        allow create, update: if estaAutenticado()
+          && request.auth.uid == userId;
+
+        // Usuario puede eliminar su actividad.
+        // Admin puede eliminar actividad de otros usuarios.
+        allow delete: if estaAutenticado()
+          && (
+            request.auth.uid == userId
+            || (esAdmin() && userId != request.auth.uid)
+          );
+      }
+
+
+      /* ==========================================================
+         TOKENS DE NOTIFICACIONES
+      ========================================================== */
+
+      match /notificationTokens/{tokenId} {
+
+        allow create: if estaAutenticado()
+          && request.auth.uid == userId
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.platform == "android";
+
+        allow get: if estaAutenticado()
+          && request.auth.uid == userId;
+
+        allow update: if estaAutenticado()
+          && request.auth.uid == userId
+          && resource.data.uid == request.auth.uid
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.platform == "android";
+
+        allow delete: if estaAutenticado()
+          && request.auth.uid == userId;
+      }
     }
+
+
+    /* ============================================================
+       NOTICIAS
+    ============================================================ */
+
+    match /noticias/{noticiaId} {
+
+      // Usuarios autenticados pueden ver publicadas.
+      // Admin y moderador pueden ver todas.
+      allow get, list: if estaAutenticado()
+        && (
+          resource.data.estado == "publicada"
+          || esAdmin()
+          || esModerador()
+        );
+
+      // Las noticias no se crean directamente desde esta app
+      allow create: if false;
+
+      // Admin y moderador pueden actualizar noticias
+      allow update: if estaAutenticado()
+        && (
+          esAdmin()
+          || esModerador()
+        );
+
+      // Solo admin puede eliminar
+      allow delete: if esAdmin();
+    }
+
+
+    /* ============================================================
+       ALERTAS SANITARIAS
+    ============================================================ */
+
     match /alertas/{alertaId} {
 
-  // Administradores pueden ver todas las alertas.
-  allow get, list: if esAdmin();
+      // Admin y moderador pueden consultar todas las alertas
+      allow get, list: if esAdmin() || esModerador();
 
-  // Los usuarios autenticados solo pueden ver
-  // alertas que estén activas.
-  allow get: if estaAutenticado()
-    && resource.data.estado == "activa";
+      // Usuarios autenticados pueden ver alertas activas
+      allow get: if estaAutenticado()
+        && resource.data.estado == "activa";
 
-  allow create: if esAdmin();
+      // Usuarios autenticados pueden listar alertas activas
+      allow list: if estaAutenticado()
+        && resource.data.estado == "activa";
 
-  allow update: if esAdmin();
+      // Admin y moderador pueden crear alertas
+      allow create: if esAdmin() || esModerador();
 
-  allow delete: if esAdmin();
-}
+      // Admin y moderador pueden actualizar alertas
+      allow update: if esAdmin() || esModerador();
 
-
-match /centrosMedicos/{centroId} {
-
-  // Administradores pueden gestionar todos
-  // los centros.
-  allow get, list: if esAdmin();
-
-  // La aplicación pública puede consultar
-  // únicamente centros activos.
-  allow get: if estaAutenticado()
-    && resource.data.estado == "activo";
-
-  allow create: if esAdmin();
-
-  allow update: if esAdmin();
-
-  allow delete: if esAdmin();
-}
-match /reportes/{reporteId} {
-
-  /* ==========================================================
-     USUARIOS AUTENTICADOS
-  ========================================================== */
-
-  allow create: if estaAutenticado()
-    && request.resource.data.creadoPor == request.auth.uid
-    && request.resource.data.estado == "pendiente"
-    && request.resource.data.vecesReportado == 1;
+      // Solo admin puede eliminar
+      allow delete: if esAdmin();
+    }
 
 
-  allow get, list: if estaAutenticado()
-    && resource.data.creadoPor == request.auth.uid;
+    /* ============================================================
+       CENTROS MÉDICOS
+    ============================================================ */
+
+    match /centrosMedicos/{centroId} {
+
+      // Solo admin puede consultar todos los centros
+      allow get, list: if esAdmin();
+
+      // Aplicación pública:
+      // solo centros activos
+      allow get: if estaAutenticado()
+        && resource.data.estado == "activo";
+
+      allow list: if estaAutenticado()
+        && resource.data.estado == "activo";
+
+      // Solo admin gestiona centros
+      allow create: if esAdmin();
+
+      allow update: if esAdmin();
+
+      allow delete: if esAdmin();
+    }
 
 
-  allow update: if estaAutenticado()
-    && resource.data.creadoPor == request.auth.uid
-    && request.resource.data.creadoPor == resource.data.creadoPor
-    && request.resource.data.vecesReportado ==
-       resource.data.vecesReportado + 1
-    && request.resource.data.estado == "pendiente";
+    /* ============================================================
+       REPORTES
+    ============================================================ */
+
+    match /reportes/{reporteId} {
+
+      /* ==========================================================
+         USUARIOS AUTENTICADOS
+      ========================================================== */
+
+      // Usuario crea su propio reporte
+      allow create: if estaAutenticado()
+        && request.resource.data.creadoPor == request.auth.uid
+        && request.resource.data.estado == "pendiente"
+        && request.resource.data.vecesReportado == 1;
+
+      // Usuario puede consultar sus propios reportes
+      allow get, list: if estaAutenticado()
+        && resource.data.creadoPor == request.auth.uid;
+
+      // Usuario puede actualizar su propio reporte
+      allow update: if estaAutenticado()
+        && resource.data.creadoPor == request.auth.uid
+        && request.resource.data.creadoPor == resource.data.creadoPor
+        && request.resource.data.vecesReportado ==
+           resource.data.vecesReportado + 1
+        && request.resource.data.estado == "pendiente";
 
 
-  /* ==========================================================
-     ADMINISTRADORES Y MODERADORES
+      /* ==========================================================
+         ADMINISTRADORES Y MODERADORES
+      ========================================================== */
 
-     Aquí posteriormente podrán revisar y gestionar
-     todos los reportes.
-  ========================================================== */
+      // Admin y moderador pueden revisar y gestionar reportes
+      allow get, list, update, delete: if puedeRevisarReportes();
+    }
 
-  allow get, list, update, delete: if esAdmin()
-    || (
-      estaAutenticado()
-      && exists(
-        /databases/$(database)/documents/usuarios/$(request.auth.uid)
-      )
-      && get(
-        /databases/$(database)/documents/usuarios/$(request.auth.uid)
-      ).data.rol == "moderador"
-    );
-}
   }
 }

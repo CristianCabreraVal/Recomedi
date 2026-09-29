@@ -7,13 +7,14 @@ import {
   Platform,
   Pressable,
   RefreshControl,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useRouter } from "expo-router";
 
@@ -856,8 +857,9 @@ deleteButtonText: {
 },
 
   safeArea: {
-    flex: 1,
-  },
+  flex: 1,
+  backgroundColor: "transparent",
+},
 
   container: {
     flex: 1,
@@ -876,43 +878,50 @@ deleteButtonText: {
   },
 
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 18,
-    paddingTop: 16,
-    paddingBottom: 14,
-  },
+  position: "relative",
+  alignItems: "center",
+  justifyContent: "center",
+  paddingHorizontal: 55,
+  paddingTop: 10,
+  paddingBottom: 18,
+},
 
-  backButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#eef2ff",
-  },
+backButton: {
+  position: "absolute",
+  left: 18,
+  top: 10,
+  width: 44,
+  height: 44,
+  borderRadius: 14,
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "#eef2ff",
+},
 
-  backButtonText: {
-    fontSize: 32,
-    lineHeight: 34,
-    color: "#3730a3",
-  },
+backButtonText: {
+  fontSize: 32,
+  lineHeight: 34,
+  color: "#3730a3",
+},
 
-  headerInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
+headerInfo: {
+  alignItems: "center",
+  justifyContent: "center",
+  width: "100%",
+},
 
-  title: {
-    fontSize: 26,
-    fontWeight: "800",
-  },
+title: {
+  fontSize: 26,
+  fontWeight: "800",
+  textAlign: "center",
+},
 
-  subtitle: {
-    marginTop: 3,
-    fontSize: 13,
-    opacity: 0.65,
-  },
+subtitle: {
+  marginTop: 4,
+  fontSize: 13,
+  opacity: 0.65,
+  textAlign: "center",
+},
 
   scroll: {
     flex: 1,

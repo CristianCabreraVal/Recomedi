@@ -219,7 +219,7 @@ export default function Login() {
       if (rol === "moderador") {
         redireccionando = true;
 
-        router.replace("/");
+        router.replace("/moderador");
 
         return;
       }
