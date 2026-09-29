@@ -1,122 +1,75 @@
 import {
-    doc,
-    serverTimestamp,
-    setDoc,
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc,
 } from "firebase/firestore";
 
 import {
-    auth,
-    db,
+  auth,
+  db,
 } from "./firebase";
 
 import {
-    obtenerTokenFCM,
+  obtenerTokenFCM,
 } from "./notificationService";
 
-
-/* ==========================================================
-   CREAR ID ÚNICO PARA EL USUARIO + TOKEN
-========================================================== */
-
-function obtenerIdDocumento(
-  uid: string,
-  token: string
-): string {
-  return `${uid}_${encodeURIComponent(token)}`;
-}
-
-
-/* ==========================================================
-   REGISTRAR TOKEN FCM
-========================================================== */
-
-export async function registrarTokenFCMEnFirestore(): Promise<
-  string | null
-> {
+export async function registrarTokenFCMEnFirestore(): Promise<string | null> {
   try {
-    const usuario =
-      auth.currentUser;
+    const usuario = auth.currentUser;
 
     if (!usuario) {
-      console.log(
-        "No hay un usuario autenticado."
-      );
-
+      console.log("No hay usuario autenticado.");
       return null;
     }
 
-    console.log(
-      "Usuario autenticado:",
-      usuario.uid
-    );
+    console.log("Usuario autenticado:", usuario.uid);
 
-    const token =
-      await obtenerTokenFCM();
+    const token = await obtenerTokenFCM();
 
     if (!token) {
-      console.log(
-        "No se obtuvo el token FCM."
-      );
-
+      console.log("No se obtuvo token FCM.");
       return null;
     }
 
-    console.log(
-      "Token FCM obtenido correctamente."
+    console.log("Token FCM obtenido correctamente.");
+
+    const referencia = doc(
+      db,
+      "usuarios",
+      usuario.uid,
+      "notificationTokens",
+      "android"
     );
 
-    /*
-     * El documento pertenece directamente al usuario.
-     *
-     * Esto evita que un token que haya sido registrado
-     * anteriormente por otra cuenta provoque conflictos.
-     */
-    const idDocumento =
-      obtenerIdDocumento(
-        usuario.uid,
-        token
-      );
+    const documentoExistente = await getDoc(referencia);
 
-    const referencia =
-      doc(
-        db,
-        "notificationTokens",
-        idDocumento
-      );
+    const datos: Record<string, unknown> = {
+      uid: usuario.uid,
+      token,
+      platform: "android",
+      enabled: true,
+      updatedAt: serverTimestamp(),
+    };
+
+    // Solo se crea una vez.
+    if (!documentoExistente.exists()) {
+      datos.createdAt = serverTimestamp();
+    }
 
     await setDoc(
       referencia,
-      {
-        uid: usuario.uid,
-        token: token,
-        platform: "android",
-        enabled: true,
-        updatedAt: serverTimestamp(),
-      },
+      datos,
       {
         merge: true,
       }
     );
 
     console.log(
-      "======================================"
-    );
-
-    console.log(
-      "TOKEN FCM REGISTRADO CORRECTAMENTE"
-    );
-
-    console.log(
-      "UID:",
-      usuario.uid
-    );
-
-    console.log(
-      "======================================"
+      "TOKEN FCM GUARDADO CORRECTAMENTE"
     );
 
     return token;
-
   } catch (error) {
     console.error(
       "Error registrando token FCM:",
@@ -127,70 +80,9 @@ export async function registrarTokenFCMEnFirestore(): Promise<
   }
 }
 
-
-/* ==========================================================
-   ACTIVAR TOKEN FCM
-========================================================== */
-
 export async function activarTokenFCM(): Promise<boolean> {
-  try {
-    const usuario =
-      auth.currentUser;
+  const token =
+    await registrarTokenFCMEnFirestore();
 
-    if (!usuario) {
-      console.log(
-        "No hay usuario autenticado."
-      );
-
-      return false;
-    }
-
-    const token =
-      await obtenerTokenFCM();
-
-    if (!token) {
-      return false;
-    }
-
-    const idDocumento =
-      obtenerIdDocumento(
-        usuario.uid,
-        token
-      );
-
-    const referencia =
-      doc(
-        db,
-        "notificationTokens",
-        idDocumento
-      );
-
-    await setDoc(
-      referencia,
-      {
-        uid: usuario.uid,
-        token: token,
-        platform: "android",
-        enabled: true,
-        updatedAt: serverTimestamp(),
-      },
-      {
-        merge: true,
-      }
-    );
-
-    console.log(
-      "Token FCM activado correctamente."
-    );
-
-    return true;
-
-  } catch (error) {
-    console.error(
-      "Error activando token FCM:",
-      error
-    );
-
-    return false;
-  }
+  return token !== null;
 }

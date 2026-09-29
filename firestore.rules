@@ -38,36 +38,99 @@ service cloud.firestore {
 
     /* ============================================================
        USUARIOS
-       
-       REGLAS EXISTENTES
-       NO MODIFICAR
     ============================================================ */
 
     match /usuarios/{userId} {
 
-      allow get, list: if esAdmin();
+      // ADMIN Y MODERADOR pueden consultar/listar usuarios
+      allow get, list: if esAdmin() || esModerador();
 
+      // Cada usuario puede consultar su propio perfil
       allow get: if estaAutenticado()
         && request.auth.uid == userId;
 
+      // Crear perfil propio
       allow create: if estaAutenticado()
         && request.auth.uid == userId;
 
+      // ADMIN puede actualizar usuarios y cambiar roles
       allow update: if esAdmin()
         && (
           userId != request.auth.uid
           || request.resource.data.rol == "admin"
         );
 
+      // MODERADOR solo puede activar/desactivar usuarios.
+      // No puede cambiar rol ni otros datos.
+      allow update: if esModerador()
+        && userId != request.auth.uid
+        && request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly([
+            "activo"
+          ]);
+
+      // Usuario puede actualizar su propio perfil,
+      // pero no puede cambiar rol ni estado.
       allow update: if estaAutenticado()
         && request.auth.uid == userId
         && request.resource.data.rol == resource.data.rol
         && request.resource.data.activo == resource.data.activo;
 
-      allow delete: if esAdmin();
+      // ADMIN puede eliminar perfiles de otros usuarios
+      allow delete: if esAdmin()
+        && userId != request.auth.uid;
+
+
+      /* ==========================================================
+         ACTIVIDAD
+      ========================================================== */
 
       match /actividad/{actividadId} {
-        allow read, write: if estaAutenticado()
+
+        // Usuario puede leer su propia actividad.
+        // Admin puede leer actividad de otros usuarios.
+        allow read: if estaAutenticado()
+          && (
+            request.auth.uid == userId
+            || esAdmin()
+          );
+
+        // Solo el propio usuario puede crear/modificar su actividad
+        allow create, update: if estaAutenticado()
+          && request.auth.uid == userId;
+
+        // Usuario puede eliminar su actividad.
+        // Admin puede eliminar actividad de otros usuarios.
+        allow delete: if estaAutenticado()
+          && (
+            request.auth.uid == userId
+            || (esAdmin() && userId != request.auth.uid)
+          );
+      }
+
+
+      /* ==========================================================
+         TOKENS DE NOTIFICACIONES
+      ========================================================== */
+
+      match /notificationTokens/{tokenId} {
+
+        allow create: if estaAutenticado()
+          && request.auth.uid == userId
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.platform == "android";
+
+        allow get: if estaAutenticado()
+          && request.auth.uid == userId;
+
+        allow update: if estaAutenticado()
+          && request.auth.uid == userId
+          && resource.data.uid == request.auth.uid
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.platform == "android";
+
+        allow delete: if estaAutenticado()
           && request.auth.uid == userId;
       }
     }
@@ -75,35 +138,30 @@ service cloud.firestore {
 
     /* ============================================================
        NOTICIAS
-       
-       REGLAS EXISTENTES
-       NO MODIFICAR
     ============================================================ */
 
     match /noticias/{noticiaId} {
 
-      allow get, list: if
-        estaAutenticado()
-        &&
-        (
+      // Usuarios autenticados pueden ver publicadas.
+      // Admin y moderador pueden ver todas.
+      allow get, list: if estaAutenticado()
+        && (
           resource.data.estado == "publicada"
-          ||
-          esAdmin()
-          ||
-          esModerador()
+          || esAdmin()
+          || esModerador()
         );
 
+      // Las noticias no se crean directamente desde esta app
       allow create: if false;
 
-      allow update: if
-        estaAutenticado()
-        &&
-        (
+      // Admin y moderador pueden actualizar noticias
+      allow update: if estaAutenticado()
+        && (
           esAdmin()
-          ||
-          esModerador()
+          || esModerador()
         );
 
+      // Solo admin puede eliminar
       allow delete: if esAdmin();
     }
 
@@ -114,18 +172,24 @@ service cloud.firestore {
 
     match /alertas/{alertaId} {
 
-      allow get, list: if esAdmin();
+      // Admin y moderador pueden consultar todas las alertas
+      allow get, list: if esAdmin() || esModerador();
 
+      // Usuarios autenticados pueden ver alertas activas
       allow get: if estaAutenticado()
         && resource.data.estado == "activa";
 
+      // Usuarios autenticados pueden listar alertas activas
       allow list: if estaAutenticado()
         && resource.data.estado == "activa";
 
-      allow create: if esAdmin();
+      // Admin y moderador pueden crear alertas
+      allow create: if esAdmin() || esModerador();
 
-      allow update: if esAdmin();
+      // Admin y moderador pueden actualizar alertas
+      allow update: if esAdmin() || esModerador();
 
+      // Solo admin puede eliminar
       allow delete: if esAdmin();
     }
 
@@ -136,14 +200,18 @@ service cloud.firestore {
 
     match /centrosMedicos/{centroId} {
 
+      // Solo admin puede consultar todos los centros
       allow get, list: if esAdmin();
 
+      // Aplicación pública:
+      // solo centros activos
       allow get: if estaAutenticado()
         && resource.data.estado == "activo";
 
       allow list: if estaAutenticado()
         && resource.data.estado == "activo";
 
+      // Solo admin gestiona centros
       allow create: if esAdmin();
 
       allow update: if esAdmin();
@@ -158,110 +226,36 @@ service cloud.firestore {
 
     match /reportes/{reporteId} {
 
+      /* ==========================================================
+         USUARIOS AUTENTICADOS
+      ========================================================== */
+
+      // Usuario crea su propio reporte
       allow create: if estaAutenticado()
         && request.resource.data.creadoPor == request.auth.uid
         && request.resource.data.estado == "pendiente"
         && request.resource.data.vecesReportado == 1;
 
-      allow get: if estaAutenticado()
+      // Usuario puede consultar sus propios reportes
+      allow get, list: if estaAutenticado()
         && resource.data.creadoPor == request.auth.uid;
 
-      allow list: if estaAutenticado()
-        && resource.data.creadoPor == request.auth.uid;
-
+      // Usuario puede actualizar su propio reporte
       allow update: if estaAutenticado()
         && resource.data.creadoPor == request.auth.uid
+        && request.resource.data.creadoPor == resource.data.creadoPor
+        && request.resource.data.vecesReportado ==
+           resource.data.vecesReportado + 1
+        && request.resource.data.estado == "pendiente";
 
-        && request.resource.data.creadoPor
-          == resource.data.creadoPor
 
-        && request.resource.data.pagina
-          == resource.data.pagina
+      /* ==========================================================
+         ADMINISTRADORES Y MODERADORES
+      ========================================================== */
 
-        && request.resource.data.recursoId
-          == resource.data.recursoId
-
-        && request.resource.data.tipo
-          == resource.data.tipo
-
-        && request.resource.data.grupoClave
-          == resource.data.grupoClave
-
-        && request.resource.data.vecesReportado
-          == resource.data.vecesReportado + 1
-
-        && request.resource.data.estado
-          == "pendiente"
-
-        && request.resource.data.diff(resource.data)
-          .affectedKeys()
-          .hasOnly([
-            "ultimaDescripcion",
-            "ultimaActividad",
-            "vecesReportado",
-            "estado"
-          ]);
-
-      allow get, list: if puedeRevisarReportes();
-
-      allow update: if puedeRevisarReportes();
-
-      allow delete: if false;
+      // Admin y moderador pueden revisar y gestionar reportes
+      allow get, list, update, delete: if puedeRevisarReportes();
     }
-
-
-/* ============================================================
-   TOKENS DE NOTIFICACIONES
-       
-   SOLO ANDROID
-============================================================ */
-
-match /notificationTokens/{userId} {
-
-  /*
-   * CREAR TOKEN
-   *
-   * El ID del documento debe ser el UID
-   * del usuario autenticado.
-   */
-  allow create: if estaAutenticado()
-    && userId == request.auth.uid
-    && request.resource.data.uid == request.auth.uid
-    && request.resource.data.platform == "android"
-    && request.resource.data.enabled == true;
-
-
-  /*
-   * LEER TOKEN
-   *
-   * El usuario solamente puede leer
-   * su propio documento.
-   */
-  allow read: if estaAutenticado()
-    && userId == request.auth.uid;
-
-
-  /*
-   * ACTUALIZAR TOKEN
-   *
-   * El usuario solamente puede actualizar
-   * su propio documento.
-   *
-   * El UID no puede cambiar.
-   */
-  allow update: if estaAutenticado()
-    && userId == request.auth.uid
-    && resource.data.uid == request.auth.uid
-    && request.resource.data.uid == request.auth.uid
-    && request.resource.data.platform == "android";
-
-
-  /*
-   * ELIMINAR TOKEN
-   */
-  allow delete: if estaAutenticado()
-    && userId == request.auth.uid;
-}
 
   }
 }

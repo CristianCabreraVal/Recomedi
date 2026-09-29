@@ -41,6 +41,15 @@ import {
   obtenerRolUsuario,
 } from "../../services/rolService";
 
+import {
+  registrarTokenFCMEnFirestore,
+} from "../../services/notificationTokenService";
+
+import {
+  consumirNotificacionPendiente,
+} from "../../services/notificationService";
+
+
 /* ============================================================
    LOGIN
 ============================================================ */
@@ -173,36 +182,120 @@ export default function Login() {
        * usuarios/{uid}.rol
        * ======================================================
        */
+/* ------------------------------------------------------
+   OBTENER ROL DESDE FIRESTORE
+------------------------------------------------------ */
+const rol = await obtenerRolUsuario(
+  resultado.user.uid
+);
 
-      const rol =
-        await obtenerRolUsuario(
-          resultado.user.uid
-        );
+console.log(
+  "ROL:",
+  rol
+);
 
-      console.log(
-        "ROL:",
-        rol
-      );
+try {
+  await registrarTokenFCMEnFirestore();
 
-      /*
-       * ======================================================
-       * ADMINISTRADOR
-       * ======================================================
-       */
+  console.log(
+    "Dispositivo preparado para recibir notificaciones."
+  );
+} catch (error) {
+  console.log(
+    "No se pudo registrar el dispositivo para notificaciones:",
+    error
+  );
+}
 
-      if (rol === "admin") {
-        redireccionando = true;
+/*
+ * Comprobar si el usuario llegó a la aplicación
+ * tocando una notificación.
+ */
+const notificacionPendiente =
+  await consumirNotificacionPendiente();
 
-        /*
-         * La pantalla de carga sigue visible
-         * mientras Expo Router cambia de pantalla.
-         */
-        router.replace(
-          "/admin"
-        );
+if (notificacionPendiente) {
+  const tipo =
+    notificacionPendiente.tipo;
 
-        return;
-      }
+  console.log(
+    "================================="
+  );
+
+  console.log(
+    "NOTIFICACIÓN PENDIENTE DESPUÉS DEL LOGIN"
+  );
+
+  console.log(
+    "Tipo:",
+    tipo
+  );
+
+  console.log(
+    "Datos:",
+    notificacionPendiente.data
+  );
+
+  console.log(
+    "================================="
+  );
+
+  /*
+   * ============================
+   * NOTICIA
+   * ============================
+   */
+  if (tipo === "noticia") {
+    router.replace(
+      "/(tabs)/noticias"
+    );
+
+    return;
+  }
+
+  /*
+   * ============================
+   * ALERTA
+   * ============================
+   */
+  if (tipo === "alerta") {
+    router.replace(
+      "/(tabs)/epidemia"
+    );
+
+    return;
+  }
+
+  /*
+   * ============================
+   * ACTIVIDAD
+   * ============================
+   */
+  if (tipo === "actividad") {
+    router.replace(
+      "/(tabs)/actividad"
+    );
+
+    return;
+  }
+
+  /*
+   * ============================
+   * RECORDATORIOS DE SALUD
+   * ============================
+   */
+  if (
+    tipo === "hidratacion" ||
+    tipo === "cuidado" ||
+    tipo === "chequeo"
+  ) {
+    router.replace(
+      "/(tabs)"
+    );
+
+    return;
+  }
+}
 
       /*
        * ======================================================
