@@ -6,7 +6,7 @@ import { doc, getDoc, } from "firebase/firestore";
 import { useTheme } from "../../hooks/useTheme";
 import { useUserRole } from "../../hooks/useUserRole";
 import {auth,db,} from "../../services/firebase";
-
+import BotonReportar from "../../components/BotonReportar";
 import {
   MOTIVOS_GENERALES,
 } from "../../services/reportesService";
@@ -698,12 +698,12 @@ return (
         </Text>
       </TouchableOpacity>
       <BotonReportar
-  recursoId="perfil"
-  recursoNombre="Mi perfil"
-  motivos={MOTIVOS_GENERALES}
-  textoBoton="Reportar un problema"
-  descripcionBoton="Reporta un problema con tu perfil"
-/>
+        recursoId="actividad"
+        recursoNombre="Actividad y estadísticas"
+        motivos={MOTIVOS_GENERALES}
+        textoBoton="Reportar un problema"
+        descripcionBoton="Reporta un problema con tus datos o estadísticas"
+      />
 
     </ScrollView>
   </View>

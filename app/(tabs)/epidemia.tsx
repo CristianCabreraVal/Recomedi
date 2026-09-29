@@ -1,4 +1,5 @@
-import { Ionicons } from "@expo/vector-icons";
+import { useEffect, useState } from "react";
+
 import {
   FlatList,
   StyleSheet,
@@ -6,7 +7,6 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useTheme } from "../../hooks/useTheme";
@@ -558,7 +558,8 @@ export default function Alerts() {
                     ]}
                   >
                     {item.contenido ||
-                      item.descripcion}
+  item.descripcion ||
+  "No hay una recomendación disponible."}
                   </Text>
                 </View>
               </View>

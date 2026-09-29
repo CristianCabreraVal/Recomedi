@@ -275,7 +275,7 @@ export default function Actividad() {
      RENDERIZADO DE LA INTERFAZ DE USUARIO (JSX)
   ============================================================ */
   return (
-    <SafeAreaView
+    <View
       style={[
         styles.container,
         {

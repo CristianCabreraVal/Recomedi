@@ -22,86 +22,426 @@ import {
   Ionicons,
 } from "@expo/vector-icons";
 
-import { useTheme } from "../../hooks/useTheme";
+import {
+  useTheme,
+} from "../../hooks/useTheme";
 
-const newsData = [
-  {
-    id: "1",
-    title: "Nueva campaña de vacunación",
-    description:
-      "El gobierno anuncia jornadas gratuitas de vacunación.",
-    category: "Salud Pública",
-    date: "13 Mayo 2026",
-  },
+import {
+  escucharNoticiasPublicadas,
+  type Noticia,
+} from "../../services/noticiasService";
 
-  {
-    id: "2",
-    title: "Aumento de enfermedades respiratorias",
-    description:
-      "Se recomienda uso de mascarilla en lugares cerrados.",
-    category: "Prevención",
-    date: "12 Mayo 2026",
-  },
-];
+export default function NoticiasScreen() {
+  const { width } =
+    useWindowDimensions();
 
-export default function News() {
-  const { colors } = useTheme();
-  const { width } = useWindowDimensions();
+  const { colors } =
+    useTheme();
 
-  // El tamaño de la tarjeta se adapta a móvil y web.
-  const cardWidth = Math.min(width - 40, 900);
+  const [
+    noticias,
+    setNoticias,
+  ] = useState<Noticia[]>([]);
 
-  // Altura fija para permitir desplazamiento vertical dentro de la noticia.
-  const cardHeight = width < 700 ? 460 : 500;
+  const [
+    cargando,
+    setCargando,
+  ] = useState(true);
 
-  const [currentNews, setCurrentNews] = useState(0);
+  const [
+    currentNews,
+    setCurrentNews,
+  ] = useState(0);
 
-  // Actualiza el indicador de noticia mientras el usuario desliza.
-  const actualizarNoticia = (
-    event: NativeSyntheticEvent<NativeScrollEvent>
-  ) => {
-    const offsetX = event.nativeEvent.contentOffset.x;
+  const [
+    noticiaSeleccionada,
+    setNoticiaSeleccionada,
+  ] = useState<Noticia | null>(null);
 
-    const index = Math.round(offsetX / cardWidth);
+  const [
+    modalVisible,
+    setModalVisible,
+  ] = useState(false);
 
-    if (
-      index >= 0 &&
-      index < newsData.length &&
-      index !== currentNews
-    ) {
-      setCurrentNews(index);
+  const scrollNoticiasRef =
+    useRef<ScrollView | null>(null);
+
+  const esWeb =
+    Platform.OS === "web";
+
+  const anchoTarjeta =
+    esWeb
+      ? Math.min(width * 0.58, 700)
+      : Math.min(width * 0.88, 560);
+
+  /*
+   * ==========================================================
+   * CARGA DE NOTICIAS EN TIEMPO REAL
+   * ==========================================================
+   */
+
+  useEffect(() => {
+    setCargando(true);
+
+    const desuscribirse =
+      escucharNoticiasPublicadas(
+        (resultado) => {
+          setNoticias(resultado);
+
+          setCurrentNews(
+            (actual) => {
+              if (
+                resultado.length === 0
+              ) {
+                return 0;
+              }
+
+              if (
+                actual >=
+                resultado.length
+              ) {
+                return (
+                  resultado.length - 1
+                );
+              }
+
+              return actual;
+            }
+          );
+
+          setCargando(false);
+        },
+        (error) => {
+          console.error(
+            "Error escuchando noticias publicadas:",
+            error
+          );
+
+          setCargando(false);
+        }
+      );
+
+    return () => {
+      desuscribirse();
+    };
+  }, []);
+
+  /*
+   * ==========================================================
+   * FECHA
+   * ==========================================================
+   */
+
+  const formatearFecha = (
+    fecha: unknown
+  ): string => {
+    if (!fecha) {
+      return "Fecha no disponible";
+    }
+
+    try {
+      let fechaFinal:
+        | Date
+        | null = null;
+
+      if (
+        fecha instanceof Date
+      ) {
+        fechaFinal = fecha;
+      } else if (
+        typeof fecha === "object" &&
+        fecha !== null
+      ) {
+        const dato =
+          fecha as {
+            toDate?: () => Date;
+            seconds?: number;
+          };
+
+        if (
+          typeof dato.toDate ===
+          "function"
+        ) {
+          fechaFinal =
+            dato.toDate();
+        } else if (
+          typeof dato.seconds ===
+          "number"
+        ) {
+          fechaFinal =
+            new Date(
+              dato.seconds * 1000
+            );
+        }
+      } else if (
+        typeof fecha === "string" ||
+        typeof fecha === "number"
+      ) {
+        const temporal =
+          new Date(fecha);
+
+        if (
+          !Number.isNaN(
+            temporal.getTime()
+          )
+        ) {
+          fechaFinal = temporal;
+        }
+      }
+
+      if (!fechaFinal) {
+        return "Fecha no disponible";
+      }
+
+      return fechaFinal.toLocaleDateString(
+        "es-CO",
+        {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        }
+      );
+    } catch (error) {
+      console.error(
+        "Error formateando fecha:",
+        error
+      );
+
+      return "Fecha no disponible";
     }
   };
 
-  return (
-    <SafeAreaView
-      style={[
-        styles.container,
-        {
-          backgroundColor: colors.background,
-        },
-      ]}
-    >
-      {/* ============================================================
-          ENCABEZADO
-      ============================================================ */}
-      <View style={styles.headerContainer}>
-        <View style={styles.headerTitleRow}>
-          {/* Icono principal de noticias */}
+  /*
+   * ==========================================================
+   * FUENTE
+   * ==========================================================
+   */
+
+  const obtenerUrlFuente = (
+    noticia: Noticia
+  ): string => {
+    return (
+      noticia.urlOficial ||
+      noticia.fuenteUrl ||
+      noticia.urlGoogleNews ||
+      ""
+    );
+  };
+
+  const abrirFuente = async (
+    noticia: Noticia
+  ): Promise<void> => {
+    const url =
+      obtenerUrlFuente(noticia);
+
+    if (!url) {
+      return;
+    }
+
+    try {
+      await Linking.openURL(url);
+    } catch (error) {
+      console.error(
+        "Error abriendo fuente:",
+        error
+      );
+    }
+  };
+
+  /*
+   * ==========================================================
+   * NOTICIA COMPLETA
+   * ==========================================================
+   */
+
+  const abrirNoticia = (
+    noticia: Noticia
+  ): void => {
+    setNoticiaSeleccionada(
+      noticia
+    );
+
+    setModalVisible(true);
+  };
+
+  const cerrarNoticia = (): void => {
+    setModalVisible(false);
+
+    setTimeout(() => {
+      setNoticiaSeleccionada(null);
+    }, 200);
+  };
+
+  /*
+   * ==========================================================
+   * PÁRRAFOS
+   * ==========================================================
+   */
+
+  const obtenerParrafos = (
+    contenido: string
+  ): string[] => {
+    if (!contenido) {
+      return [];
+    }
+
+    const texto =
+      contenido
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n")
+        .trim();
+
+    if (!texto) {
+      return [];
+    }
+
+    const bloques =
+      texto
+        .split(/\n\s*\n/)
+        .map((parrafo) =>
+          parrafo.trim()
+        )
+        .filter(
+          (parrafo) =>
+            parrafo.length > 0
+        );
+
+    if (
+      bloques.length > 1
+    ) {
+      return bloques;
+    }
+
+    return texto
+      .split("\n")
+      .map((parrafo) =>
+        parrafo.trim()
+      )
+      .filter(
+        (parrafo) =>
+          parrafo.length > 0
+      );
+  };
+
+  /*
+   * ==========================================================
+   * NAVEGACIÓN
+   * ==========================================================
+   */
+
+  const noticiaAnterior = (): void => {
+    if (
+      noticias.length === 0
+    ) {
+      return;
+    }
+
+    const nuevoIndice =
+      currentNews > 0
+        ? currentNews - 1
+        : noticias.length - 1;
+
+    setCurrentNews(
+      nuevoIndice
+    );
+
+    scrollNoticiasRef.current?.scrollTo(
+      {
+        x:
+          nuevoIndice * width,
+        animated: true,
+      }
+    );
+  };
+
+  const noticiaSiguiente = (): void => {
+    if (
+      noticias.length === 0
+    ) {
+      return;
+    }
+
+    const nuevoIndice =
+      currentNews <
+      noticias.length - 1
+        ? currentNews + 1
+        : 0;
+
+    setCurrentNews(
+      nuevoIndice
+    );
+
+    scrollNoticiasRef.current?.scrollTo(
+      {
+        x:
+          nuevoIndice * width,
+        animated: true,
+      }
+    );
+  };
+
+  /*
+   * ==========================================================
+   * TARJETA DE NOTICIA
+   * ==========================================================
+   */
+
+  const renderTarjeta = (
+    noticia: Noticia
+  ) => {
+    return (
+      <View
+        style={[
+          styles.page,
+          {
+            width: width,
+          },
+        ]}
+      >
+        <View
+          style={[
+            styles.card,
+            {
+              width: anchoTarjeta,
+              backgroundColor:
+                colors.card,
+              borderColor:
+                colors.border,
+            },
+          ]}
+        >
+          {/* ============================================== */}
+          {/* CABECERA                                        */}
+          {/* ============================================== */}
+
           <View
-            style={[
-              styles.headerIcon,
-              {
-                backgroundColor: colors.card,
-              },
-            ]}
+            style={
+              styles.cardHeader
+            }
           >
-            <Ionicons
-              name="newspaper"
-              size={25}
-              color={colors.primary}
-            />
-          </View>
+            <View
+              style={[
+                styles.newsBadge,
+                {
+                  backgroundColor:
+                    colors.primary,
+                },
+              ]}
+            >
+              <Ionicons
+                name="newspaper-outline"
+                size={15}
+                color="#FFFFFF"
+              />
+
+              <Text
+                style={
+                  styles.newsBadgeText
+                }
+              >
+                NOTICIA
+              </Text>
+            </View>
 
             <View
               style={
@@ -1696,22 +2036,123 @@ export default function News() {
                     styles.sourceCard,
                     {
                       backgroundColor:
-                        index === currentNews
-                          ? colors.primary
-                          : colors.textSecondary,
-                      opacity:
-                        index === currentNews ? 1 : 0.3,
+                        colors.card,
+                      borderColor:
+                        colors.border,
                     },
-                    index === currentNews &&
-                      styles.paginationDotActive,
                   ]}
+                >
+                  <View
+                    style={
+                      styles.sourceHeader
+                    }
+                  >
+                    <View
+                      style={[
+                        styles.sourceIcon,
+                        {
+                          backgroundColor:
+                            colors.background,
+                          borderColor:
+                            colors.border,
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name="business-outline"
+                        size={21}
+                        color={
+                          colors.primary
+                        }
+                      />
+                    </View>
+
+                    <View
+                      style={
+                        styles.sourceDetails
+                      }
+                    >
+                      <Text
+                        style={[
+                          styles.sourceLabel,
+                          {
+                            color:
+                              colors.textSecondary,
+                          },
+                        ]}
+                      >
+                        FUENTE DE LA NOTICIA
+                      </Text>
+
+                      <Text
+                        style={[
+                          styles.sourceName,
+                          {
+                            color:
+                              colors.text,
+                          },
+                        ]}
+                      >
+                        {noticiaSeleccionada.fuente ||
+                          "Fuente oficial"}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Pressable
+                    onPress={() =>
+                      abrirFuente(
+                        noticiaSeleccionada
+                      )
+                    }
+                    disabled={
+                      !obtenerUrlFuente(
+                        noticiaSeleccionada
+                      )
+                    }
+                    style={({ pressed }) => [
+                      styles.sourceButton,
+                      {
+                        backgroundColor:
+                          colors.primary,
+                        opacity:
+                          pressed
+                            ? 0.7
+                            : obtenerUrlFuente(
+                                noticiaSeleccionada
+                              )
+                              ? 1
+                              : 0.45,
+                      },
+                    ]}
+                  >
+                    <Ionicons
+                      name="open-outline"
+                      size={19}
+                      color="#FFFFFF"
+                    />
+
+                    <Text
+                      style={
+                        styles.sourceButtonText
+                      }
+                    >
+                      Ver fuente original
+                    </Text>
+                  </Pressable>
+                </View>
+
+                <View
+                  style={{
+                    height: 40,
+                  }}
                 />
-              ))}
-            </View>
-          </View>
-        )}
-      </View>
-    </SafeAreaView>
+              </ScrollView>
+            </>
+          ) : null}
+        </View>
+      </Modal>
+    </View>
   );
 }
 

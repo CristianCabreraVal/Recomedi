@@ -785,7 +785,6 @@ const seleccionarRol = async (rol: RolUsuario) => {
                 [
                   ["usuario", "Usuario"],
                   ["moderador", "Moderador"],
-                  ["admin", "Administrador"],
                 ] as [RolUsuario, string][]
               ).map(([rol, texto]) => (
                 <Pressable
