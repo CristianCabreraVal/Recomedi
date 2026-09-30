@@ -76,7 +76,7 @@ const OVERPASS_URLS = [
 ============================================================ */
 
 const RADIO_BUSQUEDA =
-  5000;
+  2000;
 
 
 /*
@@ -87,7 +87,7 @@ const RADIO_BUSQUEDA =
  * indefinidamente.
  */
 const TIMEOUT_CLIENTE =
-  15000;
+  30000;
 
 
 /*
@@ -96,7 +96,7 @@ const TIMEOUT_CLIENTE =
  * Debe ser coherente con el timeout del cliente.
  */
 const TIMEOUT_OVERPASS =
-  15;
+  30;
 
 
 /* ============================================================
