@@ -1,14 +1,16 @@
+/* 
+importes que traen archivos o librerias para utilizar funciones, componentes y herramientas.
+{} indica que elementos importan especificamente sea una funcion especifica de la libreria, como useRouter, useEffect.
+ from indica de qué librería o archivo se obtiene cada elemento.
+ */
+//Hooks de React utilizados para manejar:
+//useEffect: ejecutar procesos al cargar la pantalla.
+//useState: guardar información que cambia durante el uso.
 import { useEffect, useState } from "react";
+// Importación de funciones específicas de Firebase Firestore para manipular y consultar datos
+import {doc,getDoc} from "firebase/firestore";
 
-import {
-  doc,
-  getDoc,
-} from "firebase/firestore";
-
-import {
-  auth,
-  db,
-} from "../services/firebase";
+import {auth,db} from "../services/firebase";
 
 type Rol =
   | "usuario"

@@ -1,47 +1,36 @@
-import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Linking,
-    Modal,
-    Platform,
-    Pressable,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
-} from "react-native";
-
+/* 
+importes que traen archivos o librerias para utilizar funciones, componentes y herramientas.
+{} indica que elementos importan especificamente sea una funcion especifica de la libreria, como useRouter, useEffect.
+ from indica de qué librería o archivo se obtiene cada elemento.
+ */
+//Componentes visuales de React Native utilizados paraconstruir la pantalla de carga.
+import {ActivityIndicator,Alert,Image,Linking,Modal,Platform,Pressable,
+  RefreshControl,ScrollView,StyleSheet,Text,TextInput,View} from "react-native";
+// Componente para evitar que el contenido se solape con los bordes físicos del dispositivo (notch, barra de estado)
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import {
-    useCallback,
-    useState,
-} from "react";
+import {useCallback,useState} from "react";
 
-import {
-    useFocusEffect,
-    useRouter,
-} from "expo-router";
-
+import {useFocusEffect,useRouter,} from "expo-router";
+// Ionicons: permite usar iconos para complementar la interfaz de usuario
 import { Ionicons } from "@expo/vector-icons";
-
+// Instancias de autenticación configurada de Firebase
 import { auth } from "../../services/firebase";
 
-import {
-    aprobarNoticia,
-    editarNoticia,
-    obtenerNoticiasPendientes,
-    rechazarNoticia,
-    type Noticia,
-} from "../../services/noticiasService";
-
+import {aprobarNoticia,editarNoticia,obtenerNoticiasPendientes,rechazarNoticia,
+    type Noticia} from "../../services/noticiasService";
+// Importación del hook personalizado para obtener los colores del tema actual (claro u oscuro)
 import { useTheme } from "../../hooks/useTheme";
-
+// export permite utilizar este componente desde otros archivos.
+// function declara el componente.
+// export default indica que este es el componente principal que se exporta desde este archivo.
 export default function AdminNoticias() {
+/*const: declara una variable cuyo valor no se reasigna.
+Se utiliza para guardar valores, funciones, resultados de
+hooks o referencias que serán utilizados posteriormente por el componente.
+*/
   const { colors } = useTheme();
+    // useRouter permite al usuario navegar desde botones o eventos hacia otras rutas de la aplicación.
   const router = useRouter();
 
   const [noticias, setNoticias] =
@@ -1640,11 +1629,11 @@ export default function AdminNoticias() {
     </SafeAreaView>
   );
 }
-
-/* ==============================================================
-   ESTILOS
-============================================================== */
-
+/* StyleSheet.create permite agrupar los estilos utilizados por los componentes de este archivo.
+ Cada propiedad dentro de styles representa un conjunto de 
+ características visuales que puede aplicarse mediante:
+ style={styles.nombre}
+ */
 const styles =
   StyleSheet.create({
 

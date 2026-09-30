@@ -1,35 +1,30 @@
-/* ============================================================
-   IMPORTACIONES
-============================================================ */
-
+/* 
+importes que traen archivos o librerias para utilizar funciones, componentes y herramientas.
+{} indica que elementos importan especificamente sea una funcion especifica de la libreria, como useRouter, useEffect.
+ from indica de qué librería o archivo se obtiene cada elemento.
+ */
+//Hooks de React utilizados para manejar:
+//useEffect: ejecutar procesos al cargar la pantalla.
+//useState: guardar información que cambia durante el uso.
 import { useEffect, useState } from "react";
-import {
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+ // importa los componentes de React Native que se van a utilizar en la pantalla
+import {Alert,ScrollView,StyleSheet,Text,TextInput,TouchableOpacity,
+  View} from "react-native";
+// Componente para evitar que el contenido se solape con los bordes físicos del dispositivo (notch, barra de estado)
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-import {
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-} from "firebase/firestore";
-
+// Importación de funciones específicas de Firebase Firestore para manipular y consultar datos
+import {doc,getDoc,setDoc,updateDoc} from "firebase/firestore";
+// Instancias de autenticación y base de datos configuradas de Firebase
 import { auth, db } from "../../services/firebase";
+// Importación del hook personalizado para obtener los colores del tema actual (claro u oscuro)
 import { useTheme } from "../../hooks/useTheme";
 
 /* ============================================================
    FORMULARIO DE PERFIL
 ============================================================ */
-
+// export default indica que este es el componente principal que se exporta desde este archivo.
 export default function PerfilForm() {
   const router = useRouter();
   const { colors } = useTheme();
@@ -535,11 +530,11 @@ export default function PerfilForm() {
     </SafeAreaView>
   );
 }
-
-/* ================================================================
-   ESTILOS (Diseño del Archivo 2)
-================================================================ */
-
+/* StyleSheet.create permite agrupar los estilos utilizados por los componentes de este archivo.
+ Cada propiedad dentro de styles representa un conjunto de 
+ características visuales que puede aplicarse mediante:
+ style={styles.nombre}
+ */
 const styles = StyleSheet.create({
   container: {
     flex: 1,

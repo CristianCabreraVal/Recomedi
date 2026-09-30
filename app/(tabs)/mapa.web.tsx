@@ -1,28 +1,25 @@
-import {
-  ActivityIndicator,
-  Linking,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-
+/* 
+importes que traen archivos o librerias para utilizar funciones, componentes y herramientas.
+{} indica que elementos importan especificamente sea una funcion especifica de la libreria, como useRouter, useEffect.
+ from indica de qué librería o archivo se obtiene cada elemento.
+ */
+ // importa los componentes de React Native que se van a utilizar en la pantalla
+import {ActivityIndicator,Linking,Pressable,ScrollView,StyleSheet,Text,View,} from "react-native";
+//Hooks de React utilizados para manejar:
+//useEffect: ejecutar procesos al cargar la pantalla.
+//useState: guardar información que cambia durante el uso.
 import { useEffect, useState } from "react";
-
+// Ionicons: permite usar iconos para complementar la interfaz de usuario
 import { Ionicons } from "@expo/vector-icons";
 
 import * as Location from "expo-location";
 
 import { buscarCentrosMedicos } from "../../services/mapService";
-
+// Importación del hook personalizado para obtener los colores del tema actual (claro u oscuro)
 import { useTheme } from "../../hooks/useTheme";
-
+// Importa la funcion de un boton para reportar
 import BotonReportar from "../../components/BotonReportar";
-
-import {
-  MOTIVOS_GENERALES,
-} from "../../services/reportesService";
+import {MOTIVOS_GENERALES} from "../../services/reportesService";
 /* ============================================================
    TIPO DE UBICACIÓN
 
@@ -43,8 +40,14 @@ type Ubicacion = {
    la interfaz para evitar modificar el funcionamiento del
    servicio mapService.
 ============================================================ */
-
+// export permite utilizar este componente desde otros archivos.
+// function declara el componente.
+// export default indica que este es el componente principal que se exporta desde este archivo.
 export default function MapaWeb() {
+/*const: declara una variable cuyo valor no se reasigna.
+Se utiliza para guardar valores, funciones, resultados de
+hooks o referencias que serán utilizados posteriormente por el componente.
+*/   // useTheme obtiene los colores utilizados actualmente por la aplicación 
   const { colors } = useTheme();
 
   /* ==========================================================
@@ -1642,11 +1645,11 @@ function formatearHorario(
       " – "
     );
 }
-
-/* ============================================================
-   ESTILOS
-============================================================ */
-
+/* StyleSheet.create permite agrupar los estilos utilizados por los componentes de este archivo.
+ Cada propiedad dentro de styles representa un conjunto de 
+ características visuales que puede aplicarse mediante:
+ style={styles.nombre}
+ */
 const styles = StyleSheet.create({
 
   /* ==========================================================

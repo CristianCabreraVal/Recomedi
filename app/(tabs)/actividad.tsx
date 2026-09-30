@@ -1,45 +1,28 @@
-// Importación de componentes base de React Native para construir la interfaz y manejar eventos
-import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
-
+/* 
+importes que traen archivos o librerias para utilizar funciones, componentes y herramientas.
+{} indica que elementos importan especificamente sea una funcion especifica de la libreria, como useRouter, useEffect.
+ from indica de qué librería o archivo se obtiene cada elemento.
+ */
+ // importa los componentes de React Native que se van a utilizar en la pantalla
+import {ActivityIndicator,Alert,ScrollView,StyleSheet,Text,TextInput,TouchableOpacity,View,} from "react-native";
 // Importación de hooks fundamentales de React
 import { useCallback, useState } from "react";
 // Hook de Expo Router para ejecutar acciones cuando la pantalla se vuelve visible
 import { useFocusEffect } from "expo-router";
-// Librería de iconos vectoriales incluida en Expo
+// Ionicons: permite usar iconos para complementar la interfaz de usuario
 import { Ionicons } from "@expo/vector-icons";
 // Componente para evitar que el contenido se solape con los bordes físicos del dispositivo (notch, barra de estado)
 import { SafeAreaView } from "react-native-safe-area-context";
-
 // Importación del hook personalizado para obtener los colores del tema actual (claro u oscuro)
 import { useTheme } from "../../hooks/useTheme";
 // Instancias de autenticación y base de datos configuradas de Firebase
 import { auth, db } from "../../services/firebase";
-
 // Importación de funciones específicas de Firebase Firestore para manipular y consultar datos
-import {
-  collection,
-  doc,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  serverTimestamp,
-  setDoc,
-} from "firebase/firestore";
+import {collection,doc,getDocs,limit,orderBy,query,serverTimestamp,setDoc,} from "firebase/firestore";
+// Importa la funcion de un boton para reportar
 import BotonReportar from "../../components/BotonReportar";
 
-import {
-  MOTIVOS_GENERALES,
-} from "../../services/reportesService";
+import {MOTIVOS_GENERALES} from "../../services/reportesService";
 /* ============================================================
    TIPOS DE DATOS (TypeScript)
 ============================================================ */
@@ -61,7 +44,12 @@ type Metrica = "pasos" | "calorias" | "frecuenciaCardiaca" | "distancia";
 /* ============================================================
    COMPONENTE PRINCIPAL DE LA PANTALLA
 ============================================================ */
+// export default indica que este es el componente principal que se exporta desde este archivo.
 export default function Actividad() {
+/*const: declara una variable cuyo valor no se reasigna.
+Se utiliza para guardar valores, funciones, resultados de
+hooks o referencias que serán utilizados posteriormente por el componente.
+*/
   // Obtenemos la paleta de colores actual dependiendo del tema del dispositivo
   const { colors } = useTheme();
 

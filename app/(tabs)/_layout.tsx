@@ -1,21 +1,26 @@
 /* 
-importes que traen archivos o librerias para su utilizacion en el codigo, como react-native, expo-router, react, etc.
-{} indica que se esta importando especificamente sea una funcion especifica de la libreria, como useRouter, useEffect
- from indica de donde se esta importando la libreria o el archivo
+importes que traen archivos o librerias para utilizar funciones, componentes y herramientas.
+{} indica que elementos importan especificamente sea una funcion especifica de la libreria, como useRouter, useEffect.
+ from indica de qué librería o archivo se obtiene cada elemento.
  */
+//Componentes visuales de React Native utilizados paraconstruir la pantalla de carga.
+// Pressable: crea botones o elementos que pueden ser presionados
+// StyleSheet: permite definir los estilos de los para mantener un diseño
 import {Pressable,StyleSheet,} from "react-native";
+// Tabs: controla la navegación mediante pestañas
+// useRouter: permite navegar manualmente hacia otras rutas
 import { Tabs, useRouter } from "expo-router";
+// Ionicons: permite usar iconos para complementar la interfaz de usuario
 import { Ionicons } from "@expo/vector-icons";
+//useSafeAreaInsets: obtiene el espacio que el dispositivo reserva para el sistema, como la barra de navegación inferior
+// Esto evita que la barra de pestañas quede debajo de los controles del sistema
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-/* 
-imports que traen funciones existentes en otros archivos para su utilizacion en este archivo
-*/
+// Importaciones propias que traen funciones de otros archivos
+// Importación del hook personalizado para obtener los colores del tema actual (claro u oscuro)
 import { useTheme } from "../../hooks/useTheme";
-
 
 /* ============================================================
    LAYOUT PRINCIPAL DE LAS PESTAÑAS
-
    Este archivo controla la navegación principal de Recomedi.
 
    Aquí se configuran:
@@ -25,27 +30,27 @@ import { useTheme } from "../../hooks/useTheme";
    - Los accesos globales a Perfil y Configuración.
 
    Perfil y Configuración siguen siendo rutas válidas, pero
-   no aparecen dentro de la barra inferior porque utilizan
-   href: null.
+   no aparecen dentro de la barra inferior
 ============================================================ */
-
+// export default indica que este es el componente principal que se exporta desde este archivo.
 export default function Layout() {
 
   /* ------------------------------------------------------------
      HERRAMIENTAS DE NAVEGACIÓN Y TEMA
   ------------------------------------------------------------ */
-
-  // Permite enviar al usuario a Perfil o Configuración.
+/*const: declara una variable cuyo valor no se reasigna.
+Se utiliza para guardar valores, funciones, resultados de
+hooks o referencias que serán utilizados posteriormente por el componente.
+*/
+  // useRouter permite al usuario navegar desde botones o eventos hacia otras rutas de la aplicación.
   const router = useRouter();
 
-  // Obtiene los colores definidos por el tema de Recomedi.
+  // useTheme obtiene los colores utilizados actualmente por la aplicación 
   const { colors } = useTheme();
 
-  // Obtiene el espacio seguro del dispositivo.
-  // Es especialmente importante en Android para evitar que
-  // la barra inferior quede debajo de la navegación del sistema.
+  // Obtiene el espacio seguro del dispositivo, evita cubrir elementos de la interfaz con la barra de navegación del sistema.
+  // insets representa el espacio que queda debajo de la aplicación y que puede ser ocupado por la navegación del sistema.
   const insets = useSafeAreaInsets();
-
 
   /* ------------------------------------------------------------
      ESTRUCTURA DE NAVEGACIÓN
@@ -381,6 +386,7 @@ export default function Layout() {
 
 const styles = StyleSheet.create({
 
+  // Botón de la esquina superior izquierda (Configuración).
   headerButton: {
     paddingHorizontal: 14,
     paddingVertical: 8,

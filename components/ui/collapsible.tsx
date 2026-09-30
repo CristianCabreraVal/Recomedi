@@ -1,3 +1,8 @@
+/* 
+importes que traen archivos o librerias para utilizar funciones, componentes y herramientas.
+{} indica que elementos importan especificamente sea una funcion especifica de la libreria, como useRouter, useEffect.
+ from indica de qué librería o archivo se obtiene cada elemento.
+ */
 import { PropsWithChildren, useState } from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 
@@ -31,7 +36,11 @@ export function Collapsible({ children, title }: PropsWithChildren & { title: st
     </ThemedView>
   );
 }
-
+/* StyleSheet.create permite agrupar los estilos utilizados por los componentes de este archivo.
+ Cada propiedad dentro de styles representa un conjunto de 
+ características visuales que puede aplicarse mediante:
+ style={styles.nombre}
+ */
 const styles = StyleSheet.create({
   heading: {
     flexDirection: 'row',

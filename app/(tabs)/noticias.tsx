@@ -1,40 +1,28 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-} from "react";
-
-import {
-  ActivityIndicator,
-  Image,
-  Linking,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from "react-native";
-
-import {
-  Ionicons,
-} from "@expo/vector-icons";
-
-import {
-  useTheme,
-} from "../../hooks/useTheme";
-
-import {
-  escucharNoticiasPublicadas,
-  type Noticia,
-} from "../../services/noticiasService";
-
+/* 
+importes que traen archivos o librerias para utilizar funciones, componentes y herramientas.
+{} indica que elementos importan especificamente sea una funcion especifica de la libreria, como useRouter, useEffect.
+ from indica de qué librería o archivo se obtiene cada elemento.
+ */
+import {useEffect,useRef,useState} from "react";
+ // importa los componentes de React Native que se van a utilizar en la pantalla
+import {ActivityIndicator,Image,Linking,Modal,Platform,Pressable,
+  ScrollView,StyleSheet,Text,useWindowDimensions,View,} from "react-native";
+// Ionicons: permite usar iconos para complementar la interfaz de usuario
+import {Ionicons} from "@expo/vector-icons";
+// Importación del hook personalizado para obtener los colores del tema actual (claro u oscuro)
+import {useTheme} from "../../hooks/useTheme";
+import {escucharNoticiasPublicadas,type Noticia} from "../../services/noticiasService";
+// export permite utilizar este componente desde otros archivos.
+// function declara el componente.
+// export default indica que este es el componente principal que se exporta desde este archivo.
 export default function NoticiasScreen() {
+/*const: declara una variable cuyo valor no se reasigna.
+Se utiliza para guardar valores, funciones, resultados de
+hooks o referencias que serán utilizados posteriormente por el componente.
+*/
   const { width } =
     useWindowDimensions();
-
+  // useTheme obtiene los colores utilizados actualmente por la aplicación 
   const { colors } =
     useTheme();
 
@@ -2155,13 +2143,11 @@ export default function NoticiasScreen() {
     </View>
   );
 }
-
-/*
- * ============================================================
- * ESTILOS
- * ============================================================
+/* StyleSheet.create permite agrupar los estilos utilizados por los componentes de este archivo.
+ Cada propiedad dentro de styles representa un conjunto de 
+ características visuales que puede aplicarse mediante:
+ style={styles.nombre}
  */
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

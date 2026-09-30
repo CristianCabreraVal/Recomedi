@@ -1,40 +1,23 @@
-import {
-  Stack,
-  useRouter,
-  useSegments,
-} from "expo-router";
+/* 
+importes que traen archivos o librerias para utilizar funciones, componentes y herramientas.
+{} indica que elementos importan especificamente sea una funcion especifica de la libreria, como useRouter, useEffect.
+ from indica de qué librería o archivo se obtiene cada elemento.
+ */
+import {Stack,useRouter,useSegments} from "expo-router";
 
-import {
-  useEffect,
-  useState,
-} from "react";
+import {useEffect,useState} from "react";
+//Componentes visuales de React Native utilizados paraconstruir la pantalla de carga.
+import {ActivityIndicator,Image,StyleSheet,Text,View} from "react-native";
 
-import {
-  ActivityIndicator,
-  Image,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-
-import {
-  onAuthStateChanged,
-  reload,
-} from "firebase/auth";
+import {onAuthStateChanged,reload} from "firebase/auth";
 
 import * as SplashScreen from "expo-splash-screen";
+// Instancias de autenticación configurada de Firebase
+import {auth} from "../services/firebase";
 
-import {
-  auth,
-} from "../services/firebase";
+import {obtenerRolUsuario} from "../services/rolService";
 
-import {
-  obtenerRolUsuario,
-} from "../services/rolService";
-
-import {
-  ThemeProvider,
-} from "../hooks/useTheme";
+import {ThemeProvider} from "../hooks/useTheme";
 
 import { iniciarEscuchaNotificaciones } from "../services/notificationService";
 
@@ -48,8 +31,12 @@ type Rol =
   | "usuario"
   | "moderador"
   | "admin";
-
+// export default indica que este es el componente principal que se exporta desde este archivo.
 export default function RootLayout() {
+/*const: declara una variable cuyo valor no se reasigna.
+Se utiliza para guardar valores, funciones, resultados de
+hooks o referencias que serán utilizados posteriormente por el componente.
+*/   // useRouter permite al usuario navegar desde botones o eventos hacia otras rutas de la aplicación.
   const router = useRouter();
 
   const segments =
@@ -351,8 +338,8 @@ export default function RootLayout() {
             );
 
             /*
-             * Solo aceptamos roles conocidos.
-             */
+            Solo aceptamos roles conocidos.
+            */
             if (
               rolFirestore === "admin" ||
               rolFirestore === "moderador" ||
@@ -370,9 +357,8 @@ export default function RootLayout() {
               error
             );
 
-            /*
-             * En caso de error nunca otorgamos
-             * permisos administrativos.
+            /*En caso de error nunca otorgamos
+              permisos administrativos.
              */
             setRol("usuario");
 
@@ -391,18 +377,13 @@ export default function RootLayout() {
   ============================================================ */
 
   useEffect(() => {
-    /*
-     * Mientras Firebase esté comprobando
-     * el usuario y su rol, no redireccionamos.
+    /*Mientras Firebase esté comprobando
+      el usuario y su rol, no redireccionamos.
      */
     if (cargando) {
       return;
     }
-
-    /*
-     * Determinamos la sección actual.
-     */
-
+    // Determinamos la sección actual.
     const enAuth =
       segments[0] === "auth";
 
@@ -437,17 +418,14 @@ export default function RootLayout() {
 
       return;
     }
-
     /* ========================================================
        CORREO NO VERIFICADO
     ======================================================== */
-
     if (
       emailNoVerificado
     ) {
-      /*
-       * Todo usuario no verificado permanece
-       * en la pantalla de verificación.
+      /*Todo usuario no verificado permanece
+        en la pantalla de verificación.
        */
       if (!enVerificar) {
         router.replace(
@@ -697,11 +675,11 @@ export default function RootLayout() {
     </ThemeProvider>
   );
 }
-
-/* ==============================================================
-   ESTILOS
-============================================================== */
-
+/* StyleSheet.create permite agrupar los estilos utilizados por los componentes de este archivo.
+ Cada propiedad dentro de styles representa un conjunto de 
+ características visuales que puede aplicarse mediante:
+ style={styles.nombre}
+ */
 const styles =
   StyleSheet.create({
     container: {

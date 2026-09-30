@@ -1,23 +1,31 @@
+/* 
+importes que traen archivos o librerias para utilizar funciones, componentes y herramientas.
+{} indica que elementos importan especificamente sea una funcion especifica de la libreria, como useRouter, useEffect.
+ from indica de qué librería o archivo se obtiene cada elemento.
+ */
 import { useFocusEffect, useRouter, } from "expo-router";
 import { useCallback, useState, } from "react";
+ // importa los componentes de React Native que se van a utilizar en la pantalla
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
-
-import { doc, getDoc, } from "firebase/firestore";
+// Importación de funciones específicas de Firebase Firestore para manipular y consultar datos
+import { doc, getDoc } from "firebase/firestore";
+// Importación del hook personalizado para obtener los colores del tema actual (claro u oscuro)
 import { useTheme } from "../../hooks/useTheme";
 import { useUserRole } from "../../hooks/useUserRole";
+// Instancias de autenticación y base de datos configuradas de Firebase
 import { auth, db, } from "../../services/firebase";
-
+// Importa la funcion de un boton para reportar
 import BotonReportar from "../../components/BotonReportar";
-
-
-import {
-  registrarTokenFCMEnFirestore,
-} from "../../services/notificationTokenService";
-
+import {registrarTokenFCMEnFirestore,} from "../../services/notificationTokenService";
 import { MOTIVOS_GENERALES } from "@/services/reportesService";
-
+// export permite utilizar este componente desde otros archivos.
+// function declara el componente.
+// export default indica que este es el componente principal que se exporta desde este archivo.
 export default function Perfil() {
-
+/*const: declara una variable cuyo valor no se reasigna.
+Se utiliza para guardar valores, funciones, resultados de
+hooks o referencias que serán utilizados posteriormente por el componente.
+*/
   const registrarDispositivoFCM = async () => {
   try {
     const token =
@@ -750,11 +758,11 @@ return (
   </View>
 );
 }
-
-/* ============================================================
-   ESTILOS
-============================================================ */
-
+/* StyleSheet.create permite agrupar los estilos utilizados por los componentes de este archivo.
+ Cada propiedad dentro de styles representa un conjunto de 
+ características visuales que puede aplicarse mediante:
+ style={styles.nombre}
+ */
 const styles = StyleSheet.create({
   container: {
     flex: 1,

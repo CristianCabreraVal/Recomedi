@@ -1,30 +1,21 @@
-import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  useWindowDimensions,
-  View,
-} from "react-native";
+/* 
+importes que traen archivos o librerias para utilizar funciones, componentes y herramientas.
+{} indica que elementos importan especificamente sea una funcion especifica de la libreria, como useRouter, useEffect.
+ from indica de qué librería o archivo se obtiene cada elemento.
+ */
+//Componentes visuales de React Native utilizados paraconstruir la pantalla de carga.
+import {ActivityIndicator,Alert,KeyboardAvoidingView,Modal,Platform,Pressable,
+  ScrollView,StyleSheet,Text,TextInput,useWindowDimensions,View} from "react-native";
 
 import { useState } from "react";
-
+// Ionicons: permite usar iconos para complementar la interfaz de usuario
 import { Ionicons } from "@expo/vector-icons";
 
 import { usePathname } from "expo-router";
-
+// Importación del hook personalizado para obtener los colores del tema actual (claro u oscuro)
 import { useTheme } from "../hooks/useTheme";
 
-import {
-  MotivoReporte,
-  registrarReporte,
-} from "../services/reportesService";
+import {MotivoReporte,registrarReporte} from "../services/reportesService";
 
 /* ============================================================
    PROPS
@@ -37,11 +28,7 @@ type Props = {
   textoBoton?: string;
   descripcionBoton?: string;
 };
-
-/* ============================================================
-   COMPONENTE
-============================================================ */
-
+// export default indica que este es el componente principal que se exporta desde este archivo.
 export default function BotonReportar({
   recursoId,
   recursoNombre,
@@ -699,11 +686,11 @@ export default function BotonReportar({
     </>
   );
 }
-
-/* ============================================================
-   ESTILOS
-============================================================ */
-
+/* StyleSheet.create permite agrupar los estilos utilizados por los componentes de este archivo.
+ Cada propiedad dentro de styles representa un conjunto de 
+ características visuales que puede aplicarse mediante:
+ style={styles.nombre}
+ */
 const styles =
   StyleSheet.create({
     wrapper: {

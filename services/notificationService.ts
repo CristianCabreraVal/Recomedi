@@ -1,4 +1,11 @@
+/* 
+importes que traen archivos o librerias para utilizar funciones, componentes y herramientas.
+{} indica que elementos importan especificamente sea una funcion especifica de la libreria, como useRouter, useEffect.
+ from indica de qué librería o archivo se obtiene cada elemento.
+ */
+
 import Constants from "expo-constants";
+ // importa los componentes de React Native que se van a utilizar en la pantalla
 import { Platform } from "react-native";
 
 import * as Notifications from 'expo-notifications';

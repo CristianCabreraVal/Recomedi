@@ -1,10 +1,10 @@
-import {
-    doc,
-    getDoc,
-    setDoc,
-    updateDoc,
-    deleteDoc
-} from "firebase/firestore";
+/* 
+importes que traen archivos o librerias para utilizar funciones, componentes y herramientas.
+{} indica que elementos importan especificamente sea una funcion especifica de la libreria, como useRouter, useEffect.
+ from indica de qué librería o archivo se obtiene cada elemento.
+ */
+// Importación de funciones específicas de Firebase Firestore para manipular y consultar datos
+import {doc,getDoc,setDoc,updateDoc,deleteDoc} from "firebase/firestore";
 
 import { db } from "./firebase";
 

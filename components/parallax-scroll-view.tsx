@@ -1,9 +1,15 @@
+/* 
+importes que traen archivos o librerias para utilizar funciones, componentes y herramientas.
+{} indica que elementos importan especificamente sea una funcion especifica de la libreria, como useRouter, useEffect.
+ from indica de qué librería o archivo se obtiene cada elemento.
+ */
 import type { PropsWithChildren, ReactElement } from 'react';
 import { StyleSheet } from 'react-native';
 import Animated, {interpolate,useAnimatedRef,useAnimatedStyle,useScrollOffset,} from 'react-native-reanimated';
 
 import { ThemedView } from '@/components/themed-view';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+// Importación del hook personalizado para obtener los colores del tema actual (claro u oscuro)
 import { useThemeColor } from '@/hooks/use-theme-color';
 
 const HEADER_HEIGHT = 250;
@@ -12,7 +18,7 @@ type Props = PropsWithChildren<{
   headerImage: ReactElement;
   headerBackgroundColor: { dark: string; light: string };
 }>;
-
+// export default indica que este es el componente principal que se exporta desde este archivo.
 export default function ParallaxScrollView({
   children,
   headerImage,
@@ -57,7 +63,11 @@ export default function ParallaxScrollView({
     </Animated.ScrollView>
   );
 }
-
+/* StyleSheet.create permite agrupar los estilos utilizados por los componentes de este archivo.
+ Cada propiedad dentro de styles representa un conjunto de 
+ características visuales que puede aplicarse mediante:
+ style={styles.nombre}
+ */
 const styles = StyleSheet.create({
   container: {
     flex: 1,

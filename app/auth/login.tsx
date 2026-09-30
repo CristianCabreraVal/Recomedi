@@ -1,60 +1,36 @@
-/* ============================================================
-   IMPORTACIONES
-============================================================ */
-
+/* 
+importes que traen archivos o librerias para utilizar funciones, componentes y herramientas.
+{} indica que elementos importan especificamente sea una funcion especifica de la libreria, como useRouter, useEffect.
+ from indica de qué librería o archivo se obtiene cada elemento.
+ */
 import { useState } from "react";
+ // importa los componentes de React Native que se van a utilizar en la pantalla
+import {ActivityIndicator,Alert,Image,KeyboardAvoidingView,Platform,
+  Pressable,ScrollView,StyleSheet,Text,TextInput,View} from "react-native";
 
-import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
-
-import {
-  reload,
-  signInWithEmailAndPassword,
-} from "firebase/auth";
-
+import {reload,signInWithEmailAndPassword} from "firebase/auth";
+// Ionicons: permite usar iconos para complementar la interfaz de usuario
 import { Ionicons } from "@expo/vector-icons";
+// Componente para evitar que el contenido se solape con los bordes físicos del dispositivo (notch, barra de estado)
+import {SafeAreaView,} from "react-native-safe-area-context";
 
-import {
-  SafeAreaView,
-} from "react-native-safe-area-context";
+import {useRouter,} from "expo-router";
+// Instancias de autenticación configurada de Firebase
+import {auth} from "../../services/firebase";
 
-import {
-  useRouter,
-} from "expo-router";
+import {obtenerRolUsuario,} from "../../services/rolService";
 
-import {
-  auth,
-} from "../../services/firebase";
+import {registrarTokenFCMEnFirestore,} from "../../services/notificationTokenService";
 
-import {
-  obtenerRolUsuario,
-} from "../../services/rolService";
-
-import {
-  registrarTokenFCMEnFirestore,
-} from "../../services/notificationTokenService";
-
-import {
-  consumirNotificacionPendiente,
-} from "../../services/notificationService";
-
-
-/* ============================================================
-   LOGIN
-============================================================ */
-
+import {consumirNotificacionPendiente,} from "../../services/notificationService";
+// export permite utilizar este componente desde otros archivos.
+// function declara el componente.
+// export default indica que este es el componente principal que se exporta desde este archivo.
 export default function Login() {
+/*const: declara una variable cuyo valor no se reasigna.
+Se utiliza para guardar valores, funciones, resultados de
+hooks o referencias que serán utilizados posteriormente por el componente.
+*/  // useRouter permite al usuario navegar desde botones o eventos hacia otras rutas de la aplicación.
   const router = useRouter();
 
   /* ==========================================================
@@ -780,11 +756,11 @@ if (notificacionPendiente) {
     </SafeAreaView>
   );
 }
-
-/* ============================================================
-   ESTILOS
-============================================================ */
-
+/* StyleSheet.create permite agrupar los estilos utilizados por los componentes de este archivo.
+ Cada propiedad dentro de styles representa un conjunto de 
+ características visuales que puede aplicarse mediante:
+ style={styles.nombre}
+ */
 const styles =
   StyleSheet.create({
     /* ========================================================

@@ -27,114 +27,48 @@
  * - View: organiza grupos de componentes.
  * - useWindowDimensions: obtiene el tamaño actual de la ventana.
  */
-import {
-  Alert,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  useWindowDimensions,
-} from "react-native";
-
-
-/*
- * useRouter permite cambiar de pantalla utilizando
- * Expo Router.
- */
+ // importa los componentes de React Native que se van a utilizar en la pantalla
+import {Alert,Image,ScrollView,StyleSheet,Text,TouchableOpacity,
+  View,useWindowDimensions} from "react-native";
+//useRouter permite cambiar de pantalla utilizando Expo Router.
 import { useRouter } from "expo-router";
+//Hooks de React utilizados para manejar:
+//useEffect: ejecutar procesos al cargar la pantalla.
+//useState: guardar información que cambia durante el uso.
+import {useEffect,useState} from "react";
+//SafeAreaView evita que el contenido quede detrás deelementos del sistema del dispositivo.
 
-
-/*
- * Hooks de React utilizados para manejar:
- * - useEffect: ejecutar procesos al cargar la pantalla.
- * - useState: guardar información que cambia durante el uso.
- */
-import {
-  useEffect,
-  useState,
-} from "react";
-
-
-/*
- * SafeAreaView evita que el contenido quede detrás de
- * elementos del sistema del dispositivo.
- */
-
-
-/*
- * AsyncStorage permite guardar y recuperar información
- * localmente en el dispositivo.
- *
- * En esta pantalla se utiliza para recuperar el perfil
- * guardado del usuario.
+/*AsyncStorage permite guardar y recuperar información localmente en el dispositivo.
+ En esta pantalla se utiliza para recuperar el perfil guardado del usuario.
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-
-/*
- * Ionicons proporciona los iconos utilizados en la
- * interfaz.
+// Ionicons: permite usar iconos para complementar la interfaz de usuario
+import {Ionicons} from "@expo/vector-icons";
+// Importación del hook personalizado para obtener los colores del tema actual (claro u oscuro)
+import {useTheme} from "../../hooks/useTheme";
+/*Función del módulo de ML que genera las recomendaciones según el perfil del usuario.
+aun no generado
  */
-import {
-  Ionicons,
-} from "@expo/vector-icons";
-
-
-/*
- * Servicio encargado de enviar la recomendación al
- * sistema de notificaciones.
- */
-
-
-
-/*
- * useTheme proporciona el modo oscuro y los colores
- * utilizados por la aplicación.
- */
-import {
-  useTheme,
-} from "../../hooks/useTheme";
-
-
-/*
- * Función del módulo de ML que genera las recomendaciones
- * según el perfil del usuario.
- */
-import {
-  generarRecomendaciones,
-} from "../../ml/recomendaciones";
-
+import {generarRecomendaciones} from "../../ml/recomendaciones";
+// Importa la funcion de un boton para reportar
 import BotonReportar from "../../components/BotonReportar";
 
-import {
-  MOTIVOS_INICIO,
-} from "../../services/reportesService";
-/* ============================================================
-   COMPONENTE PRINCIPAL
-   ============================================================ */
-
+import {MOTIVOS_INICIO} from "../../services/reportesService";
+// export permite utilizar este componente desde otros archivos.
+// function declara el componente.
+// export default indica que este es el componente principal que se exporta desde este archivo.
 export default function Home() {
-
-  /*
-   * Obtiene el estado actual del modo oscuro.
-   *
-   * dark = true  → tema oscuro.
-   * dark = false → tema claro.
-   */
+/*const: declara una variable cuyo valor no se reasigna.
+Se utiliza para guardar valores, funciones, resultados de
+hooks o referencias que serán utilizados posteriormente por el componente.
+*/
+  //Obtiene el estado actual del modo oscuro.
+  // dark = true  → tema oscuro.
+  // dark = false → tema claro.
   const { dark } = useTheme();
-
-
-  /*
-   * router permite navegar entre las pantallas de Recomedi.
-   */
+  //router permite navegar entre las pantallas de Recomedi.
   const router = useRouter();
-
-
-  /*
-   * Obtiene el ancho actual de la ventana.
-   *
+  /*Obtiene el ancho actual de la ventana.
    * Esto permite cambiar la distribución de la interfaz
    * dependiendo de si la aplicación se está ejecutando
    * en móvil, tablet o web.
@@ -142,12 +76,7 @@ export default function Home() {
   const {
     width,
   } = useWindowDimensions();
-
-
-  /*
-   * Determina si el dispositivo o ventana se considera
-   * móvil.
-   *
+  /*Determina si el dispositivo o ventana se considera móvil.
    * Menos de 700 px:
    * → interfaz adaptada para móvil.
    */
@@ -155,58 +84,38 @@ export default function Home() {
     width < 700;
 
 
-  /*
-   * Determina si existe suficiente espacio horizontal
-   * para utilizar una distribución tipo dashboard.
-   *
-   * 900 px o más:
-   * → contenido en varias zonas horizontales.
-   */
+  /* Determina si existe suficiente espacio horizontal para utilizar 
+  una distribución tipo dashboard.
+  900 px o más:
+   → contenido en varias zonas horizontales.
+  */
   const pantallaAncha =
     width >= 900;
-
-
   /* ==========================================================
      ESTADOS
      ========================================================== */
-
-  /*
-   * Guarda los datos del usuario recuperados desde
-   * AsyncStorage.
-   *
-   * Se utiliza null cuando todavía no existe un perfil
-   * local guardado.
+  /*Guarda los datos del usuario recuperados desde AsyncStorage.
+   Se utiliza null cuando todavía no existe un perfil local guardado.
    */
   const [usuario, setUsuario] =
     useState<any>(null);
-
-
-  /*
-   * Contiene las recomendaciones generadas para el usuario.
-   */
+  //Contiene las recomendaciones generadas para el usuario.
   const [
     recomendaciones,
     setRecomendaciones,
   ] = useState<string[]>([]);
-
-
-  /*
-   * Guarda la última recomendación mostrada.
-   *
-   * Se utiliza para:
-   * - mostrarla dentro de la tarjeta principal;
-   * - evitar repetir inmediatamente la misma recomendación.
+  /* Guarda la última recomendación mostrada.
+   Se utiliza para:
+   - mostrarla dentro de la tarjeta principal;
+   - evitar repetir inmediatamente la misma recomendación.
    */
   const [
     ultimaRecomendacion,
     setUltimaRecomendacion,
   ] = useState<string | null>(null);
-
-
   /* ==========================================================
      GENERAR RECOMENDACIÓN
      ========================================================== */
-
   /*
    * Genera una recomendación aleatoria.
    *
@@ -217,48 +126,30 @@ export default function Home() {
    */
   const probarRecomendacion =
     async () => {
-
       try {
-
-        /*
-         * Si no existen recomendaciones disponibles,
-         * mostramos un mensaje y detenemos la función.
-         */
+//Si no existen recomendaciones disponibles, mostramos un mensaje y detenemos la función.
         if (
           recomendaciones.length === 0
         ) {
-
           const mensaje =
             "No hay recomendaciones disponibles en este momento.";
-
 
           // Guarda el mensaje para mostrarlo en la tarjeta.
           setUltimaRecomendacion(
             mensaje
           );
 
-
           // Mantiene el aviso emergente original de Recomedi.
           Alert.alert(
             "Recomedi",
             mensaje
           );
-
-
           return;
         }
-
-
-        /*
-         * Guardará la posición de la recomendación elegida
-         * dentro del arreglo.
-         */
+//Guardará la posición de la recomendación elegidadentro del arreglo.
         let indice: number;
 
-
-        /*
-         * Elegimos una posición aleatoria.
-         */
+        //Elegimos una posición aleatoria.
         do {
 
           indice =
@@ -267,51 +158,30 @@ export default function Home() {
               recomendaciones.length
             );
 
-        /*
-         * Si hay más de una recomendación, repetimos la
-         * elección mientras sea igual a la anterior.
+        /*Si hay más de una recomendación, repetimos la
+          elección mientras sea igual a la anterior.
          */
         } while (
           recomendaciones.length > 1 &&
           recomendaciones[indice] ===
             ultimaRecomendacion
         );
-
-
-        /*
-         * Obtiene el texto correspondiente a la posición
-         * elegida.
-         */
+        //Obtiene el texto correspondiente a la posición elegida.
         const nuevaRecomendacion =
           recomendaciones[indice];
-
-
-        /*
-         * Guarda la nueva recomendación para mostrarla
-         * dentro de la pantalla.
+        /*Guarda la nueva recomendación para mostrarla
+          dentro de la pantalla.
          */
         setUltimaRecomendacion(
           nuevaRecomendacion
         );
-
-
-        /*
-         * Mantiene el aviso emergente que ya utilizaba
-         * Recomedi.
-         */
+        //Mantiene el aviso emergente que ya utilizaba Recomedi.
         Alert.alert(
           "Recomendación de Recomedi",
           nuevaRecomendacion
         );
-
-
-        /*
-         * Envía la recomendación al servicio de notificaciones.
-         */
-       
-
+        //Envía la recomendación al servicio de notificaciones.
       } catch (error) {
-
         /*
          * Registra el error para facilitar la depuración.
          */
@@ -320,16 +190,13 @@ export default function Home() {
           error
         );
 
-
         const mensaje =
           "No fue posible generar la recomendación.";
-
 
         // Muestra el mensaje de error dentro de la tarjeta.
         setUltimaRecomendacion(
           mensaje
         );
-
 
         // Informa al usuario mediante un Alert.
         Alert.alert(
@@ -339,81 +206,55 @@ export default function Home() {
       }
     };
 
-
   /* ==========================================================
      CARGAR USUARIO Y RECOMENDACIONES
      ========================================================== */
 
-  /*
-   * Al abrir la pantalla:
-   *
-   * 1. Busca el perfil almacenado localmente.
-   * 2. Si existe, genera recomendaciones personalizadas.
-   * 3. Si no existe, genera recomendaciones generales.
+  /*Al abrir la pantalla:
+   
+    1. Busca el perfil almacenado localmente.
+    2. Si existe, genera recomendaciones personalizadas.
+    3. Si no existe, genera recomendaciones generales.
    */
   useEffect(() => {
 
     const cargarUsuario =
       async () => {
-
         try {
 
-          /*
-           * Recupera el usuario guardado en AsyncStorage.
-           */
+          // Recupera el usuario guardado en AsyncStorage.
           const data =
             await AsyncStorage.getItem(
               "usuario"
             );
 
-
-          /*
-           * Si no existe información del usuario,
-           * generamos recomendaciones generales.
+          /*Si no existe información del usuario,
+            generamos recomendaciones generales.
            */
           if (!data) {
 
             setUsuario(null);
-
-
             const rec =
               generarRecomendaciones();
-
-
             setRecomendaciones(
               rec
             );
-
-
             return;
           }
-
-
-          /*
-           * Convierte el texto JSON almacenado en un
-           * objeto JavaScript.
-           */
+          // Convierte el texto JSON almacenado en un objeto JavaScript.
           const user =
             JSON.parse(data);
 
-
-          /*
-           * Guarda el perfil en el estado.
-           */
+          //Guarda el perfil en el estado.
           setUsuario(
             user
           );
 
-
-          /*
-           * Genera recomendaciones utilizando los datos
-           * del perfil.
-           */
+          //Genera recomendaciones utilizando los datos del perfil.
           const rec =
             generarRecomendaciones(
               user
             );
-
 
           setRecomendaciones(
             rec
@@ -421,20 +262,17 @@ export default function Home() {
 
         } catch (error) {
 
-          /*
-           * Si ocurre un error al cargar el perfil,
-           * mostramos recomendaciones generales para
-           * que la pantalla siga siendo útil.
+          /* Si ocurre un error al cargar el perfil,
+            mostramos recomendaciones generales para
+            que la pantalla siga siendo útil.
            */
           console.error(
             "Error cargando usuario:",
             error
           );
 
-
           const rec =
             generarRecomendaciones();
-
 
           setRecomendaciones(
             rec
@@ -442,14 +280,9 @@ export default function Home() {
         }
       };
 
-
-    /*
-     * Ejecuta la carga inicial.
-     */
+    //Ejecuta la carga inicial.
     cargarUsuario();
-
   }, []);
-
 
   /* ==========================================================
      INTERFAZ
@@ -1517,19 +1350,11 @@ export default function Home() {
     </View>
   );
 }
-
-
-/* ================================================================
-   ESTILOS
-================================================================ */
-
-/*
- * Los estilos están organizados por sección de la pantalla.
- *
- * Las partes que modifican la distribución según el tamaño
- * de pantalla se combinan con estilos dinámicos dentro del JSX.
+/* StyleSheet.create permite agrupar los estilos utilizados por los componentes de este archivo.
+ Cada propiedad dentro de styles representa un conjunto de 
+ características visuales que puede aplicarse mediante:
+ style={styles.nombre}
  */
-
 const styles = StyleSheet.create({
 
   /* ==========================================================

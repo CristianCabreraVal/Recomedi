@@ -1,6 +1,13 @@
+/* 
+importes que traen archivos o librerias para utilizar funciones, componentes y herramientas.
+{} indica que elementos importan especificamente sea una funcion especifica de la libreria, como useRouter, useEffect.
+ from indica de qué librería o archivo se obtiene cada elemento.
+ */
+
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { SymbolView, SymbolViewProps, type SymbolWeight } from "expo-symbols";
 import { ComponentProps } from "react";
+// importa los componentes de React Native que se van a utilizar en la pantalla
 import { OpaqueColorValue, StyleProp, TextStyle, ViewStyle } from "react-native";
 
 type IconMapping = Record<
