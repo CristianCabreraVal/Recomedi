@@ -3,8 +3,13 @@ importes que traen archivos o librerias para utilizar funciones, componentes y h
 {} indica que elementos importan especificamente sea una funcion especifica de la libreria, como useRouter, useEffect.
  from indica de qué librería o archivo se obtiene cada elemento.
  */
-
+// createContext: crea un contexto que permite compartir información entre componentes sin tener que pasarla manualmente por cada nivel.
+// useContext: permite acceder a la información almacenada en un contexto.
+// En Recomedi se utiliza, por ejemplo, para compartir el tema de la aplicación entre diferentes pantallas.
 import {createContext,useContext,useEffect,useState,ReactNode,} from "react";
+//AsyncStorage: permite guardar información de manera persistente en el dispositivo.
+// Los datos pueden mantenerse aunque la aplicación se cierre y se vuelva a abrir.
+// Se utiliza para configuraciones o datos locales que no necesitan estar directamente en Firestore.
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type Theme = {

@@ -6,49 +6,20 @@ importes que traen archivos o librerias para utilizar funciones, componentes y h
  // importa los componentes de React Native que se van a utilizar en la pantalla
 import {ActivityIndicator,Alert,Platform,Pressable,ScrollView,StyleSheet,
   Text,TextInput,View,useWindowDimensions} from "react-native";
-
-import {
-  useCallback,
-  useMemo,
-  useState,
-} from "react";
-
-import {
-  useFocusEffect,
-  useRouter,
-} from "expo-router";
-
-import {
-  SafeAreaView,
-} from "react-native-safe-area-context";
-
-import {
-  Ionicons,
-} from "@expo/vector-icons";
-
-import {
-  auth,
-} from "../../services/firebase";
-
-import {
-  actualizarAlerta,
-  cambiarEstadoAlerta,
-  crearAlerta,
-  eliminarAlerta,
-  obtenerAlertas,
-  type AlertaSanitaria,
-  type EstadoAlerta,
-  type NivelAlerta,
-} from "../../services/alertasAdminService";
-
-import {
-  useTheme,
-} from "../../hooks/useTheme";
+import {useCallback,useMemo,useState} from "react";
+import {useFocusEffect,useRouter} from "expo-router";
+import {SafeAreaView} from "react-native-safe-area-context";
+import {Ionicons} from "@expo/vector-icons";
+import {auth} from "../../services/firebase";
+import {actualizarAlerta,cambiarEstadoAlerta,crearAlerta,eliminarAlerta,obtenerAlertas,
+  type AlertaSanitaria,type EstadoAlerta,type NivelAlerta} from "../../services/alertasAdminService";
+import {useTheme} from "../../hooks/useTheme";
 
 /* ============================================================
    CATEGORÍAS SUGERIDAS
 ============================================================ */
-
+/* Lista de categorías que se muestran como opciones rápidas
+  al crear o editar una alerta sanitaria.*/
 const CATEGORIAS_SUGERIDAS = [
   "Respiratoria",
   "Vectorial",
@@ -67,13 +38,15 @@ const CATEGORIAS_SUGERIDAS = [
 function normalizarCategoria(
   valor: string
 ): string {
+  // Elimina espacios innecesarios y deja un solo espacio entre palabras.
   const texto = valor
     .trim()
     .replace(/\s+/g, " ");
-
+// Convierte el texto a minúsculas para facilitar las equivalencias.
   const clave =
     texto.toLowerCase();
-
+// Relaciona diferentes formas de escribir una categoría
+  // con el nombre estándar utilizado en Recomedi.
   const equivalencias: Record<
     string,
     string
@@ -111,7 +84,8 @@ function normalizarCategoria(
     otra:
       "Otra",
   };
-
+// Devuelve el nombre estándar si existe una equivalencia;
+// de lo contrario, conserva el texto introducido.
   return (
     equivalencias[clave] ??
     texto
@@ -124,28 +98,30 @@ export default function AlertasAdmin() {
 /*const: declara una variable cuyo valor no se reasigna.
 Se utiliza para guardar valores, funciones, resultados de
 hooks o referencias que serán utilizados posteriormente por el componente.
-*/
+*/ // Obtenemos la paleta de colores actual dependiendo del tema del dispositivo
   const { colors } =
     useTheme();
   // useRouter permite al usuario navegar desde botones o eventos hacia otras rutas de la aplicación.
   const router =
     useRouter();
-
+  // Obtiene el ancho de la pantalla para adaptar la interfaz.
   const { width } =
     useWindowDimensions();
-
+  // Determina si la pantalla tiene un ancho considerado móvil
+  // para cambiar la forma en que se muestran las alertas.
   const esMovil =
     width < 768;
-
   /* ==========================================================
      ESTADOS
   ========================================================== */
-
+  // Controla si actualmente se está editando una alerta existente
+  // o si el formulario se está utilizando para crear una nueva.
   const [
     modoEdicion,
     setModoEdicion,
   ] = useState(false);
-
+  // Guarda la alerta que está siendo modificada actualmente.
+  // null significa que no hay ninguna alerta seleccionada para editar.
   const [
     alertaEditando,
     setAlertaEditando,
@@ -153,48 +129,55 @@ hooks o referencias que serán utilizados posteriormente por el componente.
     useState<AlertaSanitaria | null>(
       null
     );
-
+  // Guarda la lista de alertas obtenidas desde Firestore.
   const [
     alertas,
     setAlertas,
   ] = useState<AlertaSanitaria[]>(
     []
   );
-
+  // Controla si la pantalla está cargando las alertas inicialmente.
   const [
     cargando,
     setCargando,
   ] = useState(true);
-
+  // Indica si actualmente se está realizando una operación
+  // como guardar, editar, activar, finalizar o eliminar.
   const [
     actualizando,
     setActualizando,
   ] = useState(false);
-
+  // Guarda el texto introducido en el buscador de alertas.
   const [
     busqueda,
     setBusqueda,
   ] = useState("");
-
+  // Guarda el estado utilizado para filtrar la lista de alertas.
+  // Permite mostrar todas o solamente las que tengan un estado determinado.
   const [
     filtroEstado,
     setFiltroEstado,
   ] = useState<
     "todos" | EstadoAlerta
   >("todos");
-
+  // Controla si el formulario para crear o editar una alerta
+  // está visible en la pantalla.
   const [
     mostrarFormulario,
     setMostrarFormulario,
   ] = useState(false);
-
+  // Guarda el ID de la alerta que está abierta para mostrar
+  // sus detalles completos.
   const [
     alertaAbierta,
     setAlertaAbierta,
   ] = useState<string | null>(
     null
   );
-
+  /*Información introducida en el formulario de alertas.
+  Contiene los datos necesarios para crear una alerta o,
+  cuando se está editando, los valores actuales de la alerta.
+  */
   const [
     form,
     setForm,

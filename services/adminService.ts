@@ -5,14 +5,15 @@ importes que traen archivos o librerias para utilizar funciones, componentes y h
  */
 // Importación de funciones específicas de Firebase Firestore para manipular y consultar datos
 import {collection,deleteDoc,doc,getDocs,updateDoc} from "firebase/firestore";
-
+// db: instancia de Firestore configurada en el proyecto.
+// Permite acceder a la base de datos para consultar, crear, modificar o eliminar información.
 import { db } from "./firebase";
-
+// export type: permite definir la estructura de datos y hacerla disponible para otros archivos.
 export type RolUsuario =
   | "usuario"
   | "moderador"
   | "admin";
-
+// export type: permite definir la estructura de datos y hacerla disponible para otros archivos.
 export type UsuarioAdmin = {
   uid: string;
   email: string;

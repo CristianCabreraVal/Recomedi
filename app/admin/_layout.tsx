@@ -9,13 +9,7 @@ importes que traen archivos o librerias para utilizar funciones, componentes y h
 import { useEffect, useState } from "react";
  // importa los componentes de React Native que se van a utilizar en la pantalla
 import {ActivityIndicator,StyleSheet,View} from "react-native";
-
-import {
-  Redirect,
-  Stack,
-  useSegments,
-} from "expo-router";
-
+import {Redirect,Stack,useSegments} from "expo-router";
 import { onAuthStateChanged } from "firebase/auth";
 // Instancias de autenticación configurada de Firebase
 import { auth } from "../../services/firebase";
@@ -28,17 +22,28 @@ export default function AdminLayout() {
 Se utiliza para guardar valores, funciones, resultados de
 hooks o referencias que serán utilizados posteriormente por el componente.
 */
+// Obtiene los segmentos de la ruta actual para comprobar
+// si el usuario se encuentra dentro del área de administración.
   const segments = useSegments();
-
+// Indica si ya se comprobó si existe un usuario autenticado.
   const [usuarioCargado, setUsuarioCargado] =
     useState(false);
-
+// Indica si el usuario actual tiene permisos de administrador.
   const [esAdmin, setEsAdmin] =
     useState(false);
-
+// Controla si todavía se está realizando la comprobación
+// de autenticación y permisos.
   const [verificando, setVerificando] =
     useState(true);
-
+/*
+  ============================================================
+  VERIFICACIÓN DE AUTENTICACIÓN Y PERMISOS
+  ============================================================
+ */
+ /* Comprueba si existe un usuario autenticado y determina si
+   tiene el rol de administrador antes de permitir el acceso
+  al área de administración.
+ */
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(
       auth,

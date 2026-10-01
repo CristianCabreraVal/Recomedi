@@ -5,15 +5,12 @@ importes que traen archivos o librerias para utilizar funciones, componentes y h
  */
 // Importación de funciones específicas de Firebase Firestore para manipular y consultar datos
 import {doc,getDoc,serverTimestamp,setDoc} from "firebase/firestore";
-
-import {
-  auth,
-  db,
-} from "./firebase";
-
-import {
-  obtenerTokenFCM,
-} from "./notificationService";
+// auth: instancia de Firebase Authentication utilizada para gestionar el usuario autenticado.
+// db: instancia de Firestore utilizada para trabajar con la base de datos.
+import {auth,db} from "./firebase";
+// obtenerTokenFCM: función propia del proyecto utilizada para obtener el token FCM asociado al dispositivo.
+// El token permite identificar el dispositivo dentro del sistema de notificaciones push.
+import {obtenerTokenFCM} from "./notificationService";
 
 export async function registrarTokenFCMEnFirestore(): Promise<string | null> {
   try {

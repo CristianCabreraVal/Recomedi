@@ -3,13 +3,19 @@ importes que traen archivos o librerias para utilizar funciones, componentes y h
 {} indica que elementos importan especificamente sea una funcion especifica de la libreria, como useRouter, useEffect.
  from indica de qué librería o archivo se obtiene cada elemento.
  */
-
+// Constants: permite acceder a información y configuraciones propias del proyecto Expo.
+// Puede utilizarse para obtener datos del entorno de ejecución, configuración de la aplicación y otros valores proporcionados por Expo.
 import Constants from "expo-constants";
- // importa los componentes de React Native que se van a utilizar en la pantalla
+// importa los componentes de React Native que se van a utilizar en la pantalla
+// Platform: permite identificar en qué plataforma se está ejecutando la aplicación
 import { Platform } from "react-native";
-
+// Notifications: módulo de Expo que permite trabajar con notificaciones del dispositivo.
+// Se utiliza para solicitar permisos, configurar notificaciones y responder a eventos relacionados con ellas.
+// * as Notifications: importa todo el módulo y le asigna el nombre Notifications.
 import * as Notifications from 'expo-notifications';
-
+// export type: permite definir un tipo y, al mismo tiempo, hacerlo disponible para que otros archivos del proyecto puedan importarlo y utilizarlo.
+// TipoNotificacion: define los únicos valores de texto que el sistema de notificaciones reconoce como tipos válidos.
+// El símbolo | significa "o". Por lo tanto, la variable solo puede tener uno de los valores indicados.
 export type TipoNotificacion =
   | "noticia"
   | "alerta"
@@ -18,6 +24,8 @@ export type TipoNotificacion =
   | "cuidado"
   | "chequeo";
 
+// export type: permite definir la estructura de datos y hacerla disponible para otros archivos.
+// PreferenciasNotificaciones: representa todas las preferencias relacionadas con las notificaciones del usuario.
 export type PreferenciasNotificaciones = {
   noticias: boolean;
   alertas: boolean;
@@ -33,7 +41,9 @@ export type PreferenciasNotificaciones = {
   cuidadoPersonal: boolean;
   chequeosMedicos: boolean;
 };
-
+// export const: declara una constante y permite que pueda ser utilizada desde otros archivos mediante una importación.
+// preferenciasNotificacionesPredeterminadas: contiene la configuración inicial utilizada cuando el usuario todavía no ha establecido sus propias preferencias.
+// : PreferenciasNotificaciones: indica que el objeto debe cumplir exactamente con la estructura definida anteriormente.
 export const preferenciasNotificacionesPredeterminadas:
   PreferenciasNotificaciones = {
   noticias: true,
@@ -773,7 +783,8 @@ export async function registrarListenerNotificacionRespondida(
 /* ============================================================
    ESTADO
 ============================================================ */
-
+// export permite que ese componente sea utilizado por otros archivos por de medio imports.
+// function declara una función. En React, una función como esta puede utilizarse como componente cuando devuelve elementos de interfaz.
 export function obtenerEstadoNotificaciones() {
   return {
     plataforma: Platform.OS,

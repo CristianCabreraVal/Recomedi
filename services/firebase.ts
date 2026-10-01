@@ -3,14 +3,19 @@ importes que traen archivos o librerias para utilizar funciones, componentes y h
 {} indica que elementos importan especificamente sea una funcion especifica de la libreria, como useRouter, useEffect.
  from indica de qué librería o archivo se obtiene cada elemento.
  */
-
+// getApp: obtiene la aplicación de Firebase que ya fue inicializada.
+// getApps: obtiene la lista de aplicaciones de Firebase ya inicializadas.
+// initializeApp: inicializa una aplicación de Firebase con la configuración del proyecto.
 import { getApp, getApps, initializeApp } from "firebase/app";
 // Instancias de autenticación configurada de Firebase
 import type { Auth } from "firebase/auth";
+// getAuth: obtiene el servicio de Authentication de Firebase Admin.
+// Permite consultar y administrar usuarios de Firebase desde código que se ejecuta en el servidor.
 import { getAuth, initializeAuth, inMemoryPersistence, } from "firebase/auth";
 // Importación de funciones específicas de Firebase Firestore para manipular y consultar datos
 import { getFirestore } from "firebase/firestore";
- // importa los componentes de React Native que se van a utilizar en la pantalla
+// importa los componentes de React Native que se van a utilizar en la pantalla
+// Platform: permite identificar en qué plataforma se está ejecutando la aplicación
 import { Platform } from "react-native";
 
 

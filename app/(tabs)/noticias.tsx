@@ -19,44 +19,45 @@ export default function NoticiasScreen() {
 /*const: declara una variable cuyo valor no se reasigna.
 Se utiliza para guardar valores, funciones, resultados de
 hooks o referencias que serán utilizados posteriormente por el componente.
-*/
+*/ // Obtiene el ancho actual de la pantalla para adaptar el tamaño de las tarjetas.
   const { width } =
     useWindowDimensions();
-  // useTheme obtiene los colores utilizados actualmente por la aplicación 
+  // Obtiene los colores utilizados actualmente por la aplicación según el tema.
   const { colors } =
     useTheme();
-
+// Guarda la lista de noticias obtenidas desde Firebase.
   const [
     noticias,
     setNoticias,
   ] = useState<Noticia[]>([]);
-
+// Controla si las noticias todavía se están cargando.
   const [
     cargando,
     setCargando,
   ] = useState(true);
-
+// Guarda la posición de la noticia que se está mostrando actualmente en el carrusel.
   const [
     currentNews,
     setCurrentNews,
   ] = useState(0);
-
+// Guarda la noticia seleccionada para mostrar su información completa.
   const [
     noticiaSeleccionada,
     setNoticiaSeleccionada,
   ] = useState<Noticia | null>(null);
-
+// Controla la apertura y cierre de la ventana modal de la noticia.
   const [
     modalVisible,
     setModalVisible,
   ] = useState(false);
-
+// Referencia al ScrollView del carrusel para poder controlar su desplazamiento mediante código.
   const scrollNoticiasRef =
     useRef<ScrollView | null>(null);
-
+// Indica si la aplicación se está ejecutando en la versión web.
   const esWeb =
     Platform.OS === "web";
-
+// Calcula el ancho de las tarjetas de noticias según si se está usando
+// una pantalla web o un dispositivo móvil.
   const anchoTarjeta =
     esWeb
       ? Math.min(width * 0.58, 700)

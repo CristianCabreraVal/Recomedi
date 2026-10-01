@@ -24,7 +24,7 @@ export default function AdminPanel() {
 /*const: declara una variable cuyo valor no se reasigna.
 Se utiliza para guardar valores, funciones, resultados de
 hooks o referencias que serán utilizados posteriormente por el componente.
-*/
+*/ // Obtenemos la paleta de colores actual dependiendo del tema del dispositivo
   const { colors } = useTheme();
   // useRouter permite al usuario navegar desde botones o eventos hacia otras rutas de la aplicación.
   const router = useRouter();

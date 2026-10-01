@@ -9,14 +9,16 @@ importes que traen archivos o librerias para utilizar funciones, componentes y h
 import { useEffect, useState } from "react";
 // Importación de funciones específicas de Firebase Firestore para manipular y consultar datos
 import {doc,getDoc} from "firebase/firestore";
-
+// auth: instancia de Firebase Authentication configurada para gestionar la autenticación de los usuarios.
+// db: instancia de Firestore utilizada para leer y guardar información en la base de datos.
 import {auth,db} from "../services/firebase";
 
 type Rol =
   | "usuario"
   | "moderador"
   | "admin";
-
+// export permite que ese componente sea utilizado por otros archivos por de medio imports.
+// function declara una función. En React, una función como esta puede utilizarse como componente cuando devuelve elementos de interfaz.
 export function useUserRole() {
   const [rol, setRol] =
     useState<Rol>("usuario");

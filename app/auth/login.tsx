@@ -7,21 +7,16 @@ import { useState } from "react";
  // importa los componentes de React Native que se van a utilizar en la pantalla
 import {ActivityIndicator,Alert,Image,KeyboardAvoidingView,Platform,
   Pressable,ScrollView,StyleSheet,Text,TextInput,View} from "react-native";
-
 import {reload,signInWithEmailAndPassword} from "firebase/auth";
 // Ionicons: permite usar iconos para complementar la interfaz de usuario
 import { Ionicons } from "@expo/vector-icons";
 // Componente para evitar que el contenido se solape con los bordes físicos del dispositivo (notch, barra de estado)
 import {SafeAreaView,} from "react-native-safe-area-context";
-
 import {useRouter,} from "expo-router";
 // Instancias de autenticación configurada de Firebase
 import {auth} from "../../services/firebase";
-
 import {obtenerRolUsuario,} from "../../services/rolService";
-
 import {registrarTokenFCMEnFirestore,} from "../../services/notificationTokenService";
-
 import {consumirNotificacionPendiente,} from "../../services/notificationService";
 // export permite utilizar este componente desde otros archivos.
 // function declara el componente.

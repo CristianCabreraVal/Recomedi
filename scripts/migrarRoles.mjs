@@ -1,21 +1,23 @@
-import {
-    applicationDefault,
-    initializeApp,
-} from "firebase-admin/app";
+/* 
+importes que traen archivos o librerias para utilizar funciones, componentes y herramientas.
+{} indica que elementos importan especificamente sea una funcion especifica de la libreria, como useRouter, useEffect.
+ from indica de qué librería o archivo se obtiene cada elemento.
+ */
 
-import {
-    getAuth,
-} from "firebase-admin/auth";
-
-import {
-    getFirestore,
-} from "firebase-admin/firestore";
+import {applicationDefault,initializeApp} from "firebase-admin/app";
+// getAuth: obtiene el servicio de autenticación de Firebase Admin para consultar o administrar usuarios desde el servidor.
+import {getAuth} from "firebase-admin/auth";
+// getFirestore: obtiene el servicio de Firestore de Firebase Admin.
+// Permite que el código del servidor pueda leer y modificar información de la base de datos.
+import {getFirestore} from "firebase-admin/firestore";
 
 initializeApp({
   credential: applicationDefault(),
   projectId: "recomedi-3fcef",
 });
-
+// const declara una variable cuyo valor no se reasigna. 
+// auth: almacena la instancia del servicio de autenticación de Firebase Admin.
+// db: almacena la instancia de Firestore. De esta manera, las funciones posteriores pueden utilizar auth y db para trabajar con los usuarios y los datos.
 const auth = getAuth();
 const db = getFirestore();
 

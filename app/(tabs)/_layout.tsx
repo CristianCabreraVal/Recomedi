@@ -44,10 +44,8 @@ hooks o referencias que serán utilizados posteriormente por el componente.
 */
   // useRouter permite al usuario navegar desde botones o eventos hacia otras rutas de la aplicación.
   const router = useRouter();
-
   // useTheme obtiene los colores utilizados actualmente por la aplicación 
   const { colors } = useTheme();
-
   // Obtiene el espacio seguro del dispositivo, evita cubrir elementos de la interfaz con la barra de navegación del sistema.
   // insets representa el espacio que queda debajo de la aplicación y que puede ser ocupado por la navegación del sistema.
   const insets = useSafeAreaInsets();

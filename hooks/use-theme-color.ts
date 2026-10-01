@@ -5,9 +5,11 @@ importes que traen archivos o librerias para utilizar funciones, componentes y h
  */
 // importa los componentes de React Native que se van a utilizar en la pantalla
 import { ColorSchemeName, useColorScheme } from "react-native";
-
+// Colors: contiene los colores definidos para el tema de Recomedi.
+// Se importa desde constants/theme para reutilizar los mismos colores en diferentes partes de la aplicación.
 import { Colors } from "@/constants/theme";
-
+// export permite que ese componente sea utilizado por otros archivos por de medio imports.
+// function declara una función. En React, una función como esta puede utilizarse como componente cuando devuelve elementos de interfaz.
 export function useThemeColor(
   props: { light?: string; dark?: string },
   colorName: keyof typeof Colors.light & keyof typeof Colors.dark

@@ -28,9 +28,12 @@ hooks o referencias que serán utilizados posteriormente por el componente.
 */
   const registrarDispositivoFCM = async () => {
   try {
+    /*Obtiene el token FCM y registra el dispositivo en Firestore mediante la función del servicio.
+    El token permite identificar este dispositivo dentro del sistema de notificaciones.
+     */
     const token =
       await registrarTokenFCMEnFirestore();
-
+    // Comprueba si el registro del dispositivo fue realizado.
     if (!token) {
       Alert.alert(
         "Error",
@@ -56,27 +59,21 @@ hooks o referencias que serán utilizados posteriormente por el componente.
     );
   }
 };
-
-
+// Obtenemos la paleta de colores actual dependiendo del tema del dispositivo
   const { colors } = useTheme();
-
+//Se utiliza para adaptar la interfaz dependiendo del tamaño del dispositivo o ventana.
   const { width } = useWindowDimensions();
-
+//esMovil indica si la interfaz está siendo mostrada en una pantalla menor a 700 píxeles de ancho.
 const esMovil = width < 700;
-
-  const {
-    rol,
-    cargandoRol,
-    esAdmin,
-    esModerador,
-  } = useUserRole();
-
+//useUserRole obtiene información del rol del usuario actual.
+  const {rol,cargandoRol,esAdmin,esModerador,} = useUserRole();
+//useState permite almacenar información que puede cambiar durante la ejecución del componente.
   const [usuario, setUsuario] =
     useState<any>(null);
-
+//indica si la pantalla o los datos necesarios todavía están siendo cargados.
   const [cargando, setCargando] =
     useState(true);
-
+// router permite enviar al usuario a otras pantallas mediante código
   const router = useRouter();
 
   /* ============================================================

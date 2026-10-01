@@ -3,21 +3,17 @@ importes que traen archivos o librerias para utilizar funciones, componentes y h
 {} indica que elementos importan especificamente sea una funcion especifica de la libreria, como useRouter, useEffect.
  from indica de qué librería o archivo se obtiene cada elemento.
  */
-
 import {useCallback,useEffect,useMemo,useState} from "react";
 //Componentes visuales de React Native utilizados paraconstruir la pantalla de carga.
 import {ActivityIndicator,Alert,Modal,Platform,Pressable,RefreshControl,
   ScrollView,StyleSheet,Text,TextInput,View} from "react-native";
-
 import {useRouter} from "expo-router";
 // Componente para evitar que el contenido se solape con los bordes físicos del dispositivo (notch, barra de estado)
 import {SafeAreaView} from "react-native-safe-area-context";
-
 import {actualizarEstadoUsuario,actualizarRolUsuario,eliminarUsuarioDeFirestore,
   obtenerUsuarios,RolUsuario,UsuarioAdmin} from "../../services/adminService";
 // Instancias de autenticación configurada de Firebase
 import {auth} from "../../services/firebase";
-
 import {useUserRole} from "../../hooks/useUserRole";
 
 type FiltroRol =
@@ -44,39 +40,43 @@ hooks o referencias que serán utilizados posteriormente por el componente.
     esModerador,
     cargandoRol,
   } = useUserRole();
-
+// Guarda la lista de usuarios obtenidos desde Firestore.
   const [
     usuarios,
     setUsuarios,
   ] = useState<UsuarioAdmin[]>(
     []
   );
-
+// Indica si los usuarios todavía se están cargando.
   const [
     cargando,
     setCargando,
   ] = useState(true);
-
+// Indica si la lista se está actualizando mediante la acción de refrescar.
   const [
     refrescando,
     setRefrescando,
   ] = useState(false);
-
+// Obtiene el UID del usuario que tiene actualmente iniciada la sesión en Firebase.
   const uidActual =
     auth.currentUser?.uid;
-
+/* ============================================================
+   BÚSQUEDA Y FILTROS
+============================================================ */
+    // Guarda el texto introducido para buscar usuarios por sus diferentes datos.
   const [
     busqueda,
     setBusqueda,
   ] = useState("");
-
+// Guarda el filtro seleccionado para mostrar usuarios según su rol.
   const [
     filtroRol,
     setFiltroRol,
   ] = useState<FiltroRol>(
     "todos"
   );
-
+// Guarda el filtro seleccionado para mostrar usuarios
+// según su estado activo o inactivo.
   const [
     filtroEstado,
     setFiltroEstado,
@@ -84,7 +84,8 @@ hooks o referencias que serán utilizados posteriormente por el componente.
     useState<FiltroEstado>(
       "todos"
     );
-
+// Guarda el usuario actualmente seleccionado para realizar
+// acciones administrativas sobre él.
   const [
     usuarioSeleccionado,
     setUsuarioSeleccionado,
@@ -92,12 +93,13 @@ hooks o referencias que serán utilizados posteriormente por el componente.
     useState<UsuarioAdmin | null>(
       null
     );
-
+// Controla la apertura y cierre del modal utilizado
+// para cambiar el rol del usuario.
   const [
     modalRol,
     setModalRol,
   ] = useState(false);
-
+// Indica si actualmente se está realizando una operación sobre un usuario.
   const [
     guardando,
     setGuardando,
@@ -106,7 +108,7 @@ hooks o referencias que serán utilizados posteriormente por el componente.
   /* ==========================================================
      CARGAR USUARIOS
   ========================================================== */
-
+// Obtiene los usuarios desde Firestore y actualiza la lista mostrada.
   const cargarUsuarios =
     useCallback(async () => {
       try {
@@ -150,7 +152,7 @@ hooks o referencias que serán utilizados posteriormente por el componente.
   }, [
     cargarUsuarios,
   ]);
-
+// Activa el indicador de refresco y vuelve a cargar la lista de usuarios.
   const actualizar =
     async () => {
       setRefrescando(
@@ -163,7 +165,8 @@ hooks o referencias que serán utilizados posteriormente por el componente.
   /* ==========================================================
      FILTRAR USUARIOS
   ========================================================== */
-
+// Genera una lista de usuarios que coincide con la búsqueda,
+// el rol seleccionado y el estado seleccionado.
   const usuariosFiltrados =
     useMemo(() => {
       const texto =
@@ -227,9 +230,7 @@ hooks o referencias que serán utilizados posteriormente por el componente.
     ]);
 
   /* ==========================================================
-     CAMBIAR ESTADO
-     
-     ADMIN Y MODERADOR PUEDEN HACERLO.
+     CAMBIAR ESTADO ADMIN Y MODERADOR PUEDEN HACERLO.
   ========================================================== */
 
   const cambiarEstado =
@@ -325,7 +326,6 @@ hooks o referencias que serán utilizados posteriormente por el componente.
 
         return;
       }
-
       /*
        * ANDROID / IOS
        */
@@ -369,11 +369,8 @@ hooks o referencias que serán utilizados posteriormente por el componente.
     };
 
   /* ==========================================================
-     ELIMINAR USUARIO
-
-     SOLO ADMIN
+     ELIMINAR USUARIO SOLO ADMIN
   ========================================================== */
-
   const eliminarUsuario =
     async (
       usuario: UsuarioAdmin
@@ -513,9 +510,7 @@ hooks o referencias que serán utilizados posteriormente por el componente.
     };
 
   /* ==========================================================
-     CAMBIAR ROL
-
-     SOLO ADMIN
+     CAMBIAR ROL SOLO ADMIN
   ========================================================== */
 
   const seleccionarRol =
@@ -604,9 +599,7 @@ hooks o referencias que serán utilizados posteriormente por el componente.
     };
 
   /* ==========================================================
-     ABRIR SELECTOR DE ROL
-
-     SOLO ADMIN
+     ABRIR SELECTOR DE ROL SOLO ADMIN
   ========================================================== */
 
   const abrirSelectorRol =

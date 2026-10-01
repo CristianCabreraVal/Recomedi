@@ -5,9 +5,7 @@ importes que traen archivos o librerias para utilizar funciones, componentes y h
  */
  // importa los componentes de React Native que se van a utilizar en la pantalla
 import {ActivityIndicator,Alert,Pressable,ScrollView,StyleSheet,Text,View} from "react-native";
-
 import {useFocusEffect,useRouter} from "expo-router";
-
 import {useCallback,useState} from "react";
 // Componente para evitar que el contenido se solape con los bordes físicos del dispositivo (notch, barra de estado)
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -15,16 +13,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 // Instancias de autenticación configurada de Firebase
 import { auth } from "../../services/firebase";
-
-import {
-  cambiarEstadoReporte,
-  obtenerReportesAdmin,
-} from "../../services/reportesAdminService";
-
-import type {
-  EstadoReporte,
-  Reporte,
-} from "../../services/reportesService";
+import {cambiarEstadoReporte,obtenerReportesAdmin} from "../../services/reportesAdminService";
+import type {EstadoReporte,Reporte} from "../../services/reportesService";
 // Importación del hook personalizado para obtener los colores del tema actual (claro u oscuro)
 import { useTheme } from "../../hooks/useTheme";
 
@@ -81,22 +71,24 @@ export default function ReportesAdmin() {
 /*const: declara una variable cuyo valor no se reasigna.
 Se utiliza para guardar valores, funciones, resultados de
 hooks o referencias que serán utilizados posteriormente por el componente.
-*/
+*/ // Obtenemos la paleta de colores actual dependiendo del tema del dispositivo
   const { colors } = useTheme();
   // useRouter permite al usuario navegar desde botones o eventos hacia otras rutas de la aplicación.
   const router = useRouter();
-
+  // Guarda la lista de reportes obtenidos desde Firestore.
   const [reportes, setReportes] =
     useState<Reporte[]>([]);
-
+// Indica si los reportes todavía se están cargando.
   const [loading, setLoading] =
     useState(true);
-
+// Guarda el filtro de estado utilizado para mostrar
+// únicamente determinados tipos de reportes.
   const [filtro, setFiltro] =
     useState<
       EstadoReporte | "todos"
     >("todos");
-
+// Guarda el identificador del reporte que actualmente
+// se está procesando.
   const [procesando, setProcesando] =
     useState<string | null>(null);
 

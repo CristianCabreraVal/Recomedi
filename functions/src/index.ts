@@ -1,30 +1,33 @@
-import {
-  HttpsError,
-  onCall,
-} from "firebase-functions/v2/https";
-
-import {
-  initializeApp,
-} from "firebase-admin/app";
-
-import {
-  getAuth,
-} from "firebase-admin/auth";
-
-import {
-  FieldValue,
-  getFirestore,
-} from "firebase-admin/firestore";
-
-
-
+/* 
+importes que traen archivos o librerias para utilizar funciones, componentes y herramientas.
+{} indica que elementos importan especificamente sea una funcion especifica de la libreria, como useRouter, useEffect.
+ from indica de qué librería o archivo se obtiene cada elemento.
+ */
+// HttpsError: permite generar errores controlados que pueden ser enviados al dispositivo que realizó la llamada a la función. 
+// onCall: permite crear una función de Firebase que puede ser llamada directamente desde la aplicación. 
+// En este caso se utiliza para registrar el token FCM utilizado por el sistema de notificaciones.
+import {HttpsError,onCall} from "firebase-functions/v2/https";
+// initializeApp: inicializa Firebase Admin para que las Cloud Functions puedan acceder a los servicios del proyecto.
+import {initializeApp} from "firebase-admin/app";
+// getAuth: obtiene el servicio de autenticación de Firebase Admin. 
+// Se utiliza posteriormente para consultar o administrar información relacionada con los usuarios autenticados.
+import {getAuth} from "firebase-admin/auth";
+// FieldValue: proporciona valores especiales de Firestore que permiten realizar operaciones sobre los datos, como agregar o actualizar determinados valores.  
+// getFirestore: obtiene la instancia de Firestore utilizada por la función para leer y guardar información en la base de datos.
+import {FieldValue,getFirestore} from "firebase-admin/firestore";
+// initializeApp() inicia el SDK de Firebase Admin. 
+// Esto permite que las funciones del servidor puedan utilizar servicios de Firebase como Authentication y Firestore.
 initializeApp();
-
+// const declara una variable cuyo valor no se reasigna. 
+// auth: almacena la instancia del servicio de autenticación de Firebase Admin.
+// db: almacena la instancia de Firestore. De esta manera, las funciones posteriores pueden utilizar auth y db para trabajar con los usuarios y los datos.
 const auth = getAuth();
 const db = getFirestore();
-
-
-
+// export permite que la función pueda ser reconocida y desplegada como una Cloud Function de Firebase. 
+// const registra la función en una constante llamada registrarTokenFCM. 
+// onCall crea una función invocable directamente desde la aplicación mediante una llamada de Firebase Functions.
+// async indica que la función puede realizar operaciones asíncronas utilizando await.
+// request contiene la información enviada a la función cuando la aplicación realiza la llamada.
 export const registrarTokenFCM = onCall(
   async (request) => {
 

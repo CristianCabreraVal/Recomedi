@@ -3,8 +3,11 @@ importes que traen archivos o librerias para utilizar funciones, componentes y h
 {} indica que elementos importan especificamente sea una funcion especifica de la libreria, como useRouter, useEffect.
  from indica de qué librería o archivo se obtiene cada elemento.
  */
+//Hooks de React
 import type { PropsWithChildren, ReactElement } from 'react';
+// importa los componentes de React Native que se van a utilizar en la pantalla
 import { StyleSheet } from 'react-native';
+//Animated: proporciona los componentes preparados para trabajar con animaciones.
 import Animated, {interpolate,useAnimatedRef,useAnimatedStyle,useScrollOffset,} from 'react-native-reanimated';
 
 import { ThemedView } from '@/components/themed-view';

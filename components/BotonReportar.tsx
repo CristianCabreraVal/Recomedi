@@ -6,15 +6,12 @@ importes que traen archivos o librerias para utilizar funciones, componentes y h
 //Componentes visuales de React Native utilizados paraconstruir la pantalla de carga.
 import {ActivityIndicator,Alert,KeyboardAvoidingView,Modal,Platform,Pressable,
   ScrollView,StyleSheet,Text,TextInput,useWindowDimensions,View} from "react-native";
-
 import { useState } from "react";
 // Ionicons: permite usar iconos para complementar la interfaz de usuario
 import { Ionicons } from "@expo/vector-icons";
-
 import { usePathname } from "expo-router";
 // Importación del hook personalizado para obtener los colores del tema actual (claro u oscuro)
 import { useTheme } from "../hooks/useTheme";
-
 import {MotivoReporte,registrarReporte} from "../services/reportesService";
 
 /* ============================================================

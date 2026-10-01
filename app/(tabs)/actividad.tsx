@@ -52,22 +52,19 @@ hooks o referencias que serán utilizados posteriormente por el componente.
 */
   // Obtenemos la paleta de colores actual dependiendo del tema del dispositivo
   const { colors } = useTheme();
-
   // --- ESTADOS DEL FORMULARIO DE REGISTRO ---
   // Inicializa la fecha con el día actual por defecto
   const [fecha, setFecha] = useState(obtenerFechaActual());
-  
+
   // Estados para almacenar lo que el usuario escribe en los campos de texto
   const [pasos, setPasos] = useState("");
   const [frecuenciaCardiaca, setFrecuenciaCardiaca] = useState("");
   const [calorias, setCalorias] = useState("");
   const [distancia, setDistancia] = useState("");
-
   // --- ESTADOS DE CARGA E INTERFAZ ---
   // Controlan la aparición de los círculos de carga (spinners)
   const [guardando, setGuardando] = useState(false);
   const [cargandoDatos, setCargandoDatos] = useState(true);
-
   // --- ESTADOS DE DATOS Y VISUALIZACIÓN ---
   // Almacena el array de actividades descargadas desde Firestore
   const [registros, setRegistros] = useState<RegistroActividad[]>([]);
@@ -75,7 +72,6 @@ hooks o referencias que serán utilizados posteriormente por el componente.
   const [periodo, setPeriodo] = useState(7);
   // Métrica que se está mostrando actualmente en la gráfica principal
   const [metrica, setMetrica] = useState<Metrica>("pasos");
-
   // Controla si se despliega o se oculta la sección para ingresar datos manualmente
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
 

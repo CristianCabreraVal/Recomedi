@@ -1,12 +1,24 @@
-import {
-  cert,
-  getApps,
-  initializeApp,
-} from "firebase-admin/app";
+/* 
+importes que traen archivos o librerias para utilizar funciones, componentes y herramientas.
+{} indica que elementos importan especificamente sea una funcion especifica de la libreria, como useRouter, useEffect.
+ from indica de qué librería o archivo se obtiene cada elemento.
+ */
+// cert: permite crear las credenciales de Firebase Admin a partir de un certificado del proyecto.
+// getApps: permite consultar las aplicaciones de Firebase Admin ya inicializadas.
+// initializeApp: inicializa Firebase Admin.
+import {cert,getApps,initializeApp} from "firebase-admin/app";
+// getFirestore: obtiene la instancia de Firestore para poder consultar, crear, modificar o eliminar datos desde el servidor.
 import { getFirestore } from "firebase-admin/firestore";
+// GoogleDecoder: herramienta utilizada para procesar o interpretar determinadas URL relacionadas con Google News y obtener la dirección original de la noticia.
 import { GoogleDecoder } from "google-news-url-decoder";
+// crypto: módulo de Node.js que proporciona funciones relacionadas con operaciones criptográficas y generación de valores seguros.
+// Se utiliza en código del servidor cuando se necesita trabajar con hashes, identificadores o procesos de seguridad.
 import crypto from "node:crypto";
+// Parser: herramienta utilizada para leer y convertir feeds RSS en una estructura de datos que el código pueda procesar.
+// En Recomedi puede utilizarse para obtener noticias desde fuentes que publican información mediante RSS.
 import Parser from "rss-parser";
+// FUENTES_NOTICIAS: contiene las fuentes de noticias definidas para Recomedi.
+// Se importa desde otro archivo para centralizar las fuentes y poder reutilizarlas sin escribirlas directamente en cada función.
 import { FUENTES_NOTICIAS } from "./fuentesNoticias.mjs";
 
 const COLECCION = "noticias";

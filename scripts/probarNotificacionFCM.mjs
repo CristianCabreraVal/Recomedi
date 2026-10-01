@@ -1,16 +1,18 @@
-import {
-    cert,
-    getApps,
-    initializeApp,
-} from "firebase-admin/app";
-
-import {
-    getFirestore,
-} from "firebase-admin/firestore";
-
-import {
-    getMessaging,
-} from "firebase-admin/messaging";
+/* 
+importes que traen archivos o librerias para utilizar funciones, componentes y herramientas.
+{} indica que elementos importan especificamente sea una funcion especifica de la libreria, como useRouter, useEffect.
+ from indica de qué librería o archivo se obtiene cada elemento.
+ */
+// cert: permite crear las credenciales de Firebase Admin a partir de un certificado del proyecto.
+// getApps: permite consultar las aplicaciones de Firebase Admin ya inicializadas.
+// initializeApp: inicializa Firebase Admin.
+import {cert,getApps,initializeApp} from "firebase-admin/app";
+// getFirestore: obtiene el servicio de Firestore de Firebase Admin.
+// Permite que el código del servidor pueda leer y modificar información de la base de datos.
+import {getFirestore} from "firebase-admin/firestore";
+// getMessaging: obtiene el servicio de Firebase Cloud Messaging (FCM).
+// Permite trabajar con el sistema de notificaciones push desde funciones del servidor.
+import {getMessaging} from "firebase-admin/messaging";
 
 
 /* ==========================================================

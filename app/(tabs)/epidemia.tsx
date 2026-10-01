@@ -15,9 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../hooks/useTheme";
 // Importa la funcion de un boton para reportar
 import BotonReportar from "../../components/BotonReportar";
-
 import {MOTIVOS_ALERTAS,} from "../../services/reportesService";
-
 import {escucharAlertasActivas,type AlertaPublica,} from "../../services/alertasPublicasService";
 // export default indica que este es el componente principal que se exporta desde este archivo.
 export default function Alerts() {
@@ -26,20 +24,19 @@ Se utiliza para guardar valores, funciones, resultados de
 hooks o referencias que serán utilizados posteriormente por el componente.
 */  // useTheme obtiene los colores utilizados actualmente por la aplicación 
   const { colors } = useTheme();
-
+// Obtiene el ancho actual de la pantalla para adaptar la distribución de la interfaz.
   const { width } =
     useWindowDimensions();
-
-  // A partir de 900 px se utiliza una distribución de dos columnas.
+// Determina si la pantalla es suficientemente ancha para mostrar las alertas en dos columnas.
   const pantallaAncha =
     width >= 900;
-
+// Guarda las alertas sanitarias activas que se reciben desde Firebase.
   const [alertas, setAlertas] =
     useState<AlertaPublica[]>([]);
-
+// Controla si las alertas todavía se están cargando.
   const [cargandoAlertas, setCargandoAlertas] =
     useState(true);
-
+// Indica si ocurrió un error al intentar cargar las alertas.
   const [errorAlertas, setErrorAlertas] =
     useState(false);
 

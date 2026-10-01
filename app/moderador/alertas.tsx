@@ -15,6 +15,7 @@ import {SafeAreaView} from "react-native-safe-area-context";
 import {Ionicons} from "@expo/vector-icons";
 // Instancias de autenticación configurada de Firebase
 import {auth} from "../../services/firebase";
+
 import {actualizarAlerta,cambiarEstadoAlerta,crearAlerta,eliminarAlerta,obtenerAlertas,
   type AlertaSanitaria,type EstadoAlerta,type NivelAlerta,} from "../../services/alertasAdminService";
 // Importación del hook personalizado para obtener los colores del tema actual (claro u oscuro)

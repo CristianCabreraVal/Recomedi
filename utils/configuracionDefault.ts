@@ -1,3 +1,9 @@
+/* 
+importes que traen archivos o librerias para utilizar funciones, componentes y herramientas.
+{} indica que elementos importan especificamente sea una funcion especifica de la libreria, como useRouter, useEffect.
+ from indica de qué librería o archivo se obtiene cada elemento.
+ */
+// Configuracion: tipo o modelo utilizado para definir la estructura de los datos de configuración que utiliza Recomedi.
 import { Configuracion } from "../models/Configuracion";
 
 export const configuracionDefault: Configuracion = {

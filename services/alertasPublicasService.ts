@@ -6,7 +6,8 @@ importes que traen archivos o librerias para utilizar funciones, componentes y h
 // Importación de funciones específicas de Firebase Firestore para manipular y consultar datos
 import {collection,onSnapshot,query,where,
   type Unsubscribe} from "firebase/firestore";
-
+// db: instancia de Firestore configurada en el proyecto.
+// Permite acceder a la base de datos para consultar, crear, modificar o eliminar información.
 import { db } from "./firebase";
 
 export type AlertaPublica = {
@@ -27,7 +28,8 @@ export type AlertaPublica = {
   fechaInicio: any;
   fechaFin: any;
 };
-
+// export permite que ese componente sea utilizado por otros archivos por de medio imports.
+// function declara una función. En React, una función como esta puede utilizarse como componente cuando devuelve elementos de interfaz.
 export function escucharAlertasActivas(
   alCambiar: (
     alertas: AlertaPublica[]

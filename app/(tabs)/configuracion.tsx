@@ -21,7 +21,6 @@ import { auth } from "../../services/firebase";
 import { useTheme } from "../../hooks/useTheme";
 // Importa la funcion de un boton para reportar
 import BotonReportar from "../../components/BotonReportar";
-
 import {MOTIVOS_GENERALES} from "../../services/reportesService";
 // export default indica que este es el componente principal que se exporta desde este archivo.
 export default function Configuracion() {
@@ -29,15 +28,32 @@ export default function Configuracion() {
 Se utiliza para guardar valores, funciones, resultados de
 hooks o referencias que serán utilizados posteriormente por el componente.
 */
+// useState permite guardar un valor que puede cambiar durante la ejecución del componente.
+// notificaciones: contiene el estado actual de las notificaciones.
+// setNotificaciones: función utilizada para cambiar ese estado.
+//  false: valor inicial. Significa que, mientras no se cargue una configuración guardada, las notificaciones se consideran desactivadas.
   const [notificaciones, setNotificaciones] = useState(false);
+// useTheme obtiene información y funciones relacionadas con el tema visual de Recomedi.
+// dark: indica si actualmente está activo el modo oscuro.
+// colors: contiene los colores correspondientes al tema actual.
+// setDark: función utilizada para cambiar entre modo oscuro y claro.
   const { dark, colors, setDark } = useTheme();
 
   useEffect(() => {
+    // async permite realizar operaciones asíncronas.
+    // Esta función se encarga de obtener y procesar la configuración almacenada localmente.
     const cargar = async () => {
+      // try permite ejecutar la operación esperando que termine correctamente.
+      // Si ocurre un error, la ejecución pasa al bloque catch.
       try {
+        /* AsyncStorage.getItem("config"): busca en el almacenamiento local un dato guardado utilizando "config" como clave.
+        await espera el resultado antes de continuar.
+        */
         const data = await AsyncStorage.getItem("config");
 
         if (data) {
+          // JSON.parse convierte el texto guardado en AsyncStorage
+          // nuevamente en un objeto que JavaScript puede utilizar.
           const config = JSON.parse(data);
 
           setNotificaciones(config.notificaciones ?? false);

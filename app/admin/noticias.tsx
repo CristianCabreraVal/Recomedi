@@ -8,28 +8,14 @@ import {ActivityIndicator,Alert,Image,Linking,Modal,Platform,Pressable,
   RefreshControl,ScrollView,StyleSheet,Text,TextInput,View} from "react-native";
 // Componente para evitar que el contenido se solape con los bordes físicos del dispositivo (notch, barra de estado)
 import { SafeAreaView } from "react-native-safe-area-context";
-
-import {
-    useCallback,
-    useState,
-} from "react";
-
-import {
-    useFocusEffect,
-    useRouter,
-} from "expo-router";
+import {useCallback,useState} from "react";
+import {useFocusEffect,useRouter} from "expo-router";
 // Ionicons: permite usar iconos para complementar la interfaz de usuario
 import { Ionicons } from "@expo/vector-icons";
 // Instancias de autenticación configurada de Firebase
 import { auth } from "../../services/firebase";
-
-import {
-    aprobarNoticia,
-    editarNoticia,
-    obtenerNoticiasPendientes,
-    rechazarNoticia,
-    type Noticia,
-} from "../../services/noticiasService";
+import {aprobarNoticia,editarNoticia,obtenerNoticiasPendientes,rechazarNoticia,
+    type Noticia} from "../../services/noticiasService";
 // Importación del hook personalizado para obtener los colores del tema actual (claro u oscuro)
 import { useTheme } from "../../hooks/useTheme";
 // export permite utilizar este componente desde otros archivos.
@@ -39,23 +25,28 @@ export default function AdminNoticias() {
 /*const: declara una variable cuyo valor no se reasigna.
 Se utiliza para guardar valores, funciones, resultados de
 hooks o referencias que serán utilizados posteriormente por el componente.
-*/
+*/ // Obtenemos la paleta de colores actual dependiendo del tema del dispositivo
   const { colors } = useTheme();
-    // useRouter permite al usuario navegar desde botones o eventos hacia otras rutas de la aplicación.
+  // useRouter permite al usuario navegar desde botones o eventos hacia otras rutas de la aplicación.
   const router = useRouter();
-
+// Guarda la lista de noticias obtenidas y controla si todavía se están cargando.
   const [noticias, setNoticias] =
     useState<Noticia[]>([]);
-
+// Indica si la pantalla todavía está cargando las noticias.
   const [cargando, setCargando] =
     useState(true);
-
+// Indica si actualmente se está realizando una operación
+// de actualización sobre las noticias.
   const [actualizando, setActualizando] =
     useState(false);
-
+// Guarda la noticia que actualmente se encuentra seleccionada
+// para ser editada.
   const [noticiaEditando, setNoticiaEditando] =
     useState<Noticia | null>(null);
-
+/* ============================================================
+   DATOS DEL FORMULARIO DE NOTICIAS
+============================================================ */
+    // Guarda los diferentes campos utilizados para crear o editar una noticia.
   const [titulo, setTitulo] =
     useState("");
 
@@ -70,7 +61,7 @@ hooks o referencias que serán utilizados posteriormente por el componente.
 
   const [imagenUrl, setImagenUrl] =
     useState("");
-
+// Indica si actualmente se está guardando una noticia o sus cambios.
   const [guardando, setGuardando] =
     useState(false);
 
